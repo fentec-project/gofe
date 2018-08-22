@@ -5,15 +5,15 @@ implementations of functional encryption schemes, specifically FE
 schemes for _linear_ (e.g. _inner products_) and _quadratic polynomials_.
 
 To quickly get familiar with FE, read a short and very high-level 
-introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE)
+introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
 
 <!-- toc -->
 - [Building GoFE](#building-gofe)
 - [Using GoFE in your project](#using-gofe-in-your-project)
-    * [1. Select the FE scheme](#1.-select-the-fe-scheme)
-    * [2. Configure selected scheme](#2.-configure-selected-scheme)
-    * [3. Prepare input data](#3.-prepare-input-data)
-    * [4. Use the scheme (examples)](#4.-use-the-scheme-(examples))
+    * [Select the FE scheme](#1.-select-the-fe-scheme)
+    * [Configure selected scheme](#2.-configure-selected-scheme)
+    * [Prepare input data](#3.-prepare-input-data)
+    * [Use the scheme (examples)](#4.-use-the-scheme-(examples))
 <!-- tocstop -->
 
 ### Before using the library
@@ -37,7 +37,7 @@ Instructions below provide a brief introduction to the most important parts
 of the library, and guide you through a sequence of steps that will quickly
 get your FE example up and running.  
 
-### 1. Select the FE scheme
+### Select the FE scheme
 You can choose from the following  set of schemes:
 
 #### Inner product schemes
@@ -79,7 +79,7 @@ polynomials** by _Sans, Gay_ and _Pointcheval_
 bilinear pairings, and offers adaptive security under chosen-plaintext
 attacks (IND-CPA security).
 
-### 2. Configure selected scheme
+### Configure selected scheme
 All GoFE schemes are implemented as Go structs with (at least logically)
 similar APIs. So the first thing we need to do is to create a scheme instance
 by instantiating the appropriate struct. For this step, we need to pass in 
@@ -107,7 +107,7 @@ After you successfully created a FE scheme instance, you can call its
 * encryption, and
 * decryption. 
 
-### 3. Prepare input data
+### Prepare input data
 #### Vectors and matrices
 All GoFE chemes rely on vectors (or matrices) of big integer (`*big.Int`) 
 components. 
@@ -154,7 +154,7 @@ You can quickly construct random vectors and matrices by:
     X, _ := data.NewRandomMatrix(2, 3, s) // creates a random 2x3 matrix
     ````
     
-## 4. Use the scheme (examples)
+## Use the scheme (examples)
 Please note that all the examples below omit error management.
 
 ##### Using a single input scheme

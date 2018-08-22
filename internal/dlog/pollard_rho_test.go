@@ -65,7 +65,7 @@ func TestPollardRhoParallel(t *testing.T) {
 }
 
 func TestPollardRhoFactorization(t *testing.T) {
-	n := emmy.GetRandomIntOfLength(128)
+	n := emmy.GetRandomIntOfLength(32)
 	factorization, err := pollardRhoFactorization(n, nil)
 
 	if err != nil {
@@ -119,8 +119,8 @@ func checkFactorization(factorization map[string]int, n *big.Int, t *testing.T) 
 
 // Hard factorization problem - the number is a product of two large primes
 func TestPollardRhoFactorizationHard(t *testing.T) {
-	p := emmy.GetGermainPrime(40)
-	q := emmy.GetGermainPrime(40)
+	p := emmy.GetGermainPrime(35)
+	q := emmy.GetGermainPrime(35)
 
 	n := new(big.Int).Mul(p, q)
 
