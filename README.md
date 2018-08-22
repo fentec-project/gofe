@@ -10,10 +10,10 @@ introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
 <!-- toc -->
 - [Building GoFE](#building-gofe)
 - [Using GoFE in your project](#using-gofe-in-your-project)
-    * [Select the FE scheme](#1.-select-the-fe-scheme)
-    * [Configure selected scheme](#2.-configure-selected-scheme)
-    * [Prepare input data](#3.-prepare-input-data)
-    * [Use the scheme (examples)](#4.-use-the-scheme-(examples))
+    * [Select the FE scheme](#select-the-fe-scheme)
+    * [Configure selected scheme](#configure-selected-scheme)
+    * [Prepare input data](#prepare-input-data)
+    * [Use the scheme (examples)](#use-the-scheme-(examples))
 <!-- tocstop -->
 
 ### Before using the library
