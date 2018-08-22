@@ -1,0 +1,14 @@
+# IDE files
+.idea
+.vscode
+
+# Vendor directory
+vendor/*/
+
+# Other
+*.swp
+*.swo
+.DS_Store
+
+# Binary
+fentec

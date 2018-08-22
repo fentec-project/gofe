@@ -1,0 +1,12 @@
+language: go
+
+go:
+  - "tip"
+  - "1.8"
+  - "1.9"
+  - "1.10"
+
+go_import_path: github.com/fentec-project/gofe
+
+install:
+  - go get -u -t -v ./...
