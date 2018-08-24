@@ -19,60 +19,132 @@ package sample
 import (
 	"math"
 	"math/big"
-	"math/rand"
 )
 
 // Normal samples random values from the Normal (Gaussian)
 // probability distribution, centered on 0.
 type Normal struct {
-	// Mean
-	// mu float64 // TODO Add if necessary. Currently mu = 0 is assumed
 	// Standard deviation
-	sigma float64
-	// Variance
-	variance float64
-	// Sampling precision.
-	// This parameter tells us how close we are to uniformly
-	// sampling from the interval [0,1]
-	eps float64
-	// Limit for the sampling interval.
-	// Events outside this interval are highly unlikely.
-	k float64
+	sigma *big.Float
+	// Precision parameter
+	n int
+	// Precomputed exponential values
+	preExp []*big.Float
+	// Precomputed values
+	powN *big.Int
+	powNF *big.Float
 
-	// The interval for sampling
-	cut int
 }
 
 // NewNormal returns an instance of Normal sampler.
 // It assumes mean = 0.
-func NewNormal(sigma, eps, k float64) *Normal {
-	return &Normal{
+func NewNormal(sigma *big.Float, n int) *Normal {
+	powN := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(n)), nil)
+	powNF := new(big.Float)
+	powNF.SetPrec(uint(n))
+	powNF.SetInt(powN)
+	s := &Normal{
 		sigma:    sigma,
-		variance: sigma * sigma,
-		eps:      eps,
-		k:        k,
-		cut:      int(sigma * math.Sqrt(k)),
+		n:        n,
+		preExp:   nil,
+		powN:     powN,
+		powNF:    powNF,
 	}
+	return s
 }
 
-func (g *Normal) density(x float64) float64 {
-	return math.Exp(-x * x / g.variance)
+
+
+// an approximation of a exp(-x/alpha) with taylor
+// polynomial of degree k, precise up to 2^{-n}, assuming
+// res has been initialized with precision n
+func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
+	// prepare the values for calculating the taylor polynomial of exp(x/sigma)
+	res := big.NewFloat(1)
+	res.SetPrec(uint(n))
+
+	value := new(big.Float)
+	value.SetPrec(uint(n))
+	value.SetInt(x)
+	value.Quo(value, alpha)
+
+	powerValue := new(big.Float)
+	powerValue.SetPrec(uint(n))
+	powerValue.Set(value)
+
+	factorial := new(big.Float)
+	factorial.SetPrec(uint(n))
+	factorial.SetInt64(1)
+
+	tmp := new(big.Float)
+	tmp.SetPrec(uint(n))
+
+	// computation of the polynomial
+	for i := 1; i <= k; i++ {
+		tmp.Quo(powerValue, factorial)
+
+		res.Add(res, tmp)
+
+		powerValue.Mul(powerValue, value)
+		factorial.Mul(factorial, big.NewFloat(float64(i + 1)))
+	}
+	res.Quo(big.NewFloat(1), res)
+
+	return res
 }
 
-func (g *Normal) Sample() (*big.Int, error) {
-	cutTimes2 := 2*g.cut + 1 // TODO check consistency - do we need + 1?
+// Precomputation of values of exp(i / 2 * sigma^2) needed
+// for sampling discrete Gauss distribution wit standard deviation sigma
+// to arbitrary precision. This is needed since such computations present
+// one of the bottlenecks of computation.
+func (c Normal) precompExp() []*big.Float {
+	maxFloat := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
+	maxBits := maxFloat.MantExp(nil) * 2
+	vec := make([]*big.Float, maxBits + 1)
 
-	var x, u float64
+	twoSigmaSquare := new(big.Float)
+	twoSigmaSquare.SetPrec(uint(c.n))
+	twoSigmaSquare.Mul(c.sigma, c.sigma)
+	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
 
-	// TODO maybe add an exit condition later, resulting in an error
-	// to prevent infinite loop with unreasonable params
-	for {
-		// random sample from the interval
-		x = float64(rand.Intn(cutTimes2) - g.cut)
-		u = float64(rand.Intn(int(g.eps)))
+	x := big.NewInt(1)
+	for i := 0; i < maxBits + 1; i++ {
+		vec[i] = taylorExp(x, twoSigmaSquare, 8 * c.n, c.n)
+		x.Mul(x, big.NewInt(2))
+	}
+	return vec
+}
 
-		if u < g.density(x)*g.eps {
-			return new(big.Int).SetInt64(int64(x)), nil
+
+// Function decides if y > exp(-x/(2*sigma^2)) with minimal calculations of
+// exp(-x/(2*sigma^2)) based on the precomputed values.
+// sigma is implicit in the precomputed values saved in c.
+func (c Normal) isExpGreater(y *big.Float, x *big.Int) int {
+	upper := big.NewFloat(1)
+	upper.SetPrec(uint(c.n))
+	lower := new(big.Float)
+	lower.SetPrec(uint(c.n))
+	maxBits := x.BitLen()
+
+	lower.Set(c.preExp[maxBits])
+	// TODO check if it is more efficient (in practice) to put this line at the end
+	lower.Quo(lower, c.preExp[0])
+	if lower.Cmp(y) == 1 {
+		return 0
+	}
+	for i := 0; i < maxBits; i++ {
+		bit := x.Bit(maxBits - 1 - i)
+		if bit == 1 {
+			upper.Mul(upper, c.preExp[maxBits - 1 - i])
+			if y.Cmp(upper) == 1 {
+				return 1
+			}
+		} else {
+			lower.Quo(lower, c.preExp[maxBits - 1 - i])
+			if y.Cmp(lower) == -1 {
+				return 0
+			}
 		}
 	}
+	return 0
 }
