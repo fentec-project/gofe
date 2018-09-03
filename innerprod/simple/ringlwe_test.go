@@ -34,8 +34,6 @@ func TestSimple_RingLWE(t *testing.T) {
 	q, _ := new(big.Int).SetString("903468688179973616387830299599", 10)
 
 	sigma := float64(20)
-	eps := float64(1048576)
-	k := float64(1048576)
 
 	sampler := sample.NewUniform(b)
 	y, _ := data.NewRandomVector(l, sampler)
@@ -44,11 +42,11 @@ func TestSimple_RingLWE(t *testing.T) {
 	emptyVec := data.Vector{}
 	emptyMat := data.Matrix{}
 
-	_, err := simple.NewRingLWE(l, 24, b, p, q, sigma, eps, k)
+	_, err := simple.NewRingLWE(l, 24, b, p, q, sigma)
 	assert.Error(t, err) // n not a power of 2
-	_, err = simple.NewRingLWE(l, n, b, big.NewInt(10), q, sigma, eps, k)
+	_, err = simple.NewRingLWE(l, n, b, big.NewInt(10), q, sigma)
 	assert.Error(t, err) // precondition failed
-	ringLWE, err := simple.NewRingLWE(l, n, b, p, q, sigma, eps, k)
+	ringLWE, err := simple.NewRingLWE(l, n, b, p, q, sigma)
 	assert.NoError(t, err)
 
 	SK, err := ringLWE.GenerateSecretKey()

@@ -20,8 +20,6 @@ import (
 	"math/big"
 	"testing"
 
-	"math"
-
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
@@ -29,25 +27,24 @@ import (
 )
 
 func TestFullySec_LWE(t *testing.T) {
-	l := 10
+	l := 4
 	n := 64
-	m := 8576
 	P := big.NewInt(4) // maximal size of the entry of the message
 	V := big.NewInt(4) // maximal size of the entry of the other operand for inner product
-	q, _ := new(big.Int).SetString("80000273017373644747761631204419146913522365603493191", 10)
+	//q, _ := new(big.Int).SetString("80000273017373644747761631204419146913522365603493191", 10)
 
 	x, y, xy := testVectorData(l, P, V)
 	emptyVec := data.Vector{}
 	emptyMat := data.Matrix{}
 
-	eps := math.Pow(2, 32)
-	k := float64(256)
-	sigma := new(big.Float).SetFloat64(1.1791095524314183e-19)
+	//eps := math.Pow(2, 32)
+	//k := float64(256)
+	//sigma := new(big.Float).SetFloat64(1.1791095524314183e-19)
 
-	fsLWE, err := fullysec.NewLWE(l, n, m, P, V, q)
+	fsLWE, err := fullysec.NewLWE(l, n, P, V)
 	assert.NoError(t, err)
 
-	Z, err := fsLWE.GenerateSecretKey(eps, k)
+	Z, err := fsLWE.GenerateSecretKey()
 	assert.NoError(t, err)
 
 	_, err = fsLWE.GeneratePublicKey(emptyMat)
@@ -64,13 +61,13 @@ func TestFullySec_LWE(t *testing.T) {
 	zX, err := fsLWE.DeriveKey(y, Z)
 	assert.NoError(t, err)
 
-	_, err = fsLWE.Encrypt(emptyVec, U, sigma, eps, k)
+	_, err = fsLWE.Encrypt(emptyVec, U)
 	assert.Error(t, err)
-	_, err = fsLWE.Encrypt(x, emptyMat, sigma, eps, k)
+	_, err = fsLWE.Encrypt(x, emptyMat)
 	assert.Error(t, err)
-	_, err = fsLWE.Encrypt(x.MulScalar(big.NewInt(2)), U, sigma, eps, k)
+	_, err = fsLWE.Encrypt(x.MulScalar(big.NewInt(2)), U)
 	assert.Error(t, err) // boundary violation
-	cipher, err := fsLWE.Encrypt(x, U, sigma, eps, k)
+	cipher, err := fsLWE.Encrypt(x, U)
 	assert.NoError(t, err)
 
 	_, err = fsLWE.Decrypt(emptyVec, zX, y)

@@ -21,8 +21,6 @@ import (
 
 	"fmt"
 
-	"math"
-
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
@@ -37,10 +35,7 @@ type ringLWEParams struct {
 	n int
 
 	// Settings for discrete gaussian sampler
-	sigma float64 // standard deviation
-	eps   float64 // precision
-	k     float64 // security parameter
-	cut   int     // limit for the number of possible outcomes
+	sigma *big.Float // standard deviation
 
 	bound *big.Int // upper bound for coordinates of input vectors
 
@@ -72,7 +67,7 @@ type RingLWE struct {
 // any of these conditions is violated, or if public parameters
 // for the scheme cannot be generated for some other reason,
 // an error is returned.
-func NewRingLWE(l, n int, bound, p, q *big.Int, sigma, eps, k float64) (*RingLWE, error) {
+func NewRingLWE(l, n int, bound, p, q *big.Int, sigma float64) (*RingLWE, error) {
 	// Ensure that p >= l * B² holds
 	bSquared := new(big.Int).Mul(bound, bound)
 	lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
@@ -95,13 +90,10 @@ func NewRingLWE(l, n int, bound, p, q *big.Int, sigma, eps, k float64) (*RingLWE
 			bound: bound,
 			p:     p,
 			q:     q,
-			sigma: sigma,
-			eps:   eps,
-			k:     k,
-			cut:   int(sigma * math.Sqrt(k)),
+			sigma: big.NewFloat(sigma),
 			a:     randVec,
 		},
-		sampler: sample.NewNormalCumulative(sigma, eps, k),
+		sampler: sample.NewNormalCumulative(big.NewFloat(sigma), n, true),
 	}, nil
 }
 

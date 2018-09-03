@@ -23,6 +23,9 @@ import (
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
+	"math/bits"
+	"github.com/xlab-si/emmy/crypto/common"
+	"math"
 )
 
 // lweParams represents parameters for the simple LWE scheme.
@@ -36,6 +39,8 @@ type lweParams struct {
 
 	p *big.Int // Modulus for message space
 	q *big.Int // Modulus for ciphertext and keys
+
+	sigmaQ *big.Float
 
 	// Matrix A of dimensions m*n is a public parameter
 	// of the scheme
@@ -54,7 +59,29 @@ type LWE struct {
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
-func NewLWE(l int, bound *big.Int, n, m int, p, q *big.Int) (*LWE, error) {
+func NewLWE(l int, bound *big.Int, n int) (*LWE, error) {
+
+	// TODO check if it is correct, since once a test returned a wrong answer
+	bInt := bound.Uint64()
+	nBitsP := (bound.BitLen() * 2) + bits.Len(uint(l)) + 1
+	// TODO find a better way to generate prime
+	p, err := common.GetSafePrime(nBitsP)
+
+	nBitsQ := nBitsP + bound.BitLen() + bits.Len(uint(n*n)) + (bits.Len(uint(l))/2 + 1) + 1
+	// TODO find a better way to generate prime
+	q, err := common.GetSafePrime(nBitsQ)
+
+	m := (n + l + 2) * nBitsQ
+
+	sigma := (float64(l)*float64(bInt) + 1) / (float64(p.Uint64()) * math.Sqrt(float64(m)) * math.Log(float64(n)) * float64(l) * float64(bInt) * float64(bInt))
+
+
+	// TODO check whether this conversion can be avoided
+	sigmaFloat := big.NewFloat(sigma)
+	qFloat := new(big.Float).SetInt(q)
+	sigmaQ := new(big.Float).Mul(sigmaFloat, qFloat)
+	sigmaQI, _ := sigmaQ.Int(nil)
+	sigmaQ.SetInt(sigmaQI)
 	A, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot generate public parameters")
@@ -62,13 +89,14 @@ func NewLWE(l int, bound *big.Int, n, m int, p, q *big.Int) (*LWE, error) {
 
 	return &LWE{
 		params: &lweParams{
-			l:     l,
-			bound: bound,
-			n:     n,
-			m:     m,
-			p:     p,
-			q:     q,
-			A:     A,
+			l:      l,
+			bound:  bound,
+			n:      n,
+			m:      m,
+			p:      p,
+			q:      q,
+			A:      A,
+			sigmaQ: sigmaQ,
 		},
 	}, nil
 }
@@ -82,23 +110,21 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	return data.NewRandomMatrix(s.params.n, s.params.l, sample.NewUniform(s.params.q))
 }
 
-// GeneratePublicKey accepts a secret key SK, standard deviation sigma,
-// precision eps and a limit k for the sampling interval. It generates a
-// public key PK for the scheme. Public key is a matrix of m*l elements.
+// GeneratePublicKey accepts a secret key SK, standard deviation sigma.
+// It generates a public key PK for the scheme. Public key is a matrix
+// of m*l elements.
 //
 // In case of a malformed secret key the function returns an error.
-func (s *LWE) GeneratePublicKey(SK data.Matrix, sigma, eps, k float64) (data.Matrix, error) {
+func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 	if !SK.CheckDims(s.params.n, s.params.l) {
 		return nil, gofe.MalformedSecKey
 	}
 
 	// Initialize and fill noise matrix E with m*l samples
-	// TODO check whether this conversion can be avoided
-	sigmaFloat := big.NewFloat(sigma)
-	qFloat := new(big.Float).SetInt(s.params.q)
-	sigmaMulQFloat := new(big.Float).Mul(sigmaFloat, qFloat)
-	sigmaMulQ, _ := sigmaMulQFloat.Float64()
-	sampler := sample.NewNormal(sigmaMulQ, eps, k)
+
+	//sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
+	sampler := sample.NewNormalNegative(s.params.sigmaQ, s.params.n)
+
 	E, err := data.NewRandomMatrix(s.params.m, s.params.l, sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating public key")

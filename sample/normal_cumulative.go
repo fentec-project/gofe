@@ -19,7 +19,6 @@ package sample
 import (
 	"math/big"
 	"crypto/rand"
-	"github.com/fentec-project/gofe/data"
 	"math"
 	"sort"
 )
@@ -30,7 +29,7 @@ import (
 // is not too big, due to the sizes of the precumputed tables.
 type NormalCumulative struct {
 	*Normal
-	preCumu data.Vector
+	preCumu []*big.Int
 	twoSided bool
 }
 
