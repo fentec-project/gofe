@@ -23,11 +23,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NormalCumulative samples random values from the
-// cumulative Normal (Gaussian) probability distribution, centered on 0.
+// NormalNegative samples random values from the
+// possible outputs of Normal (Gaussian) probability distribution centered on 0
+// and excepts or denies each sample with probability defined by the distribution
 type NormalNegative struct {
 	*Normal
+	// cut defines from which interval we sample
 	cut *big.Int
+	// precomputed value so we do not need to calculate it each time
+	cutTimes2 *big.Int
 }
 
 // NewNormalCumulative returns an instance of NormalCumulative sampler.
@@ -37,9 +41,12 @@ func NewNormalNegative(sigma *big.Float, n int) *NormalNegative {
 	cutF := new(big.Float).Mul(sigma, big.NewFloat(math.Sqrt(float64(n))))
 	cut := new(big.Int)
 	cut, _ = cutF.Int(cut)
+	cutTimes2 := new(big.Int).Mul(cut, big.NewInt(2))
+	cutTimes2 = cutTimes2.Add(cutTimes2, big.NewInt(1))
 	s := &NormalNegative{
 		Normal:      NewNormal(sigma, n),
-		cut: cut,
+		cut:         cut,
+		cutTimes2:   cutTimes2,
 	}
 	s.preExp = s.precompExp()
 	return s
@@ -47,8 +54,6 @@ func NewNormalNegative(sigma *big.Float, n int) *NormalNegative {
 
 
 func (c *NormalNegative) Sample() (*big.Int, error) {
-	cutTimes2 := new(big.Int).Mul(c.cut, big.NewInt(2))
-	cutTimes2 = cutTimes2.Add(cutTimes2, big.NewInt(1))
 	uF := new(big.Float)
 	uF.SetPrec(uint(c.n))
 	x := new(big.Float)
@@ -59,7 +64,7 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 	// to prevent infinite loop with unreasonable params
 	for {
 		// random sample from the interval
-		n, err := rand.Int(rand.Reader, cutTimes2)
+		n, err := rand.Int(rand.Reader, c.cutTimes2)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while sampling")
 		}

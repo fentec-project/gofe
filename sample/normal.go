@@ -28,9 +28,9 @@ type Normal struct {
 	sigma *big.Float
 	// Precision parameter
 	n int
-	// Precomputed exponential values
+	// Precomputed values of exponential function with precision n
 	preExp []*big.Float
-	// Precomputed values
+	// Precomputed values for quicker sampling
 	powN *big.Int
 	powNF *big.Float
 
@@ -56,8 +56,7 @@ func NewNormal(sigma *big.Float, n int) *Normal {
 
 
 // an approximation of a exp(-x/alpha) with taylor
-// polynomial of degree k, precise up to 2^{-n}, assuming
-// res has been initialized with precision n
+// polynomial of degree k, precise at least up to 2^{-n}
 func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
 	// prepare the values for calculating the taylor polynomial of exp(x/sigma)
 	res := big.NewFloat(1)
@@ -93,10 +92,11 @@ func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
 	return res
 }
 
-// Precomputation of values of exp(i / 2 * sigma^2) needed
+// Precomputation of values of exp(-i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma
 // to arbitrary precision. This is needed since such computations present
-// one of the bottlenecks of computation.
+// one of the bottlenecks of the computation. Values are precomputed up to
+// i < sigma^2 * sqrt(n) since for greater i the results are negligible.
 func (c Normal) precompExp() []*big.Float {
 	maxFloat := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	maxBits := maxFloat.MantExp(nil) * 2
@@ -116,10 +116,12 @@ func (c Normal) precompExp() []*big.Float {
 }
 
 
-// Function decides if y > exp(-x/(2*sigma^2)) with minimal calculations of
+// Function decides if y > exp(-x/(2*sigma^2)) with minimal calculation of
 // exp(-x/(2*sigma^2)) based on the precomputed values.
-// sigma is implicit in the precomputed values saved in c.
+// Sigma is implicit in the precomputed values saved in c.
 func (c Normal) isExpGreater(y *big.Float, x *big.Int) int {
+	// set up an upper and lower bound for possible value of
+	// exp(-x/(2*sigma^2))
 	upper := big.NewFloat(1)
 	upper.SetPrec(uint(c.n))
 	lower := new(big.Float)
@@ -127,11 +129,13 @@ func (c Normal) isExpGreater(y *big.Float, x *big.Int) int {
 	maxBits := x.BitLen()
 
 	lower.Set(c.preExp[maxBits])
-	// TODO check if it is more efficient (in practice) to put this line at the end
 	lower.Quo(lower, c.preExp[0])
 	if lower.Cmp(y) == 1 {
 		return 0
 	}
+
+	// based on bits of x and the precomputed values
+	// change the upper and lower bound
 	for i := 0; i < maxBits; i++ {
 		bit := x.Bit(maxBits - 1 - i)
 		if bit == 1 {

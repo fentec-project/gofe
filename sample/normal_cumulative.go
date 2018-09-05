@@ -29,8 +29,14 @@ import (
 // is not too big, due to the sizes of the precumputed tables.
 type NormalCumulative struct {
 	*Normal
+	// table of precomputed values relative to the cumulative distribution
 	preCumu []*big.Int
+	// twoSided defines if we limit sampling only to non-negative integers
+	// or to all
 	twoSided bool
+	// integer defining from how big of an interval do we need to sample uniformly
+	// to sample according to discrete Gauss
+	sampleSize *big.Int
 }
 
 // NewNormalCumulative returns an instance of NormalCumulative sampler.
@@ -41,8 +47,13 @@ func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulati
 		Normal:      NewNormal(sigma, n),
 		preCumu:     nil,
 		twoSided:    twoSided,
+		sampleSize:  nil,
 	}
 	s.precompCumu()
+	s.sampleSize = new(big.Int).Set(s.preCumu[len(s.preCumu) - 1])
+	if s.twoSided {
+		s.sampleSize.Mul(s.sampleSize, big.NewInt(2))
+	}
 	return s
 }
 
@@ -50,12 +61,12 @@ func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulati
 // precomputed values.
 //TODO: can some values be moved to constructor?
 func (c *NormalCumulative) Sample() (*big.Int, error) {
-	sampleSize := new(big.Int).Mul(c.preCumu[len(c.preCumu) - 1], big.NewInt(2))
-	u, err := rand.Int(rand.Reader, sampleSize)
+	u, err := rand.Int(rand.Reader, c.sampleSize)
 	sample := new(big.Int).Set(u)
 	sign := 1
 
-	if u.Cmp(c.preCumu[len(c.preCumu) - 1]) != -1 {
+	// if we sample two sided, one bit is reserved for the sign of the output
+	if c.twoSided && u.Cmp(c.preCumu[len(c.preCumu) - 1]) != -1 {
 		sample.Sub(sample, c.preCumu[len(c.preCumu) - 1])
 		sign = -1
 	}
@@ -71,7 +82,7 @@ func (c *NormalCumulative) precompCumu() {
 	cutF := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	cut, _ := cutF.Int64()
 	cut = cut + 1
-	vec := make([]*big.Int, cut + 1) // vec is table of precomputed values
+	vec := make([]*big.Int, cut + 1) // vec is a table of precomputed values
 	vec[0] = big.NewInt(0)
 	iSquare := new(big.Int)
 	twoSigmaSquare := new(big.Float).Mul(c.sigma, c.sigma)
@@ -81,12 +92,18 @@ func (c *NormalCumulative) precompCumu() {
 	add := new(big.Int)
 	for i := int64(0); i < cut; i++ {
 		iSquare.SetInt64(i * i)
+		// compute the value of exp(-i^2/2sigma^2) with precision n.
+		// Computing the taylor polynomial with 8 * n elements suffices
 		value := taylorExp(iSquare, twoSigmaSquare, 8 * c.n, c.n)
+		// in the case of sampling all integers, sampling 0 is counted twice
+		// as positive and as negative, hence its probability must be halved
 		if i == 0 && c.twoSided {
 			value.Quo(value, big.NewFloat(2))
 		}
+		// calculate the relative probability
 		addF.Mul(value, c.powNF)
 		addF.Int(add)
+		// save the relative probability
 		vec[i + 1] = new(big.Int).Add(vec[i], add)
 	}
 	c.preCumu = vec

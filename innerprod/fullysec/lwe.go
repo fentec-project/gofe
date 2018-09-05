@@ -75,42 +75,78 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 	nF := float64(n)
 
-	// TODO can we avoid assuming?
-	boundM := float64(n * 300) //assuming that the final q will have around 300 bits
 
-	// tmp values
-	log2M := math.Log2(boundM)
-	sqrtNLogM := math.Sqrt(nF * log2M)
-	kSquared := new(big.Int).Mul(K, K).Int64()
-	max := math.Max(boundM, float64(kSquared))
-	sqrtMax := math.Sqrt(max)
+	nBitsQ := 1
+	var sigma *big.Float
+	var sigma1, sigma2 *big.Float
 
-	// standard deviation for first half of the matrix for sampling private key
-	sigma1 := big.NewFloat(math.Floor(sqrtNLogM * sqrtMax))
-	sigma1F, _ := sigma1.Float64()
+	// parameters for the scheme are given as a set of requirements in the paper
+	// hence we search for such parameters iteratively
+	for i := 1; true; i++ {
+		boundMF := float64(n * i) //assuming that the final q will have at most i bits
+		// tmp values
+		log2M := math.Log2(boundMF)
+		sqrtNLogM := math.Sqrt(nF * log2M)
+		kF := new(big.Float).SetInt(K)
+		kSquaredF := new(big.Float).Mul(kF, kF)
 
-	// tmp values
-	nPow3 := math.Pow(nF, 3)
-	powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
+		max := new(big.Float)
+		if kSquaredF.Cmp(big.NewFloat(boundMF)) == 1 {
+			max.SetFloat64(boundMF)
+		} else {
+			max.Set(kSquaredF)
+		}
 
-	// standard deviation for second half of the matrix for sampling private key
-	sigma2 := big.NewFloat(math.Floor(math.Sqrt(nF) * nPow3 * max * math.Sqrt(boundM) * powSqrtLogM5))
-	sigma2F, _ := sigma2.Float64()
+		sqrtMax := new(big.Float).Sqrt(max)
 
-	// tmp value
-	bound2 := math.Sqrt(math.Pow(sigma1F, 2)+math.Pow(sigma2F, 2)) * math.Sqrt(nF)
-	sigma := 1 / (float64(kSquared) * bound2 * math.Sqrt(math.Log2(nF)))
-	sigmaPrime := sigma / (math.Pow(nF, 6) * float64(K.Int64()) * math.Pow(200, 2) * (math.Pow(math.Sqrt(math.Log2(nF)), 5)))
-	nBitsQ := 2 * int(math.Log2((math.Sqrt(math.Log2(nF)))/sigmaPrime))
+		// standard deviation for first half of the matrix for sampling private key
+		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
+		// make it an integer for faster sampling using NormalDouble
+		sigma1I, _ := sigma1.Int(nil)
+		sigma1.SetInt(sigma1I)
 
+		// tmp values
+		nPow3 := math.Pow(nF, 3)
+		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
+
+		// standard deviation for second half of the matrix for sampling private key
+		sigma2 = new(big.Float).Mul(big.NewFloat(math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)), max)
+		// make it an integer for faster sampling using NormalDouble
+		sigma2I, _ := sigma2.Int(nil)
+		sigma2.SetInt(sigma2I)
+
+		// tmp value
+		sigma1Square := new(big.Float).Mul(sigma1, sigma1)
+		sigma2Square := new(big.Float).Mul(sigma2, sigma2)
+
+		bound2 := new(big.Float).Add(sigma1Square, sigma2Square)
+		bound2.Sqrt(bound2)
+		bound2.Mul(bound2, big.NewFloat(math.Sqrt(nF)))
+
+		sigma = new(big.Float).Quo(big.NewFloat(1), kSquaredF)
+		sigma.Quo(sigma, bound2)
+		sigma.Quo(sigma, big.NewFloat(math.Log2(nF)))
+
+		// assuming number of bits of q will be at least nBitsQ from the previous iteration (this is always true)
+		sigmaPrime := new(big.Float).Quo(sigma, kF)
+		sigmaPrime.Quo(sigmaPrime, big.NewFloat(math.Pow(nF, 6) * math.Pow(float64(nBitsQ), 2) * (math.Pow(math.Sqrt(math.Log2(nF)), 5))))
+
+		nBitsQ = new(big.Float).Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime).MantExp(nil) + 1
+		// check if the number of bits for q is greater than i
+		if nBitsQ < i {
+			break
+		}
+	}
+	// get q
 	q, _ := rand.Prime(rand.Reader, nBitsQ)
-	m := int(1.1 * nF * float64(nBitsQ))
+	m := int(1.01 * nF * float64(nBitsQ))
 
-	qBF := new(big.Float).SetInt(q)
-	sigmaBF := new(big.Float).SetFloat64(sigma)
-	sigmaQ := new(big.Float).Mul(sigmaBF, qBF) // check accuracy TODO
-	//sigmaQI, _ := sigmaQ.Int(nil)
-	//sigmaQ.SetInt(sigmaQI)
+	// get sigmaQ
+	qF := new(big.Float).SetInt(q)
+	sigmaQ := new(big.Float).Mul(sigma, qF)
+	// make it an integer for faster sampling using NormalDouble
+	sigmaQI, _ := sigmaQ.Int(nil)
+	sigmaQ.SetInt(sigmaQI)
 
 	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
@@ -140,8 +176,8 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	var x *big.Int
 
-	sampler1 := sample.NewNormalNegative(s.params.sigma1, s.params.n)
-	sampler2 := sample.NewNormalNegative(s.params.sigma2, s.params.n)
+	sampler1 := sample.NewNormalDouble(s.params.sigma1, s.params.n, big.NewFloat(1))
+	sampler2 := sample.NewNormalDouble(s.params.sigma2, s.params.n, big.NewFloat(1))
 
 	Z := make(data.Matrix, s.params.l)
 	halfRows := Z.Rows() / 2
@@ -222,7 +258,7 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix) (data.Vector, error) {
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	sampler := sample.NewNormalNegative(s.params.sigmaQ, s.params.n)
+	sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
 	e0, err0 := data.NewRandomVector(s.params.m, sampler)
 	e1, err1 := data.NewRandomVector(s.params.l, sampler)
 	if err0 != nil || err1 != nil {

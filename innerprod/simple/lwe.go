@@ -24,8 +24,8 @@ import (
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
 	"math/bits"
-	"github.com/xlab-si/emmy/crypto/common"
 	"math"
+	"crypto/rand"
 )
 
 // lweParams represents parameters for the simple LWE scheme.
@@ -33,7 +33,7 @@ type lweParams struct {
 	l int // Length of data vectors for inner product
 
 	n int // Main security parameters of the scheme
-	m int // TODO clarify the meaning of this parameter
+	m int // Number of rows (samples) for the LWE problem
 
 	bound *big.Int // Bound for input vector coordinates (for both x and y)
 
@@ -61,32 +61,43 @@ type LWE struct {
 // not be generated.
 func NewLWE(l int, bound *big.Int, n int) (*LWE, error) {
 
-	// TODO check if it is correct, since once a test returned a wrong answer
-	bInt := bound.Uint64()
+	// TODO Get confirmation that this is theoretically secure and correct, since there
+	// are errors in the paper
+	boundF := new(big.Float).SetInt(bound)
 	nBitsP := (bound.BitLen() * 2) + bits.Len(uint(l)) + 1
-	// TODO find a better way to generate prime
-	p, err := common.GetSafePrime(nBitsP)
+	p, err := rand.Prime(rand.Reader, nBitsP)
 
 	nBitsQ := nBitsP + bound.BitLen() + bits.Len(uint(n*n)) + (bits.Len(uint(l))/2 + 1) + 1
-	// TODO find a better way to generate prime
-	q, err := common.GetSafePrime(nBitsQ)
+	q, err := rand.Prime(rand.Reader, nBitsQ)
 
 	m := (n + l + 2) * nBitsQ
+	pF := new(big.Float).SetInt(p)
 
-	sigma := (float64(l)*float64(bInt) + 1) / (float64(p.Uint64()) * math.Sqrt(float64(m)) * math.Log(float64(n)) * float64(l) * float64(bInt) * float64(bInt))
+	sigma := new(big.Float)
+	sigma.SetPrec(uint(n))
+	sigma.SetInt(bound)
+	sigma.Mul(sigma, big.NewFloat(float64(l)))
+	sigma.Add(sigma, big.NewFloat(1))
+	sigma.Quo(sigma, pF)
+	sigma.Quo(sigma, big.NewFloat(math.Sqrt(float64(m)) * math.Log2(float64(n)) * float64(l)))
+	sigma.Quo(sigma, boundF)
+	sigma.Quo(sigma, boundF)
 
+	qF := new(big.Float).SetInt(q)
+	sigmaQ := new(big.Float).Mul(sigma, qF)
 
-	// TODO check whether this conversion can be avoided
-	sigmaFloat := big.NewFloat(sigma)
-	qFloat := new(big.Float).SetInt(q)
-	sigmaQ := new(big.Float).Mul(sigmaFloat, qFloat)
+	// TODO: if proper parameters are generated, the first value should be smaller than second
+	// check after we get conformation
+	//fmt.Println(sigma, 1 / (pF * math.Sqrt(float64(m)) * float64(l) * bound.Float64))
+
+	// make it an integer for faster sampling using NormalDouble
 	sigmaQI, _ := sigmaQ.Int(nil)
 	sigmaQ.SetInt(sigmaQI)
+	sigmaQ.Add(sigmaQ, big.NewFloat(1))
 	A, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot generate public parameters")
 	}
-
 	return &LWE{
 		params: &lweParams{
 			l:      l,
@@ -122,8 +133,7 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 
 	// Initialize and fill noise matrix E with m*l samples
 
-	//sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
-	sampler := sample.NewNormalNegative(s.params.sigmaQ, s.params.n)
+	sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
 
 	E, err := data.NewRandomMatrix(s.params.m, s.params.l, sampler)
 	if err != nil {
