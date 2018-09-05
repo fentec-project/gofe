@@ -71,7 +71,7 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 	// K = l * P * V
 	K := new(big.Int).Mul(P, V)
-	K = K.Mul(K, big.NewInt(int64(l)))
+	K.Mul(K, big.NewInt(int64(l)))
 
 	nF := float64(n)
 

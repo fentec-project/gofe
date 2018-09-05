@@ -33,7 +33,7 @@ func TestSimple_RingLWE(t *testing.T) {
 	p, _ := new(big.Int).SetString("10000000000000000", 10)
 	q, _ := new(big.Int).SetString("903468688179973616387830299599", 10)
 
-	sigma := float64(20)
+	sigma := big.NewFloat(20)
 
 	sampler := sample.NewUniform(b)
 	y, _ := data.NewRandomVector(l, sampler)

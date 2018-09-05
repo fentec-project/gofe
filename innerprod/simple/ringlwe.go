@@ -67,7 +67,7 @@ type RingLWE struct {
 // any of these conditions is violated, or if public parameters
 // for the scheme cannot be generated for some other reason,
 // an error is returned.
-func NewRingLWE(l, n int, bound, p, q *big.Int, sigma float64) (*RingLWE, error) {
+func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, error) {
 	// Ensure that p >= l * B² holds
 	bSquared := new(big.Int).Mul(bound, bound)
 	lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
@@ -90,10 +90,10 @@ func NewRingLWE(l, n int, bound, p, q *big.Int, sigma float64) (*RingLWE, error)
 			bound: bound,
 			p:     p,
 			q:     q,
-			sigma: big.NewFloat(sigma),
+			sigma: sigma,
 			a:     randVec,
 		},
-		sampler: sample.NewNormalCumulative(big.NewFloat(sigma), n, true),
+		sampler: sample.NewNormalCumulative(sigma, n, true),
 	}, nil
 }
 
