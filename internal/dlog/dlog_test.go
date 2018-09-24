@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/xlab-si/emmy/crypto/groups"
+	"github.com/xlab-si/emmy/crypto/schnorr"
 )
 
 type params struct {
@@ -80,7 +80,7 @@ func BenchmarkDLog(b *testing.B) {
 	t3 := 0.0
 
 	for i := 0; i < times; i++ {
-		key, _ := groups.NewSchnorrGroup(modulusLength)
+		key, _ := schnorr.NewGroup(modulusLength)
 		order := key.Q
 		xCheck, _ := emmy.GetRandomIntFromRange(big.NewInt(2), order)
 		h := new(big.Int).Exp(key.G, xCheck, key.P)
