@@ -17,9 +17,10 @@
 package sample
 
 import (
-	"math/big"
-	"math"
 	"crypto/rand"
+	"math"
+	"math/big"
+
 	"github.com/pkg/errors"
 )
 
@@ -44,14 +45,13 @@ func NewNormalNegative(sigma *big.Float, n int) *NormalNegative {
 	cutTimes2 := new(big.Int).Mul(cut, big.NewInt(2))
 	cutTimes2 = cutTimes2.Add(cutTimes2, big.NewInt(1))
 	s := &NormalNegative{
-		Normal:      NewNormal(sigma, n),
-		cut:         cut,
-		cutTimes2:   cutTimes2,
+		Normal:    NewNormal(sigma, n),
+		cut:       cut,
+		cutTimes2: cutTimes2,
 	}
 	s.preExp = s.precompExp()
 	return s
 }
-
 
 func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF := new(big.Float)
@@ -83,4 +83,3 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 		}
 	}
 }
-

@@ -12,14 +12,14 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*/
+ */
 
 package sample
 
 import (
-	"math/big"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 )
 
 // NormalDouble samples random values from the
@@ -34,7 +34,7 @@ type NormalDouble struct {
 	// NormalCumulative sampler used in the first part
 	samplerCumu *NormalCumulative
 	// precomputed parameters used for sampling
-	k *big.Int
+	k      *big.Int
 	twiceK *big.Int
 }
 
@@ -85,7 +85,7 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 			return nil, err
 		}
 		// use the last sampling to decide the sign of the output
-		if y.Cmp(s.k) != -1{
+		if y.Cmp(s.k) != -1 {
 			sign = -1
 			y.Sub(y, s.k)
 		}
@@ -130,4 +130,3 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 	}
 
 }
-

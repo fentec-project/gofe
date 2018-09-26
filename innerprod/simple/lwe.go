@@ -19,13 +19,14 @@ package simple
 import (
 	"math/big"
 
+	"crypto/rand"
+	"math"
+	"math/bits"
+
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
-	"math/bits"
-	"math"
-	"crypto/rand"
 )
 
 // lweParams represents parameters for the simple LWE scheme.
@@ -79,7 +80,7 @@ func NewLWE(l int, bound *big.Int, n int) (*LWE, error) {
 	sigma.Mul(sigma, big.NewFloat(float64(l)))
 	sigma.Add(sigma, big.NewFloat(1))
 	sigma.Quo(sigma, pF)
-	sigma.Quo(sigma, big.NewFloat(math.Sqrt(float64(m)) * math.Log2(float64(n)) * float64(l)))
+	sigma.Quo(sigma, big.NewFloat(math.Sqrt(float64(m))*math.Log2(float64(n))*float64(l)))
 	sigma.Quo(sigma, boundF)
 	sigma.Quo(sigma, boundF)
 

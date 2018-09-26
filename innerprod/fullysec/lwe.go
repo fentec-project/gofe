@@ -21,11 +21,12 @@ import (
 
 	"math"
 
+	"crypto/rand"
+
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
-	"crypto/rand"
 )
 
 // lweParams represents parameters for the fully secure LWE scheme.
@@ -75,7 +76,6 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 	nF := float64(n)
 
-
 	nBitsQ := 1
 	var sigma *big.Float
 	var sigma1, sigma2 *big.Float
@@ -110,7 +110,7 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
 
 		// standard deviation for second half of the matrix for sampling private key
-		sigma2 = new(big.Float).Mul(big.NewFloat(math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)), max)
+		sigma2 = new(big.Float).Mul(big.NewFloat(math.Sqrt(nF)*nPow3*powSqrtLogM5*math.Sqrt(boundMF)), max)
 		// make it an integer for faster sampling using NormalDouble
 		sigma2I, _ := sigma2.Int(nil)
 		sigma2.SetInt(sigma2I)
@@ -129,7 +129,7 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 		// assuming number of bits of q will be at least nBitsQ from the previous iteration (this is always true)
 		sigmaPrime := new(big.Float).Quo(sigma, kF)
-		sigmaPrime.Quo(sigmaPrime, big.NewFloat(math.Pow(nF, 6) * math.Pow(float64(nBitsQ), 2) * (math.Pow(math.Sqrt(math.Log2(nF)), 5))))
+		sigmaPrime.Quo(sigmaPrime, big.NewFloat(math.Pow(nF, 6)*math.Pow(float64(nBitsQ), 2)*(math.Pow(math.Sqrt(math.Log2(nF)), 5))))
 
 		nBitsQ = new(big.Float).Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime).MantExp(nil) + 1
 		// check if the number of bits for q is greater than i

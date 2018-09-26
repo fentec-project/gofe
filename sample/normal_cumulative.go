@@ -12,14 +12,14 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*/
+ */
 
 package sample
 
 import (
-	"math/big"
 	"crypto/rand"
 	"math"
+	"math/big"
 	"sort"
 )
 
@@ -44,13 +44,13 @@ type NormalCumulative struct {
 // called, so that Sample merely returns a precomputed value.
 func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulative {
 	s := &NormalCumulative{
-		Normal:      NewNormal(sigma, n),
-		preCumu:     nil,
-		twoSided:    twoSided,
-		sampleSize:  nil,
+		Normal:     NewNormal(sigma, n),
+		preCumu:    nil,
+		twoSided:   twoSided,
+		sampleSize: nil,
 	}
 	s.precompCumu()
-	s.sampleSize = new(big.Int).Set(s.preCumu[len(s.preCumu) - 1])
+	s.sampleSize = new(big.Int).Set(s.preCumu[len(s.preCumu)-1])
 	if s.twoSided {
 		s.sampleSize.Mul(s.sampleSize, big.NewInt(2))
 	}
@@ -66,13 +66,13 @@ func (c *NormalCumulative) Sample() (*big.Int, error) {
 	sign := 1
 
 	// if we sample two sided, one bit is reserved for the sign of the output
-	if c.twoSided && u.Cmp(c.preCumu[len(c.preCumu) - 1]) != -1 {
-		sample.Sub(sample, c.preCumu[len(c.preCumu) - 1])
+	if c.twoSided && u.Cmp(c.preCumu[len(c.preCumu)-1]) != -1 {
+		sample.Sub(sample, c.preCumu[len(c.preCumu)-1])
 		sign = -1
 	}
 	// Find the precomputed sample
-	i := sort.Search(len(c.preCumu), func(i int) bool {return sample.Cmp(c.preCumu[i]) != 1})
-	res := big.NewInt(int64(sign) * int64(i - 1))
+	i := sort.Search(len(c.preCumu), func(i int) bool { return sample.Cmp(c.preCumu[i]) != 1 })
+	res := big.NewInt(int64(sign) * int64(i-1))
 	return res, err
 }
 
@@ -82,7 +82,7 @@ func (c *NormalCumulative) precompCumu() {
 	cutF := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	cut, _ := cutF.Int64()
 	cut = cut + 1
-	vec := make([]*big.Int, cut + 1) // vec is a table of precomputed values
+	vec := make([]*big.Int, cut+1) // vec is a table of precomputed values
 	vec[0] = big.NewInt(0)
 	iSquare := new(big.Int)
 	twoSigmaSquare := new(big.Float).Mul(c.sigma, c.sigma)
@@ -94,7 +94,7 @@ func (c *NormalCumulative) precompCumu() {
 		iSquare.SetInt64(i * i)
 		// compute the value of exp(-i^2/2sigma^2) with precision n.
 		// Computing the taylor polynomial with 8 * n elements suffices
-		value := taylorExp(iSquare, twoSigmaSquare, 8 * c.n, c.n)
+		value := taylorExp(iSquare, twoSigmaSquare, 8*c.n, c.n)
 		// in the case of sampling all integers, sampling 0 is counted twice
 		// as positive and as negative, hence its probability must be halved
 		if i == 0 && c.twoSided {
@@ -104,7 +104,7 @@ func (c *NormalCumulative) precompCumu() {
 		addF.Mul(value, c.powNF)
 		addF.Int(add)
 		// save the relative probability
-		vec[i + 1] = new(big.Int).Add(vec[i], add)
+		vec[i+1] = new(big.Int).Add(vec[i], add)
 	}
 	c.preCumu = vec
 }

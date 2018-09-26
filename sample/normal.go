@@ -31,9 +31,8 @@ type Normal struct {
 	// Precomputed values of exponential function with precision n
 	preExp []*big.Float
 	// Precomputed values for quicker sampling
-	powN *big.Int
+	powN  *big.Int
 	powNF *big.Float
-
 }
 
 // NewNormal returns an instance of Normal sampler.
@@ -44,16 +43,14 @@ func NewNormal(sigma *big.Float, n int) *Normal {
 	powNF.SetPrec(uint(n))
 	powNF.SetInt(powN)
 	s := &Normal{
-		sigma:    sigma,
-		n:        n,
-		preExp:   nil,
-		powN:     powN,
-		powNF:    powNF,
+		sigma:  sigma,
+		n:      n,
+		preExp: nil,
+		powN:   powN,
+		powNF:  powNF,
 	}
 	return s
 }
-
-
 
 // an approximation of a exp(-x/alpha) with taylor
 // polynomial of degree k, precise at least up to 2^{-n}
@@ -85,7 +82,7 @@ func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
 		res.Add(res, tmp)
 
 		powerValue.Mul(powerValue, value)
-		factorial.Mul(factorial, big.NewFloat(float64(i + 1)))
+		factorial.Mul(factorial, big.NewFloat(float64(i+1)))
 	}
 	res.Quo(big.NewFloat(1), res)
 
@@ -100,7 +97,7 @@ func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
 func (c Normal) precompExp() []*big.Float {
 	maxFloat := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	maxBits := maxFloat.MantExp(nil) * 2
-	vec := make([]*big.Float, maxBits + 1)
+	vec := make([]*big.Float, maxBits+1)
 
 	twoSigmaSquare := new(big.Float)
 	twoSigmaSquare.SetPrec(uint(c.n))
@@ -108,13 +105,12 @@ func (c Normal) precompExp() []*big.Float {
 	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
 
 	x := big.NewInt(1)
-	for i := 0; i < maxBits + 1; i++ {
-		vec[i] = taylorExp(x, twoSigmaSquare, 8 * c.n, c.n)
+	for i := 0; i < maxBits+1; i++ {
+		vec[i] = taylorExp(x, twoSigmaSquare, 8*c.n, c.n)
 		x.Mul(x, big.NewInt(2))
 	}
 	return vec
 }
-
 
 // Function decides if y > exp(-x/(2*sigma^2)) with minimal calculation of
 // exp(-x/(2*sigma^2)) based on the precomputed values.
@@ -139,12 +135,12 @@ func (c Normal) isExpGreater(y *big.Float, x *big.Int) int {
 	for i := 0; i < maxBits; i++ {
 		bit := x.Bit(maxBits - 1 - i)
 		if bit == 1 {
-			upper.Mul(upper, c.preExp[maxBits - 1 - i])
+			upper.Mul(upper, c.preExp[maxBits-1-i])
 			if y.Cmp(upper) == 1 {
 				return 1
 			}
 		} else {
-			lower.Quo(lower, c.preExp[maxBits - 1 - i])
+			lower.Quo(lower, c.preExp[maxBits-1-i])
 			if y.Cmp(lower) == -1 {
 				return 0
 			}

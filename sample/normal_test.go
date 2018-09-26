@@ -19,11 +19,11 @@ package sample_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"math/big"
-	"github.com/fentec-project/gofe/sample"
-)
 
+	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
+)
 
 func mean(vec []*big.Int) *big.Float {
 	meanI := big.NewInt(0)
@@ -47,15 +47,14 @@ func variance(vec []*big.Int) *big.Float {
 	return ret
 }
 
-
 func TestSample_Normal(t *testing.T) {
 
 	c := sample.NewNormalNegative(big.NewFloat(10), 256)
-	vec := make([]*big.Int, 10000)
+	vec := make([]*big.Int, 100000)
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = c.Sample()
 	}
-	me,_ := mean(vec).Float64()
+	me, _ := mean(vec).Float64()
 	v, _ := variance(vec).Float64()
 	// me should be around 0 and v should be around 100
 	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
@@ -63,13 +62,11 @@ func TestSample_Normal(t *testing.T) {
 	assert.True(t, v < 110, "variance of the normal distribution is too big")
 	assert.True(t, v > 90, "variance of the normal distribution is too small")
 
-
-
 	c2 := sample.NewNormalCumulative(big.NewFloat(10), 256, true)
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = c2.Sample()
 	}
-	me,_ = mean(vec).Float64()
+	me, _ = mean(vec).Float64()
 	v, _ = variance(vec).Float64()
 	// me should be around 0 and v should be around 100
 	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
@@ -81,7 +78,7 @@ func TestSample_Normal(t *testing.T) {
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = c3.Sample()
 	}
-	me,_ = mean(vec).Float64()
+	me, _ = mean(vec).Float64()
 	v, _ = variance(vec).Float64()
 	// me should be around 0 and v should be around 100
 	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
