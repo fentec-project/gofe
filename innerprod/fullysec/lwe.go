@@ -46,9 +46,12 @@ type lweParams struct {
 	// Modulus for ciphertext and keys.
 	// Must be significantly larger than K.
 	// TODO check appropriateness of this parameter in constructor!
-	q      *big.Int
+	q *big.Int
+	// standard deviation for the noise terms in the encryption process
 	sigmaQ *big.Float
+	// standard deviation for first half of the matrix for sampling private key
 	sigma1 *big.Float
+	// standard deviation for second half of the matrix for sampling private key
 	sigma2 *big.Float
 
 	// Matrix A of dimensions m*n is a public parameter
@@ -77,13 +80,13 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 	nF := float64(n)
 
 	nBitsQ := 1
-	var sigma *big.Float
-	var sigma1, sigma2 *big.Float
+	var sigma, sigma1, sigma2 *big.Float
 
 	// parameters for the scheme are given as a set of requirements in the paper
 	// hence we search for such parameters iteratively
 	for i := 1; true; i++ {
-		boundMF := float64(n * i) //assuming that the final q will have at most i bits
+		//assuming that the final q will have at most i bits we calculate a bound
+		boundMF := float64(n * i)
 		// tmp values
 		log2M := math.Log2(boundMF)
 		sqrtNLogM := math.Sqrt(nF * log2M)
@@ -99,7 +102,6 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 		sqrtMax := new(big.Float).Sqrt(max)
 
-		// standard deviation for first half of the matrix for sampling private key
 		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
 		// make it an integer for faster sampling using NormalDouble
 		sigma1I, _ := sigma1.Int(nil)
@@ -108,9 +110,8 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 		// tmp values
 		nPow3 := math.Pow(nF, 3)
 		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
-
-		// standard deviation for second half of the matrix for sampling private key
-		sigma2 = new(big.Float).Mul(big.NewFloat(math.Sqrt(nF)*nPow3*powSqrtLogM5*math.Sqrt(boundMF)), max)
+		mulVal := math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)
+		sigma2 = new(big.Float).Mul(big.NewFloat(mulVal), max)
 		// make it an integer for faster sampling using NormalDouble
 		sigma2I, _ := sigma2.Int(nil)
 		sigma2.SetInt(sigma2I)
@@ -127,18 +128,34 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 		sigma.Quo(sigma, bound2)
 		sigma.Quo(sigma, big.NewFloat(math.Log2(nF)))
 
-		// assuming number of bits of q will be at least nBitsQ from the previous iteration (this is always true)
+		// assuming number of bits of q will be at least nBitsQ from the previous
+		// iteration (this is always true) we calculate sigma prime
+		nfPow6 := math.Pow(nF, 6)
+		nBitsQPow2 := math.Pow(float64(nBitsQ), 2)
+		sqrtLog2nFPow5 := math.Pow(math.Sqrt(math.Log2(nF)), 5)
 		sigmaPrime := new(big.Float).Quo(sigma, kF)
-		sigmaPrime.Quo(sigmaPrime, big.NewFloat(math.Pow(nF, 6)*math.Pow(float64(nBitsQ), 2)*(math.Pow(math.Sqrt(math.Log2(nF)), 5))))
+		sigmaPrime.Quo(sigmaPrime, big.NewFloat(nfPow6*nBitsQPow2*sqrtLog2nFPow5))
 
-		nBitsQ = new(big.Float).Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime).MantExp(nil) + 1
-		// check if the number of bits for q is greater than i
+		boundForQ := new(big.Float)
+		boundForQ.Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime)
+		nBitsQ = boundForQ.MantExp(nil) + 1
+		// check if the number of bits for q is greater than i as it was
+		// assumed at the beginning of the iteration
 		if nBitsQ < i {
 			break
 		}
+		// in the next iteration the number of bits for q must be at least as
+		// many as it was demanded in this iteration
+		i = nBitsQ
 	}
 	// get q
-	q, _ := rand.Prime(rand.Reader, nBitsQ)
+	q, err := rand.Prime(rand.Reader, nBitsQ)
+
+	if err != nil {
+		return nil, errors.Wrap(err,
+			"cannot generate parameters, generating a prime number failed")
+	}
+
 	m := int(1.01 * nF * float64(nBitsQ))
 
 	// get sigmaQ
@@ -150,7 +167,8 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 
 	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot generate public parameters")
+		return nil, errors.Wrap(err,
+			"cannot generate parameters, generating a random matrix failed")
 	}
 	return &LWE{
 		params: &lweParams{

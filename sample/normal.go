@@ -23,7 +23,7 @@ import (
 
 // Normal samples random values from the Normal (Gaussian)
 // probability distribution, centered on 0.
-type Normal struct {
+type normal struct {
 	// Standard deviation
 	sigma *big.Float
 	// Precision parameter
@@ -37,12 +37,12 @@ type Normal struct {
 
 // NewNormal returns an instance of Normal sampler.
 // It assumes mean = 0.
-func NewNormal(sigma *big.Float, n int) *Normal {
+func newNormal(sigma *big.Float, n int) *normal {
 	powN := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(n)), nil)
 	powNF := new(big.Float)
 	powNF.SetPrec(uint(n))
 	powNF.SetInt(powN)
-	s := &Normal{
+	s := &normal{
 		sigma:  sigma,
 		n:      n,
 		preExp: nil,
@@ -94,7 +94,7 @@ func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
 // to arbitrary precision. This is needed since such computations present
 // one of the bottlenecks of the computation. Values are precomputed up to
 // i < sigma^2 * sqrt(n) since for greater i the results are negligible.
-func (c Normal) precompExp() []*big.Float {
+func (c normal) precompExp() []*big.Float {
 	maxFloat := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	maxBits := maxFloat.MantExp(nil) * 2
 	vec := make([]*big.Float, maxBits+1)
@@ -115,7 +115,7 @@ func (c Normal) precompExp() []*big.Float {
 // Function decides if y > exp(-x/(2*sigma^2)) with minimal calculation of
 // exp(-x/(2*sigma^2)) based on the precomputed values.
 // Sigma is implicit in the precomputed values saved in c.
-func (c Normal) isExpGreater(y *big.Float, x *big.Int) int {
+func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
 	// set up an upper and lower bound for possible value of
 	// exp(-x/(2*sigma^2))
 	upper := big.NewFloat(1)

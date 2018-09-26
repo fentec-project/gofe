@@ -50,7 +50,7 @@ func variance(vec []*big.Int) *big.Float {
 func TestSample_Normal(t *testing.T) {
 
 	c := sample.NewNormalNegative(big.NewFloat(10), 256)
-	vec := make([]*big.Int, 100000)
+	vec := make([]*big.Int, 10000)
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = c.Sample()
 	}

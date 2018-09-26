@@ -164,7 +164,8 @@ func (s *LWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
 	if !SK.CheckDims(s.params.n, s.params.l) {
 		return nil, gofe.MalformedSecKey
 	}
-	//Secret key is a linear combination of input vector y and master secret key SK.
+	//Secret key is a linear combination of input vector y
+	// and master secret key SK.
 	skY, err := SK.MulVec(y)
 	if err != nil {
 		return nil, gofe.MalformedInput

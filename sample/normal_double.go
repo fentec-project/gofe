@@ -30,7 +30,7 @@ import (
 // for the output, which is accepted or rejected with certain
 // probability.
 type NormalDouble struct {
-	*Normal
+	*normal
 	// NormalCumulative sampler used in the first part
 	samplerCumu *NormalCumulative
 	// precomputed parameters used for sampling
@@ -44,7 +44,6 @@ type NormalDouble struct {
 // sigma should be a multiple of firstSigma. Increasing firstSigma a bit speeds
 // up the algorithm but increases the size of the precomputed values
 func NewNormalDouble(sigma *big.Float, n int, firstSigma *big.Float) *NormalDouble {
-	c := NewNormalCumulative(firstSigma, n, false)
 	kF := new(big.Float)
 	kF.SetPrec(uint(n))
 	kF.Quo(sigma, firstSigma)
@@ -54,8 +53,8 @@ func NewNormalDouble(sigma *big.Float, n int, firstSigma *big.Float) *NormalDoub
 	k, _ := kF.Int(nil)
 	twiceK := new(big.Int).Mul(k, big.NewInt(2))
 	s := &NormalDouble{
-		Normal:      NewNormal(sigma, n),
-		samplerCumu: c,
+		normal:      newNormal(sigma, n),
+		samplerCumu: NewNormalCumulative(firstSigma, n, false),
 		k:           k,
 		twiceK:      twiceK,
 	}
@@ -68,7 +67,7 @@ func NewNormalDouble(sigma *big.Float, n int, firstSigma *big.Float) *NormalDoub
 func (s *NormalDouble) Sample() (*big.Int, error) {
 	// prepare values
 	var sign int64
-	checkValue := new(big.Int)
+	checkVal := new(big.Int)
 	uF := new(big.Float)
 	uF.SetPrec(uint(s.n))
 	for {
@@ -91,10 +90,10 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 		}
 
 		// calculate the probability of the accepting the result
-		checkValue.Mul(s.k, x)
-		checkValue.Mul(checkValue, big.NewInt(2))
-		checkValue.Add(checkValue, y)
-		checkValue.Mul(checkValue, y)
+		checkVal.Mul(s.k, x)
+		checkVal.Mul(checkVal, big.NewInt(2))
+		checkVal.Add(checkVal, y)
+		checkVal.Mul(checkVal, y)
 
 		// sample if accept the output
 		u, err := rand.Int(rand.Reader, s.powN)
@@ -105,7 +104,7 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 		// decide if accept
 		uF.SetInt(u)
 		uF.Quo(uF, s.powNF)
-		if s.isExpGreater(uF, checkValue) == 0 {
+		if s.isExpGreater(uF, checkVal) == 0 {
 			// calculate the value that we accepted
 			res := new(big.Int).Mul(s.k, x)
 			res.Add(res, y)

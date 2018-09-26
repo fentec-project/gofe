@@ -28,14 +28,14 @@ import (
 // This sampler is the fastest, but is limited only to cases when sigma
 // is not too big, due to the sizes of the precumputed tables.
 type NormalCumulative struct {
-	*Normal
+	*normal
 	// table of precomputed values relative to the cumulative distribution
-	preCumu []*big.Int
+	precomputed []*big.Int
 	// twoSided defines if we limit sampling only to non-negative integers
 	// or to all
 	twoSided bool
-	// integer defining from how big of an interval do we need to sample uniformly
-	// to sample according to discrete Gauss
+	// integer defining from how big of an interval do we need to sample
+	// uniformly to sample according to discrete Gauss
 	sampleSize *big.Int
 }
 
@@ -44,13 +44,13 @@ type NormalCumulative struct {
 // called, so that Sample merely returns a precomputed value.
 func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulative {
 	s := &NormalCumulative{
-		Normal:     NewNormal(sigma, n),
-		preCumu:    nil,
-		twoSided:   twoSided,
-		sampleSize: nil,
+		normal:      newNormal(sigma, n),
+		precomputed: nil,
+		twoSided:    twoSided,
+		sampleSize:  nil,
 	}
 	s.precompCumu()
-	s.sampleSize = new(big.Int).Set(s.preCumu[len(s.preCumu)-1])
+	s.sampleSize = new(big.Int).Set(s.precomputed[len(s.precomputed)-1])
 	if s.twoSided {
 		s.sampleSize.Mul(s.sampleSize, big.NewInt(2))
 	}
@@ -59,19 +59,19 @@ func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulati
 
 // Sample samples discrete cumulative distribution with
 // precomputed values.
-//TODO: can some values be moved to constructor?
 func (c *NormalCumulative) Sample() (*big.Int, error) {
 	u, err := rand.Int(rand.Reader, c.sampleSize)
 	sample := new(big.Int).Set(u)
 	sign := 1
 
 	// if we sample two sided, one bit is reserved for the sign of the output
-	if c.twoSided && u.Cmp(c.preCumu[len(c.preCumu)-1]) != -1 {
-		sample.Sub(sample, c.preCumu[len(c.preCumu)-1])
+	if c.twoSided && u.Cmp(c.precomputed[len(c.precomputed)-1]) != -1 {
+		sample.Sub(sample, c.precomputed[len(c.precomputed)-1])
 		sign = -1
 	}
 	// Find the precomputed sample
-	i := sort.Search(len(c.preCumu), func(i int) bool { return sample.Cmp(c.preCumu[i]) != 1 })
+	i := sort.Search(len(c.precomputed),
+		func(i int) bool { return sample.Cmp(c.precomputed[i]) != 1 })
 	res := big.NewInt(int64(sign) * int64(i-1))
 	return res, err
 }
@@ -106,5 +106,5 @@ func (c *NormalCumulative) precompCumu() {
 		// save the relative probability
 		vec[i+1] = new(big.Int).Add(vec[i], add)
 	}
-	c.preCumu = vec
+	c.precomputed = vec
 }
