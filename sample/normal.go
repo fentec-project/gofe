@@ -52,8 +52,6 @@ func newNormal(sigma *big.Float, n uint) *normal {
 	}
 }
 
-
-
 // precompExp precomputes tje values of exp(-2^i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma
 // to arbitrary precision. This is needed since such computations present

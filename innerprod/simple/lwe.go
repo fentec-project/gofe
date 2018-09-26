@@ -139,7 +139,6 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 		return nil, errors.Wrap(err, "error generating public key")
 	}
 
-
 	E, err := data.NewRandomMatrix(s.params.m, s.params.l, sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating public key")

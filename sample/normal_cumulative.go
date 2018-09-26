@@ -44,8 +44,8 @@ type NormalCumulative struct {
 // called, so that Sample merely returns a precomputed value.
 func NewNormalCumulative(sigma *big.Float, n uint, twoSided bool) *NormalCumulative {
 	s := &NormalCumulative{
-		normal:      newNormal(sigma, n),
-		twoSided:    twoSided,
+		normal:   newNormal(sigma, n),
+		twoSided: twoSided,
 	}
 	s.precompute()
 	s.sampleSize = new(big.Int).Set(s.precomputed[len(s.precomputed)-1])
