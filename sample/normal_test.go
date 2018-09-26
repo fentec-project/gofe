@@ -47,42 +47,27 @@ func variance(vec []*big.Int) *big.Float {
 	return ret
 }
 
-func TestSample_Normal(t *testing.T) {
+// paramBounds holds the boundaries for acceptable mean
+// and variance values.
+type paramBounds struct {
+	meanLow, meanHigh, varLow, varHigh float64
+}
 
-	c := sample.NewNormalNegative(big.NewFloat(10), 256)
+// testNormalSampler takes a normal sampler and checks whether
+// it is producing expected results - such that mean and variance
+// of a series of samples are within acceptable bounds.
+func testNormalSampler(t *testing.T, s sample.Sampler, bounds paramBounds) {
 	vec := make([]*big.Int, 10000)
 	for i := 0; i < len(vec); i++ {
-		vec[i], _ = c.Sample()
+		vec[i], _ = s.Sample()
 	}
+
 	me, _ := mean(vec).Float64()
 	v, _ := variance(vec).Float64()
-	// me should be around 0 and v should be around 100
-	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
-	assert.True(t, me > -0.5, "mean value of the normal distribution is too small")
-	assert.True(t, v < 110, "variance of the normal distribution is too big")
-	assert.True(t, v > 90, "variance of the normal distribution is too small")
 
-	c2 := sample.NewNormalCumulative(big.NewFloat(10), 256, true)
-	for i := 0; i < len(vec); i++ {
-		vec[i], _ = c2.Sample()
-	}
-	me, _ = mean(vec).Float64()
-	v, _ = variance(vec).Float64()
 	// me should be around 0 and v should be around 100
-	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
-	assert.True(t, me > -0.5, "mean value of the normal distribution is too small")
-	assert.True(t, v < 110, "variance of the normal distribution is too big")
-	assert.True(t, v > 90, "variance of the normal distribution is too small")
-
-	c3 := sample.NewNormalDouble(big.NewFloat(10), 256, big.NewFloat(1))
-	for i := 0; i < len(vec); i++ {
-		vec[i], _ = c3.Sample()
-	}
-	me, _ = mean(vec).Float64()
-	v, _ = variance(vec).Float64()
-	// me should be around 0 and v should be around 100
-	assert.True(t, me < 0.5, "mean value of the normal distribution is too big")
-	assert.True(t, me > -0.5, "mean value of the normal distribution is too small")
-	assert.True(t, v < 110, "variance of the normal distribution is too big")
-	assert.True(t, v > 90, "variance of the normal distribution is too small")
+	assert.True(t, me > bounds.meanLow, "mean value of the normal distribution is too small")
+	assert.True(t, me < bounds.meanHigh, "mean value of the normal distribution is too big")
+	assert.True(t, v > bounds.varLow, "variance of the normal distribution is too small")
+	assert.True(t, v < bounds.varHigh, "variance of the normal distribution is too big")
 }
