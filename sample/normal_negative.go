@@ -38,7 +38,7 @@ type NormalNegative struct {
 // NewNormalNegative returns an instance of NormalNegative sampler.
 // It assumes mean = 0. Values are precomputed when this function is
 // called, so that Sample merely returns a precomputed value.
-func NewNormalNegative(sigma *big.Float, n int) *NormalNegative {
+func NewNormalNegative(sigma *big.Float, n uint) *NormalNegative {
 	cutF := new(big.Float).Mul(sigma, big.NewFloat(math.Sqrt(float64(n))))
 	cut := new(big.Int)
 	cut, _ = cutF.Int(cut)
@@ -55,9 +55,9 @@ func NewNormalNegative(sigma *big.Float, n int) *NormalNegative {
 
 func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF := new(big.Float)
-	uF.SetPrec(uint(c.n))
+	uF.SetPrec(c.n)
 	x := new(big.Float)
-	x.SetPrec(uint(c.n))
+	x.SetPrec(c.n)
 	nSquare := new(big.Int)
 
 	// TODO maybe add an exit condition later, resulting in an error

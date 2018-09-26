@@ -194,8 +194,8 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	var x *big.Int
 
-	sampler1 := sample.NewNormalDouble(s.params.sigma1, s.params.n, big.NewFloat(1))
-	sampler2 := sample.NewNormalDouble(s.params.sigma2, s.params.n, big.NewFloat(1))
+	sampler1 := sample.NewNormalDouble(s.params.sigma1, uint(s.params.n), big.NewFloat(1))
+	sampler2 := sample.NewNormalDouble(s.params.sigma2, uint(s.params.n), big.NewFloat(1))
 
 	Z := make(data.Matrix, s.params.l)
 	halfRows := Z.Rows() / 2
@@ -276,7 +276,7 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix) (data.Vector, error) {
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
+	sampler := sample.NewNormalDouble(s.params.sigmaQ, uint(s.params.n), big.NewFloat(1))
 	e0, err0 := data.NewRandomVector(s.params.m, sampler)
 	e1, err1 := data.NewRandomVector(s.params.l, sampler)
 	if err0 != nil || err1 != nil {

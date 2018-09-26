@@ -42,14 +42,12 @@ type NormalCumulative struct {
 // NewNormalCumulative returns an instance of NormalCumulative sampler.
 // It assumes mean = 0. Values are precomputed when this function is
 // called, so that Sample merely returns a precomputed value.
-func NewNormalCumulative(sigma *big.Float, n int, twoSided bool) *NormalCumulative {
+func NewNormalCumulative(sigma *big.Float, n uint, twoSided bool) *NormalCumulative {
 	s := &NormalCumulative{
 		normal:      newNormal(sigma, n),
-		precomputed: nil,
 		twoSided:    twoSided,
-		sampleSize:  nil,
 	}
-	s.precompCumu()
+	s.precompute()
 	s.sampleSize = new(big.Int).Set(s.precomputed[len(s.precomputed)-1])
 	if s.twoSided {
 		s.sampleSize.Mul(s.sampleSize, big.NewInt(2))
@@ -78,7 +76,7 @@ func (c *NormalCumulative) Sample() (*big.Int, error) {
 
 // precompCumu precomputes the values for sampling.
 // This can be used only if sigma is not too big.
-func (c *NormalCumulative) precompCumu() {
+func (c *NormalCumulative) precompute() {
 	cutF := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	cut, _ := cutF.Int64()
 	cut = cut + 1
@@ -88,7 +86,7 @@ func (c *NormalCumulative) precompCumu() {
 	twoSigmaSquare := new(big.Float).Mul(c.sigma, c.sigma)
 	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
 	addF := new(big.Float)
-	addF.SetPrec(uint(c.n))
+	addF.SetPrec(c.n)
 	add := new(big.Int)
 	for i := int64(0); i < cut; i++ {
 		iSquare.SetInt64(i * i)

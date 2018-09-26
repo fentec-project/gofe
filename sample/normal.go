@@ -27,7 +27,7 @@ type normal struct {
 	// Standard deviation
 	sigma *big.Float
 	// Precision parameter
-	n int
+	n uint
 	// Precomputed values of exponential function with precision n
 	preExp []*big.Float
 	// Precomputed values for quicker sampling
@@ -37,70 +37,36 @@ type normal struct {
 
 // NewNormal returns an instance of Normal sampler.
 // It assumes mean = 0.
-func newNormal(sigma *big.Float, n int) *normal {
+func newNormal(sigma *big.Float, n uint) *normal {
 	powN := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(n)), nil)
 	powNF := new(big.Float)
-	powNF.SetPrec(uint(n))
+	powNF.SetPrec(n)
 	powNF.SetInt(powN)
-	s := &normal{
+
+	return &normal{
 		sigma:  sigma,
 		n:      n,
 		preExp: nil,
 		powN:   powN,
 		powNF:  powNF,
 	}
-	return s
 }
 
-// an approximation of a exp(-x/alpha) with taylor
-// polynomial of degree k, precise at least up to 2^{-n}
-func taylorExp(x *big.Int, alpha *big.Float, k int, n int) *big.Float {
-	// prepare the values for calculating the taylor polynomial of exp(x/sigma)
-	res := big.NewFloat(1)
-	res.SetPrec(uint(n))
 
-	value := new(big.Float)
-	value.SetPrec(uint(n))
-	value.SetInt(x)
-	value.Quo(value, alpha)
 
-	powerValue := new(big.Float)
-	powerValue.SetPrec(uint(n))
-	powerValue.Set(value)
-
-	factorial := new(big.Float)
-	factorial.SetPrec(uint(n))
-	factorial.SetInt64(1)
-
-	tmp := new(big.Float)
-	tmp.SetPrec(uint(n))
-
-	// computation of the polynomial
-	for i := 1; i <= k; i++ {
-		tmp.Quo(powerValue, factorial)
-
-		res.Add(res, tmp)
-
-		powerValue.Mul(powerValue, value)
-		factorial.Mul(factorial, big.NewFloat(float64(i+1)))
-	}
-	res.Quo(big.NewFloat(1), res)
-
-	return res
-}
-
-// Precomputation of values of exp(-i / 2 * sigma^2) needed
+// precompExp precomputes tje values of exp(-2^i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma
 // to arbitrary precision. This is needed since such computations present
-// one of the bottlenecks of the computation. Values are precomputed up to
-// i < sigma^2 * sqrt(n) since for greater i the results are negligible.
+// one of the bottlenecks of the computation. Values are precomputed in the
+// interval 0 <= i < sigma^2 * sqrt(n) since for greater i the results are
+// negligible.
 func (c normal) precompExp() []*big.Float {
 	maxFloat := new(big.Float).Mul(c.sigma, big.NewFloat(math.Sqrt(float64(c.n))))
 	maxBits := maxFloat.MantExp(nil) * 2
 	vec := make([]*big.Float, maxBits+1)
 
 	twoSigmaSquare := new(big.Float)
-	twoSigmaSquare.SetPrec(uint(c.n))
+	twoSigmaSquare.SetPrec(c.n)
 	twoSigmaSquare.Mul(c.sigma, c.sigma)
 	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
 
@@ -112,16 +78,16 @@ func (c normal) precompExp() []*big.Float {
 	return vec
 }
 
-// Function decides if y > exp(-x/(2*sigma^2)) with minimal calculation of
-// exp(-x/(2*sigma^2)) based on the precomputed values.
-// Sigma is implicit in the precomputed values saved in c.
+// isExpGreater outputs if y > exp(-x/(2*sigma^2)) with minimal
+// calculation of exp(-x/(2*sigma^2)) based on the precomputed
+// values. Sigma is implicit in the precomputed values saved in c.
 func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
 	// set up an upper and lower bound for possible value of
 	// exp(-x/(2*sigma^2))
 	upper := big.NewFloat(1)
-	upper.SetPrec(uint(c.n))
+	upper.SetPrec(c.n)
 	lower := new(big.Float)
-	lower.SetPrec(uint(c.n))
+	lower.SetPrec(c.n)
 	maxBits := x.BitLen()
 
 	lower.Set(c.preExp[maxBits])
@@ -147,4 +113,41 @@ func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
 		}
 	}
 	return 0
+}
+
+// taylorExp approximates exp(-x/alpha) with taylor polinomial
+// of degree k, precise at least up to 2^-n.
+func taylorExp(x *big.Int, alpha *big.Float, k uint, n uint) *big.Float {
+	// prepare the values for calculating the taylor polynomial of exp(x/sigma)
+	res := big.NewFloat(1)
+	res.SetPrec(n)
+
+	val := new(big.Float)
+	val.SetPrec(n)
+	val.SetInt(x)
+	val.Quo(val, alpha)
+
+	powVal := new(big.Float)
+	powVal.SetPrec(n)
+	powVal.Set(val)
+
+	factorial := new(big.Float)
+	factorial.SetPrec(n)
+	factorial.SetInt64(1)
+
+	tmp := new(big.Float)
+	tmp.SetPrec(n)
+
+	// computation of the polynomial
+	for i := uint(1); i <= k; i++ {
+		tmp.Quo(powVal, factorial)
+
+		res.Add(res, tmp)
+
+		powVal.Mul(powVal, val)
+		factorial.Mul(factorial, big.NewFloat(float64(i+1)))
+	}
+	res.Quo(big.NewFloat(1), res)
+
+	return res
 }

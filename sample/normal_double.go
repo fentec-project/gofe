@@ -43,9 +43,9 @@ type NormalDouble struct {
 // called, so that Sample merely samples a value.
 // sigma should be a multiple of firstSigma. Increasing firstSigma a bit speeds
 // up the algorithm but increases the size of the precomputed values
-func NewNormalDouble(sigma *big.Float, n int, firstSigma *big.Float) *NormalDouble {
+func NewNormalDouble(sigma *big.Float, n uint, firstSigma *big.Float) *NormalDouble {
 	kF := new(big.Float)
-	kF.SetPrec(uint(n))
+	kF.SetPrec(n)
 	kF.Quo(sigma, firstSigma)
 	if !kF.IsInt() {
 		fmt.Println("shold be an int")
@@ -69,7 +69,7 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 	var sign int64
 	checkVal := new(big.Int)
 	uF := new(big.Float)
-	uF.SetPrec(uint(s.n))
+	uF.SetPrec(s.n)
 	for {
 		sign = 1
 		// first sample according to discrete gauss with smaller

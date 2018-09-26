@@ -134,7 +134,7 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 
 	// Initialize and fill noise matrix E with m*l samples
 
-	sampler := sample.NewNormalDouble(s.params.sigmaQ, s.params.n, big.NewFloat(1))
+	sampler := sample.NewNormalDouble(s.params.sigmaQ, uint(s.params.n), big.NewFloat(1))
 
 	E, err := data.NewRandomMatrix(s.params.m, s.params.l, sampler)
 	if err != nil {

@@ -93,7 +93,7 @@ func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, err
 			sigma: sigma,
 			a:     randVec,
 		},
-		sampler: sample.NewNormalCumulative(sigma, n, true),
+		sampler: sample.NewNormalCumulative(sigma, uint(n), true),
 	}, nil
 }
 
