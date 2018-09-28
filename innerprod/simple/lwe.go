@@ -60,49 +60,54 @@ type LWE struct {
 // It accepts the length of input vectors l, bound for coordinates of
 // input vectors x and y, the main security parameters n and m,
 // modulus for input data p, and modulus for ciphertext and keys q.
+// Security parameters are generated so that they satisfy theoretical
+// bounds provided in the phd thesis Functional Encryption for
+// Inner-Product Evaluations, see Section 8.3.1 in
+// https://www.di.ens.fr/~fbourse/publications/Thesis.pdf
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
 func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 
+	// generate parameters
 	nBitsP := boundX.BitLen() + boundY.BitLen() + bits.Len(uint(l)) + 1
 	p, err := rand.Prime(rand.Reader, nBitsP)
 	pF := new(big.Float).SetInt(p)
-
-	// tmp variable
 	boundXF := new(big.Float).SetInt(boundX)
 	boundYF := new(big.Float).SetInt(boundY)
 
-	x := new(big.Float).Mul(boundXF, big.NewFloat(math.Sqrt(float64(l))))
-	x.Add(x, big.NewFloat(1))
-	x.Mul(x, pF)
+	val := new(big.Float).Mul(boundXF, big.NewFloat(math.Sqrt(float64(l))))
+	val.Add(val, big.NewFloat(1))
+	x := new(big.Float).Mul(val, pF)
 	x.Mul(x, boundYF)
 	x.Mul(x, big.NewFloat(float64(8 * n) * math.Sqrt(float64(n + l + 1))))
 	xSqrt := new(big.Float).Sqrt(x)
 	x.Mul(x, xSqrt)
 	xI, _ := x.Int(nil)
-	fmt.Println(xI)
-
 	nBitsQ := xI.BitLen() + 1
 	q, err := rand.Prime(rand.Reader, nBitsQ)
-	m := (n + l + 1) * nBitsQ + 2 * n + 1
 
+	m := (n + l + 1) * nBitsQ + 2 * n + 1
 
 	sigma := new(big.Float)
 	sigma.SetPrec(uint(n))
 	sigma.Quo(big.NewFloat(1 / (2 * math.Sqrt(float64(2 * l * m * n)))), pF)
 	sigma.Quo(sigma, boundYF)
-
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
-
 	// make it an integer for faster sampling using NormalDouble
 	sigmaQI, _ := sigmaQ.Int(nil)
 	sigmaQ.SetInt(sigmaQI)
 	sigmaQ.Add(sigmaQ, big.NewFloat(1))
 
-	//fmt.Println(q, m, sigmaQ)
 
+	// sanity check if the parameters satisfy theoretical bounds
+	val.Quo(sigmaQ, val)
+	if val.Cmp(big.NewFloat(2 * math.Sqrt(float64(n)))) < 1 {
+		return nil, fmt.Errorf("parameters generation faliled, sigmaQ too small")
+	}
+
+	// generate a random matrix
 	A, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot generate public parameters")
