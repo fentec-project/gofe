@@ -23,11 +23,12 @@ import (
 	"math"
 	"math/bits"
 
+	"fmt"
+
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
-	"fmt"
 )
 
 // lweParams represents parameters for the simple LWE scheme.
@@ -39,7 +40,6 @@ type lweParams struct {
 
 	boundX *big.Int // Bound for input vector coordinates (for x)
 	boundY *big.Int // Bound for inner product vector coordinates (for y)
-
 
 	p *big.Int // Modulus for message space
 	q *big.Int // Modulus for ciphertext and keys
@@ -80,18 +80,18 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	val.Add(val, big.NewFloat(1))
 	x := new(big.Float).Mul(val, pF)
 	x.Mul(x, boundYF)
-	x.Mul(x, big.NewFloat(float64(8 * n) * math.Sqrt(float64(n + l + 1))))
+	x.Mul(x, big.NewFloat(float64(8*n)*math.Sqrt(float64(n+l+1))))
 	xSqrt := new(big.Float).Sqrt(x)
 	x.Mul(x, xSqrt)
 	xI, _ := x.Int(nil)
 	nBitsQ := xI.BitLen() + 1
 	q, err := rand.Prime(rand.Reader, nBitsQ)
 
-	m := (n + l + 1) * nBitsQ + 2 * n + 1
+	m := (n+l+1)*nBitsQ + 2*n + 1
 
 	sigma := new(big.Float)
 	sigma.SetPrec(uint(n))
-	sigma.Quo(big.NewFloat(1 / (2 * math.Sqrt(float64(2 * l * m * n)))), pF)
+	sigma.Quo(big.NewFloat(1/(2*math.Sqrt(float64(2*l*m*n)))), pF)
 	sigma.Quo(sigma, boundYF)
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
@@ -100,10 +100,9 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	sigmaQ.SetInt(sigmaQI)
 	sigmaQ.Add(sigmaQ, big.NewFloat(1))
 
-
 	// sanity check if the parameters satisfy theoretical bounds
 	val.Quo(sigmaQ, val)
-	if val.Cmp(big.NewFloat(2 * math.Sqrt(float64(n)))) < 1 {
+	if val.Cmp(big.NewFloat(2*math.Sqrt(float64(n)))) < 1 {
 		return nil, fmt.Errorf("parameters generation faliled, sigmaQ too small")
 	}
 
@@ -115,7 +114,7 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	return &LWE{
 		params: &lweParams{
 			l:      l,
-			boundX:  boundX,
+			boundX: boundX,
 			boundY: boundY,
 			n:      n,
 			m:      m,
