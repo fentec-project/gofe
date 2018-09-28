@@ -27,6 +27,7 @@ import (
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
+	"fmt"
 )
 
 // lweParams represents parameters for the simple LWE scheme.
@@ -36,7 +37,9 @@ type lweParams struct {
 	n int // Main security parameters of the scheme
 	m int // Number of rows (samples) for the LWE problem
 
-	bound *big.Int // Bound for input vector coordinates (for both x and y)
+	boundX *big.Int // Bound for input vector coordinates (for x)
+	boundY *big.Int // Bound for inner product vector coordinates (for y)
+
 
 	p *big.Int // Modulus for message space
 	q *big.Int // Modulus for ciphertext and keys
@@ -60,41 +63,46 @@ type LWE struct {
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
-func NewLWE(l int, bound *big.Int, n int) (*LWE, error) {
+func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 
-	// TODO Get confirmation that this is theoretically secure and correct, since there
-	// are errors in the paper
-	boundF := new(big.Float).SetInt(bound)
-	nBitsP := (bound.BitLen() * 2) + bits.Len(uint(l)) + 1
+	nBitsP := boundX.BitLen() + boundY.BitLen() + bits.Len(uint(l)) + 1
 	p, err := rand.Prime(rand.Reader, nBitsP)
-
-	nBitsQ := nBitsP + bound.BitLen() + bits.Len(uint(n*n)) + (bits.Len(uint(l))/2 + 1) + 1
-	q, err := rand.Prime(rand.Reader, nBitsQ)
-
-	m := (n + l + 2) * nBitsQ
 	pF := new(big.Float).SetInt(p)
+
+	// tmp variable
+	boundXF := new(big.Float).SetInt(boundX)
+	boundYF := new(big.Float).SetInt(boundY)
+
+	x := new(big.Float).Mul(boundXF, big.NewFloat(math.Sqrt(float64(l))))
+	x.Add(x, big.NewFloat(1))
+	x.Mul(x, pF)
+	x.Mul(x, boundYF)
+	x.Mul(x, big.NewFloat(float64(8 * n) * math.Sqrt(float64(n + l + 1))))
+	xSqrt := new(big.Float).Sqrt(x)
+	x.Mul(x, xSqrt)
+	xI, _ := x.Int(nil)
+	fmt.Println(xI)
+
+	nBitsQ := xI.BitLen() + 1
+	q, err := rand.Prime(rand.Reader, nBitsQ)
+	m := (n + l + 1) * nBitsQ + 2 * n + 1
+
 
 	sigma := new(big.Float)
 	sigma.SetPrec(uint(n))
-	sigma.SetInt(bound)
-	sigma.Mul(sigma, big.NewFloat(float64(l)))
-	sigma.Add(sigma, big.NewFloat(1))
-	sigma.Quo(sigma, pF)
-	sigma.Quo(sigma, big.NewFloat(math.Sqrt(float64(m))*math.Log2(float64(n))*float64(l)))
-	sigma.Quo(sigma, boundF)
-	sigma.Quo(sigma, boundF)
+	sigma.Quo(big.NewFloat(1 / (2 * math.Sqrt(float64(2 * l * m * n)))), pF)
+	sigma.Quo(sigma, boundYF)
 
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
-
-	// TODO: if proper parameters are generated, the first value should be smaller than second
-	// check after we get conformation
-	//fmt.Println(sigma, 1 / (pF * math.Sqrt(float64(m)) * float64(l) * bound.Float64))
 
 	// make it an integer for faster sampling using NormalDouble
 	sigmaQI, _ := sigmaQ.Int(nil)
 	sigmaQ.SetInt(sigmaQI)
 	sigmaQ.Add(sigmaQ, big.NewFloat(1))
+
+	//fmt.Println(q, m, sigmaQ)
+
 	A, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot generate public parameters")
@@ -102,7 +110,8 @@ func NewLWE(l int, bound *big.Int, n int) (*LWE, error) {
 	return &LWE{
 		params: &lweParams{
 			l:      l,
-			bound:  bound,
+			boundX:  boundX,
+			boundY: boundY,
 			n:      n,
 			m:      m,
 			p:      p,
@@ -161,7 +170,7 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 // In case of malformed secret key or input vector that violates the configured
 // bound, it returns an error.
 func (s *LWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
-	if err := y.CheckBound(s.params.bound); err != nil {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
 	if !SK.CheckDims(s.params.n, s.params.l) {
@@ -183,7 +192,7 @@ func (s *LWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
 // public key or input vector that violates the configured bound,
 // it returns an error.
 func (s *LWE) Encrypt(x data.Vector, PK data.Matrix) (data.Vector, error) {
-	if err := x.CheckBound(s.params.bound); err != nil {
+	if err := x.CheckBound(s.params.boundX); err != nil {
 		return nil, err
 	}
 	if !PK.CheckDims(s.params.m, s.params.l) {
@@ -238,7 +247,7 @@ func (s *LWE) center(v data.Vector) data.Vector {
 // If decryption failed (for instance with input data that violates the
 // configured bound or malformed ciphertext or keys), error is returned.
 func (s *LWE) Decrypt(ct, skY, y data.Vector) (*big.Int, error) {
-	if err := y.CheckBound(s.params.bound); err != nil {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
 	if len(skY) != s.params.n {

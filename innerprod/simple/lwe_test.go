@@ -35,7 +35,7 @@ func TestSimple_LWE(t *testing.T) {
 	emptyVec := data.Vector{}
 	emptyMat := data.Matrix{}
 
-	simpleLWE, err := simple.NewLWE(l, b, n)
+	simpleLWE, err := simple.NewLWE(l, b, b, n)
 	assert.NoError(t, err)
 
 	SK, err := simpleLWE.GenerateSecretKey()
