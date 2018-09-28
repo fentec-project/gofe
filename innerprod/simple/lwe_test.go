@@ -29,7 +29,7 @@ import (
 func TestSimple_LWE(t *testing.T) {
 	l := 4
 	n := 128
-	b := big.NewInt(100000)
+	b := big.NewInt(10000)
 
 	x, y, xy := testVectorData(l, b, b)
 	emptyVec := data.Vector{}

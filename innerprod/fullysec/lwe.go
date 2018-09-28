@@ -37,9 +37,9 @@ type lweParams struct {
 	m int // Number of samples
 
 	// Message space size
-	P *big.Int
-	// Key space size
-	V *big.Int
+	boundX *big.Int
+	// Inner product vector space size
+	boundY *big.Int
 	// Modulus for the resulting inner product.
 	// K depends on the parameters l, P and V and is computed by the scheme.
 	K *big.Int
@@ -66,15 +66,15 @@ type LWE struct {
 
 // NewLWE configures a new instance of the scheme.
 // It accepts the length of input vectors l, the main security parameters
-// n and m, message space size P, key and ciphertext space size V, and
-// modulus for ciphertext and keys q.
+// n and m, message space size boundX, inner product vector space size
+// boundY.
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
-func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
+func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
-	// K = l * P * V
-	K := new(big.Int).Mul(P, V)
+	// K = l * boundX * boundY
+	K := new(big.Int).Mul(boundX, boundY)
 	K.Mul(K, big.NewInt(int64(l)))
 
 	nF := float64(n)
@@ -150,7 +150,6 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 	}
 	// get q
 	q, err := rand.Prime(rand.Reader, nBitsQ)
-
 	if err != nil {
 		return nil, errors.Wrap(err,
 			"cannot generate parameters, generating a prime number failed")
@@ -175,8 +174,8 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 			l:      l,
 			n:      n,
 			m:      m,
-			P:      P,
-			V:      V,
+			boundX: boundX,
+			boundY: boundY,
 			q:      q,
 			K:      K,
 			sigmaQ: sigmaQ,
@@ -192,7 +191,7 @@ func NewLWE(l, n int, P, V *big.Int) (*LWE, error) {
 //
 // In case secret key could not be generated, it returns an error.
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
-	var x *big.Int
+	var val *big.Int
 
 	sampler1, err := sample.NewNormalDouble(s.params.sigma1, uint(s.params.n), big.NewFloat(1))
 	if err != nil {
@@ -209,15 +208,15 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 		Z[i] = make(data.Vector, s.params.m)
 		for j := 0; j < Z.Cols(); j++ {
 			if j < halfRows { // first half
-				x, _ = sampler1.Sample()
+				val, _ = sampler1.Sample()
 			} else { // second half
-				x, _ = sampler2.Sample()
+				val, _ = sampler2.Sample()
 				if j-halfRows == i {
-					x.Add(x, big.NewInt(1))
+					val.Add(val, big.NewInt(1))
 				}
 			}
 
-			Z[i][j] = x
+			Z[i][j] = val
 		}
 	}
 
@@ -239,39 +238,39 @@ func (s *LWE) GeneratePublicKey(Z data.Matrix) (data.Matrix, error) {
 	return U, nil
 }
 
-// DeriveKey accepts input vector x and master secret key Z, and derives a
+// DeriveKey accepts input vector y and master secret key Z, and derives a
 // functional encryption key.
 // In case of malformed secret key or input vector that violates the
 // configured bound, it returns an error.
-func (s *LWE) DeriveKey(x data.Vector, Z data.Matrix) (data.Vector, error) {
-	if err := x.CheckBound(s.params.V); err != nil {
+func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
 	if !Z.CheckDims(s.params.l, s.params.m) {
 		return nil, gofe.MalformedSecKey
 	}
 	// Secret key is a linear combination of input vector x and master secret key Z.
-	zX, err := Z.Transpose().MulVec(x)
+	zY, err := Z.Transpose().MulVec(y)
 	if err != nil {
 		return nil, gofe.MalformedInput
 	}
-	zX = zX.Mod(s.params.q)
+	zY = zY.Mod(s.params.q)
 
-	return zX, nil
+	return zY, nil
 }
 
 // Encrypt encrypts vector y using public key U.
 // It returns the resulting ciphertext vector. In case of malformed
 // public key or input vector that violates the configured bound,
 // it returns an error.
-func (s *LWE) Encrypt(y data.Vector, U data.Matrix) (data.Vector, error) {
-	if err := y.CheckBound(s.params.P); err != nil {
+func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
+	if err := x.CheckBound(s.params.boundX); err != nil {
 		return nil, err
 	}
 	if !U.CheckDims(s.params.l, s.params.n) {
 		return nil, gofe.MalformedPubKey
 	}
-	if len(y) != s.params.l {
+	if len(x) != s.params.l {
 		return nil, gofe.MalformedInput
 	}
 
@@ -299,7 +298,7 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix) (data.Vector, error) {
 
 	// calculate second part of the cipher
 	qDivK := new(big.Int).Div(s.params.q, s.params.K)
-	t := y.MulScalar(qDivK) // center
+	t := x.MulScalar(qDivK) // center
 
 	c1, _ := U.MulVec(r)
 	c1 = c1.Add(e1)
@@ -313,14 +312,14 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix) (data.Vector, error) {
 // and plaintext vector x, and calculates the inner product of x and y.
 // If decryption failed (for instance with input data that violates the
 // configured bound or malformed ciphertext or keys), error is returned.
-func (s *LWE) Decrypt(cipher, zX, x data.Vector) (*big.Int, error) {
-	if err := x.CheckBound(s.params.V); err != nil {
+func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
-	if len(zX) != s.params.m {
+	if len(zY) != s.params.m {
 		return nil, gofe.MalformedDecKey
 	}
-	if len(x) != s.params.l {
+	if len(y) != s.params.l {
 		return nil, gofe.MalformedInput
 	}
 
@@ -329,10 +328,10 @@ func (s *LWE) Decrypt(cipher, zX, x data.Vector) (*big.Int, error) {
 	}
 	c0 := cipher[:s.params.m]
 	c1 := cipher[s.params.m:]
-	xDotC1, _ := x.Dot(c1)
-	zXDotC0, _ := zX.Dot(c0)
+	yDotC1, _ := y.Dot(c1)
+	zYDotC0, _ := zY.Dot(c0)
 
-	mu1 := new(big.Int).Sub(xDotC1, zXDotC0)
+	mu1 := new(big.Int).Sub(yDotC1, zYDotC0)
 	mu1.Mod(mu1, s.params.q)
 
 	// TODO Improve!
