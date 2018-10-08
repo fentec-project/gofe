@@ -79,7 +79,7 @@ func (c normal) precompExp() []*big.Float {
 // isExpGreater outputs if y > exp(-x/(2*sigma^2)) with minimal
 // calculation of exp(-x/(2*sigma^2)) based on the precomputed
 // values. Sigma is implicit in the precomputed values saved in c.
-func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
+func (c normal) isExpGreater(y *big.Float, x *big.Int) bool {
 	// set up an upper and lower bound for possible value of
 	// exp(-x/(2*sigma^2))
 	upper := big.NewFloat(1)
@@ -91,7 +91,7 @@ func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
 	lower.Set(c.preExp[maxBits])
 	lower.Quo(lower, c.preExp[0])
 	if lower.Cmp(y) == 1 {
-		return 0
+		return false
 	}
 
 	// based on bits of x and the precomputed values
@@ -101,16 +101,16 @@ func (c normal) isExpGreater(y *big.Float, x *big.Int) int {
 		if bit == 1 {
 			upper.Mul(upper, c.preExp[maxBits-1-i])
 			if y.Cmp(upper) == 1 {
-				return 1
+				return true
 			}
 		} else {
 			lower.Quo(lower, c.preExp[maxBits-1-i])
 			if y.Cmp(lower) == -1 {
-				return 0
+				return false
 			}
 		}
 	}
-	return 0
+	return false
 }
 
 // taylorExp approximates exp(-x/alpha) with taylor polinomial

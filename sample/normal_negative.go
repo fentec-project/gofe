@@ -26,7 +26,7 @@ import (
 
 // NormalNegative samples random values from the possible
 // outputs of Normal (Gaussian) probability distribution centered on 0 and
-// excepts or denies each sample with probability defined by the distribution
+// accepts or denies each sample with probability defined by the distribution
 type NormalNegative struct {
 	*normal
 	// cut defines from which interval we sample
@@ -56,8 +56,6 @@ func NewNormalNegative(sigma *big.Float, n uint) *NormalNegative {
 func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF := new(big.Float)
 	uF.SetPrec(c.n)
-	x := new(big.Float)
-	x.SetPrec(c.n)
 	nSquare := new(big.Int)
 
 	// TODO maybe add an exit condition later, resulting in an error
@@ -78,7 +76,7 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 		}
 		uF.SetInt(u)
 		uF.Quo(uF, c.powNF)
-		if c.isExpGreater(uF, nSquare) == 0 {
+		if c.isExpGreater(uF, nSquare) == false {
 			return n, nil
 		}
 	}

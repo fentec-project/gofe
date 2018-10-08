@@ -42,7 +42,7 @@ type NormalDouble struct {
 // It assumes mean = 0. Values are precomputed when this function is
 // called, so that Sample merely samples a value.
 // sigma should be a multiple of firstSigma. Increasing firstSigma a bit speeds
-// up the algorithm but increases the size of the precomputed values
+// up the algorithm but increases the size number of precomputed values
 func NewNormalDouble(sigma *big.Float, n uint, firstSigma *big.Float) (*NormalDouble, error) {
 	kF := new(big.Float)
 	kF.Quo(sigma, firstSigma)
@@ -103,7 +103,7 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 		// decide if accept
 		uF.SetInt(u)
 		uF.Quo(uF, s.powNF)
-		if s.isExpGreater(uF, checkVal) == 0 {
+		if s.isExpGreater(uF, checkVal) == false {
 			// calculate the value that we accepted
 			res := new(big.Int).Mul(s.k, x)
 			res.Add(res, y)
@@ -113,11 +113,11 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 			// decide if we accept the value, otherwise we return
 			// the value
 			if res.Cmp(big.NewInt(0)) == 0 {
-				except, err := rand.Int(rand.Reader, big.NewInt(2))
+				bit, err := rand.Int(rand.Reader, big.NewInt(2))
 				if err != nil {
 					return nil, err
 				}
-				if except.Cmp(big.NewInt(0)) == 0 {
+				if bit.Cmp(big.NewInt(0)) == 0 {
 
 					return res, err
 				}
