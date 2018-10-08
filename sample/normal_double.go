@@ -42,7 +42,7 @@ type NormalDouble struct {
 // It assumes mean = 0. Values are precomputed when this function is
 // called, so that Sample merely samples a value.
 // sigma should be a multiple of firstSigma. Increasing firstSigma a bit speeds
-// up the algorithm but increases the size number of precomputed values
+// up the algorithm but increases the number of precomputed values
 func NewNormalDouble(sigma *big.Float, n uint, firstSigma *big.Float) (*NormalDouble, error) {
 	kF := new(big.Float)
 	kF.Quo(sigma, firstSigma)
