@@ -21,6 +21,8 @@ import (
 
 	"math"
 
+	"crypto/rand"
+
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
@@ -35,9 +37,9 @@ type lweParams struct {
 	m int // Number of samples
 
 	// Message space size
-	P *big.Int
-	// Key space size
-	V *big.Int
+	boundX *big.Int
+	// Inner product vector space size
+	boundY *big.Int
 	// Modulus for the resulting inner product.
 	// K depends on the parameters l, P and V and is computed by the scheme.
 	K *big.Int
@@ -45,6 +47,12 @@ type lweParams struct {
 	// Must be significantly larger than K.
 	// TODO check appropriateness of this parameter in constructor!
 	q *big.Int
+	// standard deviation for the noise terms in the encryption process
+	sigmaQ *big.Float
+	// standard deviation for first half of the matrix for sampling private key
+	sigma1 *big.Float
+	// standard deviation for second half of the matrix for sampling private key
+	sigma2 *big.Float
 
 	// Matrix A of dimensions m*n is a public parameter
 	// of the scheme
@@ -58,60 +66,141 @@ type LWE struct {
 
 // NewLWE configures a new instance of the scheme.
 // It accepts the length of input vectors l, the main security parameters
-// n and m, message space size P, key and ciphertext space size V, and
-// modulus for ciphertext and keys q.
+// n and m, message space size boundX, inner product vector space size
+// boundY.
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
-func NewLWE(l, n, m int, P, V, q *big.Int) (*LWE, error) {
-	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot generate public parameters")
-	}
+func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
-	// K = l * P * V
-	K := new(big.Int).Mul(P, V)
+	// K = l * boundX * boundY
+	K := new(big.Int).Mul(boundX, boundY)
 	K.Mul(K, big.NewInt(int64(l)))
 
+	nF := float64(n)
+
+	nBitsQ := 1
+	var sigma, sigma1, sigma2 *big.Float
+
+	// parameters for the scheme are given as a set of requirements in the paper
+	// hence we search for such parameters iteratively
+	for i := 1; true; i++ {
+		//assuming that the final q will have at most i bits we calculate a bound
+		boundMF := float64(n * i)
+		// tmp values
+		log2M := math.Log2(boundMF)
+		sqrtNLogM := math.Sqrt(nF * log2M)
+		kF := new(big.Float).SetInt(K)
+		kSquaredF := new(big.Float).Mul(kF, kF)
+
+		max := new(big.Float)
+		if kSquaredF.Cmp(big.NewFloat(boundMF)) == 1 {
+			max.SetFloat64(boundMF)
+		} else {
+			max.Set(kSquaredF)
+		}
+
+		sqrtMax := new(big.Float).Sqrt(max)
+
+		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
+		// make it an integer for faster sampling using NormalDouble
+		sigma1I, _ := sigma1.Int(nil)
+		sigma1.SetInt(sigma1I)
+
+		// tmp values
+		nPow3 := math.Pow(nF, 3)
+		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
+		mulVal := math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)
+		sigma2 = new(big.Float).Mul(big.NewFloat(mulVal), max)
+		// make it an integer for faster sampling using NormalDouble
+		sigma2I, _ := sigma2.Int(nil)
+		sigma2.SetInt(sigma2I)
+
+		// tmp value
+		sigma1Square := new(big.Float).Mul(sigma1, sigma1)
+		sigma2Square := new(big.Float).Mul(sigma2, sigma2)
+
+		bound2 := new(big.Float).Add(sigma1Square, sigma2Square)
+		bound2.Sqrt(bound2)
+		bound2.Mul(bound2, big.NewFloat(math.Sqrt(nF)))
+
+		sigma = new(big.Float).Quo(big.NewFloat(1), kSquaredF)
+		sigma.Quo(sigma, bound2)
+		sigma.Quo(sigma, big.NewFloat(math.Log2(nF)))
+
+		// assuming number of bits of q will be at least nBitsQ from the previous
+		// iteration (this is always true) we calculate sigma prime
+		nfPow6 := math.Pow(nF, 6)
+		nBitsQPow2 := math.Pow(float64(nBitsQ), 2)
+		sqrtLog2nFPow5 := math.Pow(math.Sqrt(math.Log2(nF)), 5)
+		sigmaPrime := new(big.Float).Quo(sigma, kF)
+		sigmaPrime.Quo(sigmaPrime, big.NewFloat(nfPow6*nBitsQPow2*sqrtLog2nFPow5))
+
+		boundForQ := new(big.Float)
+		boundForQ.Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime)
+		nBitsQ = boundForQ.MantExp(nil) + 1
+		// check if the number of bits for q is greater than i as it was
+		// assumed at the beginning of the iteration
+		if nBitsQ < i {
+			break
+		}
+		// in the next iteration the number of bits for q must be at least as
+		// many as it was demanded in this iteration
+		i = nBitsQ
+	}
+	// get q
+	q, err := rand.Prime(rand.Reader, nBitsQ)
+	if err != nil {
+		return nil, errors.Wrap(err,
+			"cannot generate parameters, generating a prime number failed")
+	}
+
+	m := int(1.01 * nF * float64(nBitsQ))
+
+	// get sigmaQ
+	qF := new(big.Float).SetInt(q)
+	sigmaQ := new(big.Float).Mul(sigma, qF)
+	// make it an integer for faster sampling using NormalDouble
+	sigmaQI, _ := sigmaQ.Int(nil)
+	sigmaQ.SetInt(sigmaQI)
+
+	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
+	if err != nil {
+		return nil, errors.Wrap(err,
+			"cannot generate parameters, generating a random matrix failed")
+	}
 	return &LWE{
 		params: &lweParams{
-			l: l,
-			n: n,
-			m: m,
-			P: P,
-			V: V,
-			q: q,
-			K: K,
-			A: randMat,
+			l:      l,
+			n:      n,
+			m:      m,
+			boundX: boundX,
+			boundY: boundY,
+			q:      q,
+			K:      K,
+			sigmaQ: sigmaQ,
+			sigma1: sigma1,
+			sigma2: sigma2,
+			A:      randMat,
 		},
 	}, nil
 }
 
-// GenerateSecretKey accepts precision eps and a limit k for the
-// sampling interval, and generates a secret key for the scheme.
+// GenerateSecretKey generates a secret key for the scheme.
 // The secret key is a matrix with dimensions l*m.
 //
 // In case secret key could not be generated, it returns an error.
-func (s *LWE) GenerateSecretKey(eps, k float64) (data.Matrix, error) {
-	var x *big.Int
+func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
+	var val *big.Int
 
-	nF := float64(s.params.n)
-	mF := float64(s.params.m)
-
-	// standard deviation for first half of the matrix
-	log2M := math.Log2(mF)
-	sqrtNLogM := math.Sqrt(nF * log2M)
-	kSquared := new(big.Int).Mul(s.params.K, s.params.K).Int64() // accuracy?
-	max := math.Max(mF, float64(kSquared))
-	sqrtMax := math.Sqrt(max)
-	sigma1 := sqrtNLogM * sqrtMax
-	sampler1 := sample.NewNormal(sigma1, eps, k)
-
-	// standard deviation for second half of the matrix
-	nPow3 := math.Pow(nF, 3)
-	powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
-	sigma2 := math.Sqrt(nF) * nPow3 * max * log2M * powSqrtLogM5
-	sampler2 := sample.NewNormal(sigma2, eps, k)
+	sampler1, err := sample.NewNormalDouble(s.params.sigma1, uint(s.params.n), big.NewFloat(1))
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating secret key")
+	}
+	sampler2, err := sample.NewNormalDouble(s.params.sigma2, uint(s.params.n), big.NewFloat(1))
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating secret key")
+	}
 
 	Z := make(data.Matrix, s.params.l)
 	halfRows := Z.Rows() / 2
@@ -119,15 +208,15 @@ func (s *LWE) GenerateSecretKey(eps, k float64) (data.Matrix, error) {
 		Z[i] = make(data.Vector, s.params.m)
 		for j := 0; j < Z.Cols(); j++ {
 			if j < halfRows { // first half
-				x, _ = sampler1.Sample()
+				val, _ = sampler1.Sample()
 			} else { // second half
-				x, _ = sampler2.Sample()
+				val, _ = sampler2.Sample()
 				if j-halfRows == i {
-					x.Add(x, big.NewInt(1))
+					val.Add(val, big.NewInt(1))
 				}
 			}
 
-			Z[i][j] = x
+			Z[i][j] = val
 		}
 	}
 
@@ -149,39 +238,39 @@ func (s *LWE) GeneratePublicKey(Z data.Matrix) (data.Matrix, error) {
 	return U, nil
 }
 
-// DeriveKey accepts input vector x and master secret key Z, and derives a
+// DeriveKey accepts input vector y and master secret key Z, and derives a
 // functional encryption key.
 // In case of malformed secret key or input vector that violates the
 // configured bound, it returns an error.
-func (s *LWE) DeriveKey(x data.Vector, Z data.Matrix) (data.Vector, error) {
-	if err := x.CheckBound(s.params.V); err != nil {
+func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
 	if !Z.CheckDims(s.params.l, s.params.m) {
 		return nil, gofe.MalformedSecKey
 	}
 	// Secret key is a linear combination of input vector x and master secret key Z.
-	zX, err := Z.Transpose().MulVec(x)
+	zY, err := Z.Transpose().MulVec(y)
 	if err != nil {
 		return nil, gofe.MalformedInput
 	}
-	zX = zX.Mod(s.params.q)
+	zY = zY.Mod(s.params.q)
 
-	return zX, nil
+	return zY, nil
 }
 
 // Encrypt encrypts vector y using public key U.
 // It returns the resulting ciphertext vector. In case of malformed
 // public key or input vector that violates the configured bound,
 // it returns an error.
-func (s *LWE) Encrypt(y data.Vector, U data.Matrix, alpha *big.Float, eps, k float64) (data.Vector, error) {
-	if err := y.CheckBound(s.params.P); err != nil {
+func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
+	if err := x.CheckBound(s.params.boundX); err != nil {
 		return nil, err
 	}
 	if !U.CheckDims(s.params.l, s.params.n) {
 		return nil, gofe.MalformedPubKey
 	}
-	if len(y) != s.params.l {
+	if len(x) != s.params.l {
 		return nil, gofe.MalformedInput
 	}
 
@@ -192,13 +281,14 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix, alpha *big.Float, eps, k flo
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	q := new(big.Float).SetInt(s.params.q)
-	alphaQ, _ := new(big.Float).Mul(alpha, q).Float64() // check accuracy TODO
-	sampler := sample.NewNormal(alphaQ, eps, k)
+	sampler, err := sample.NewNormalDouble(s.params.sigmaQ, uint(s.params.n), big.NewFloat(1))
+	if err != nil {
+		return nil, errors.Wrap(err, "error in encrypt")
+	}
 	e0, err0 := data.NewRandomVector(s.params.m, sampler)
 	e1, err1 := data.NewRandomVector(s.params.l, sampler)
 	if err0 != nil || err1 != nil {
-		return nil, errors.Wrap(err, "error in encrypt")
+		return nil, errors.Wrap(err0, "error in encrypt")
 	}
 
 	// calculate first part of the cipher
@@ -208,7 +298,7 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix, alpha *big.Float, eps, k flo
 
 	// calculate second part of the cipher
 	qDivK := new(big.Int).Div(s.params.q, s.params.K)
-	t := y.MulScalar(qDivK) // center
+	t := x.MulScalar(qDivK) // center
 
 	c1, _ := U.MulVec(r)
 	c1 = c1.Add(e1)
@@ -222,14 +312,14 @@ func (s *LWE) Encrypt(y data.Vector, U data.Matrix, alpha *big.Float, eps, k flo
 // and plaintext vector x, and calculates the inner product of x and y.
 // If decryption failed (for instance with input data that violates the
 // configured bound or malformed ciphertext or keys), error is returned.
-func (s *LWE) Decrypt(cipher, zX, x data.Vector) (*big.Int, error) {
-	if err := x.CheckBound(s.params.V); err != nil {
+func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
+	if err := y.CheckBound(s.params.boundY); err != nil {
 		return nil, err
 	}
-	if len(zX) != s.params.m {
+	if len(zY) != s.params.m {
 		return nil, gofe.MalformedDecKey
 	}
-	if len(x) != s.params.l {
+	if len(y) != s.params.l {
 		return nil, gofe.MalformedInput
 	}
 
@@ -238,10 +328,10 @@ func (s *LWE) Decrypt(cipher, zX, x data.Vector) (*big.Int, error) {
 	}
 	c0 := cipher[:s.params.m]
 	c1 := cipher[s.params.m:]
-	xDotC1, _ := x.Dot(c1)
-	zXDotC0, _ := zX.Dot(c0)
+	yDotC1, _ := y.Dot(c1)
+	zYDotC0, _ := zY.Dot(c0)
 
-	mu1 := new(big.Int).Sub(xDotC1, zXDotC0)
+	mu1 := new(big.Int).Sub(yDotC1, zYDotC0)
 	mu1.Mod(mu1, s.params.q)
 
 	// TODO Improve!

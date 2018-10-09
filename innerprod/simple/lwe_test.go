@@ -28,25 +28,22 @@ import (
 
 func TestSimple_LWE(t *testing.T) {
 	l := 4
-	n := 3
-	m := 5
-	b := big.NewInt(10)
-	p, _ := new(big.Int).SetString("1967543", 10)
-	q, _ := new(big.Int).SetString("177565475815727", 10)
+	n := 128
+	b := big.NewInt(10000)
 
 	x, y, xy := testVectorData(l, b, b)
 	emptyVec := data.Vector{}
 	emptyMat := data.Matrix{}
 
-	simpleLWE, err := simple.NewLWE(l, b, n, m, p, q)
+	simpleLWE, err := simple.NewLWE(l, b, b, n)
 	assert.NoError(t, err)
 
 	SK, err := simpleLWE.GenerateSecretKey()
 	assert.NoError(t, err)
 
-	PK, err := simpleLWE.GeneratePublicKey(emptyMat, 0, 0, 0)
+	PK, err := simpleLWE.GeneratePublicKey(emptyMat)
 	assert.Error(t, err)
-	PK, err = simpleLWE.GeneratePublicKey(SK, 3.82660052843e-12, 1048576, 256)
+	PK, err = simpleLWE.GeneratePublicKey(SK)
 	assert.NoError(t, err)
 
 	_, err = simpleLWE.DeriveKey(emptyVec, SK)
