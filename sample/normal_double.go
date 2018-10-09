@@ -24,7 +24,7 @@ import (
 
 // NormalDouble samples random values from the
 // normal (Gaussian) probability distribution, centered on 0.
-// This sampler works in a way that first samples form a
+// This sampler works in a way that it first samples from a
 // NormalCumulative with some small sigma and then using
 // another sampling from uniform distribution creates a candidate
 // for the output, which is accepted or rejected with certain

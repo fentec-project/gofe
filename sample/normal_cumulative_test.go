@@ -37,8 +37,8 @@ func TestNormalCumulative(t *testing.T) {
 			n:        256,
 			twoSided: true,
 			expect: paramBounds{
-				meanLow:  -0.5,
-				meanHigh: 0.5,
+				meanLow:  -2,
+				meanHigh: 2,
 				varLow:   90,
 				varHigh:  110,
 			},

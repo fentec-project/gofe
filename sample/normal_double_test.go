@@ -68,8 +68,8 @@ func TestNormalDouble(t *testing.T) {
 			sigma:      big.NewFloat(10),
 			n:          256,
 			expect: paramBounds{
-				meanLow:  -0.5,
-				meanHigh: 0.5,
+				meanLow:  -2,
+				meanHigh: 2,
 				varLow:   90,
 				varHigh:  110,
 			},
@@ -80,8 +80,8 @@ func TestNormalDouble(t *testing.T) {
 			sigma:      big.NewFloat(9),
 			n:          256,
 			expect: paramBounds{
-				meanLow:  -0.5,
-				meanHigh: 0.5,
+				meanLow:  -2,
+				meanHigh: 2,
 				varLow:   70,
 				varHigh:  100,
 			},
