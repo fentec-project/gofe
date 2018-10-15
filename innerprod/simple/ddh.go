@@ -21,10 +21,10 @@ import (
 	"math/big"
 
 	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/internal/keygen"
 	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/fentec-project/gofe/internal"
 )
 
 // ddhParams represents configuration parameters for the DDH scheme instance.

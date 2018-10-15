@@ -25,8 +25,8 @@ import (
 	"crypto/rand"
 
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/fentec-project/gofe/internal"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // paillerParams represents parameters for the fully secure Paillier scheme.
@@ -237,4 +237,3 @@ func (d *Paillier) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*bi
 
 	return ret, nil
 }
-
