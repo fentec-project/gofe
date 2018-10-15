@@ -26,6 +26,8 @@ import (
 type normal struct {
 	// Standard deviation
 	sigma *big.Float
+	// Value derived form sigma used often in computations
+	twoSigmaSquare *big.Float
 	// Precision parameter
 	n uint
 	// Precomputed values of exponential function with precision n
@@ -42,13 +44,18 @@ func newNormal(sigma *big.Float, n uint) *normal {
 	powNF := new(big.Float)
 	powNF.SetPrec(n)
 	powNF.SetInt(powN)
+	twoSigmaSquare := new(big.Float)
+	twoSigmaSquare.SetPrec(n)
+	twoSigmaSquare.Mul(sigma, sigma)
+	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
 
 	return &normal{
-		sigma:  sigma,
-		n:      n,
-		preExp: nil,
-		powN:   powN,
-		powNF:  powNF,
+		sigma:          sigma,
+		twoSigmaSquare: twoSigmaSquare,
+		n:              n,
+		preExp:         nil,
+		powN:           powN,
+		powNF:          powNF,
 	}
 }
 
@@ -63,14 +70,9 @@ func (c normal) precompExp() []*big.Float {
 	maxBits := maxFloat.MantExp(nil) * 2
 	vec := make([]*big.Float, maxBits+1)
 
-	twoSigmaSquare := new(big.Float)
-	twoSigmaSquare.SetPrec(c.n)
-	twoSigmaSquare.Mul(c.sigma, c.sigma)
-	twoSigmaSquare.Mul(twoSigmaSquare, big.NewFloat(2))
-
 	x := big.NewInt(1)
 	for i := 0; i < maxBits+1; i++ {
-		vec[i] = taylorExp(x, twoSigmaSquare, 8*c.n, c.n)
+		vec[i] = taylorExp(x, c.twoSigmaSquare, 8*c.n, c.n)
 		x.Mul(x, big.NewInt(2))
 	}
 	return vec
@@ -78,10 +80,21 @@ func (c normal) precompExp() []*big.Float {
 
 // isExpGreater outputs if y > exp(-x/(2*sigma^2)) with minimal
 // calculation of exp(-x/(2*sigma^2)) based on the precomputed
-// values. Sigma is implicit in the precomputed values saved in c.
+// values if such values are provided. Sigma is implicit in the
+// precomputed values saved in c.
 func (c normal) isExpGreater(y *big.Float, x *big.Int) bool {
-	// set up an upper and lower bound for possible value of
-	// exp(-x/(2*sigma^2))
+	// check if precomputed values are provided, if not compute
+	// the exp using the taylor polynomial
+	if c.preExp == nil {
+		val := taylorExp(x, c.twoSigmaSquare, 8*c.n, c.n)
+		if val.Cmp(y) == -1 {
+			return true
+		} else {
+			return false
+		}
+	}
+	// if precomputed values are not provided set up an upper and
+	// lower bound for possible value of exp(-x/(2*sigma^2))
 	upper := big.NewFloat(1)
 	upper.SetPrec(c.n)
 	lower := new(big.Float)
@@ -113,7 +126,7 @@ func (c normal) isExpGreater(y *big.Float, x *big.Int) bool {
 	return false
 }
 
-// taylorExp approximates exp(-x/alpha) with taylor polinomial
+// taylorExp approximates exp(-x/alpha) with taylor polynomial
 // of degree k, precise at least up to 2^-n.
 func taylorExp(x *big.Int, alpha *big.Float, k uint, n uint) *big.Float {
 	// prepare the values for calculating the taylor polynomial of exp(x/sigma)

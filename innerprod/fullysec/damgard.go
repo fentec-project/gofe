@@ -24,6 +24,7 @@ import (
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/internal/keygen"
 	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/internal"
 )
 
 // l (int): The length of vectors to be encrypted.
@@ -84,12 +85,32 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 		return nil, fmt.Errorf("l * bound^2 should be smaller than group order")
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(1), key.P)
-	if err != nil {
-		return nil, err
-	}
+	h := new(big.Int)
+	for {
+		r, err := emmy.GetRandomIntFromRange(big.NewInt(1), key.P)
+		if err != nil {
+			return nil, err
+		}
+		h.Exp(key.G, r, key.P)
 
-	h := new(big.Int).Exp(key.G, r, key.P)
+		// check if h is a generator of Z_p*
+		if new(big.Int).Exp(h, key.Q, key.P).Cmp(big.NewInt(1)) == 0 {
+			continue
+		}
+		if new(big.Int).Exp(h, big.NewInt(2), key.P).Cmp(big.NewInt(1)) == 0 {
+			continue
+		}
+
+		// additional checks to avoid some known attacks
+		if new(big.Int).Mod(new(big.Int).Sub(key.P, big.NewInt(1)), h).Cmp(big.NewInt(0)) == 0 {
+			continue
+		}
+		hInv := new(big.Int).ModInverse(h, key.P)
+		if new(big.Int).Mod(new(big.Int).Sub(key.P, big.NewInt(1)), hInv).Cmp(big.NewInt(0)) == 0 {
+			continue
+		}
+		break
+	}
 
 	return &Damgard{
 		Params: &damgardParams{
@@ -204,7 +225,7 @@ func (d *Damgard) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		// e_i = h_i^r * g^x_i
 		// e_i = mpk[i]^r * g^x_i
 		t1 := new(big.Int).Exp(masterPubKey[i], r, d.Params.p)
-		t2 := new(big.Int).Exp(d.Params.g, x[i], d.Params.p)
+		t2 := internal.ModExp(d.Params.g, x[i], d.Params.p)
 		ct := new(big.Int).Mod(new(big.Int).Mul(t1, t2), d.Params.p)
 		ciphertext[i+2] = ct
 	}
@@ -222,7 +243,7 @@ func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vec
 
 	num := big.NewInt(1)
 	for i, ct := range cipher[2:] {
-		t1 := new(big.Int).Exp(ct, y[i], d.Params.p)
+		t1 := internal.ModExp(ct, y[i], d.Params.p)
 		num = num.Mod(new(big.Int).Mul(num, t1), d.Params.p)
 	}
 
@@ -241,6 +262,15 @@ func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vec
 	if err != nil {
 		return nil, err
 	}
-	return calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
+	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
+	if err != nil {
+		gInv := new(big.Int).ModInverse(d.Params.g, d.Params.p)
+		res, err = calc.WithBound(bound).BabyStepGiantStep(r, gInv)
+		if err != nil {
+			return nil, err
+		}
+		res.Neg(res)
+	}
 
+	return res, nil
 }
