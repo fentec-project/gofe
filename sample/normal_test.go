@@ -57,7 +57,7 @@ type paramBounds struct {
 // it is producing expected results - such that mean and variance
 // of a series of samples are within acceptable bounds.
 func testNormalSampler(t *testing.T, s sample.Sampler, bounds paramBounds) {
-	vec := make([]*big.Int, 10000)
+	vec := make([]*big.Int, 1000)
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = s.Sample()
 	}
@@ -65,7 +65,7 @@ func testNormalSampler(t *testing.T, s sample.Sampler, bounds paramBounds) {
 	me, _ := mean(vec).Float64()
 	v, _ := variance(vec).Float64()
 
-	// me should be around 0 and v should be around 100
+	// me should be around 0 and v should be around sigma^2
 	assert.True(t, me > bounds.meanLow, "mean value of the normal distribution is too small")
 	assert.True(t, me < bounds.meanHigh, "mean value of the normal distribution is too big")
 	assert.True(t, v > bounds.varLow, "variance of the normal distribution is too small")

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 	emmy "github.com/xlab-si/emmy/crypto/common"
 	"github.com/xlab-si/emmy/crypto/schnorr"
@@ -30,19 +31,21 @@ type params struct {
 	p, order, g *big.Int
 }
 
-func get_params() *params {
-	p, _ := emmy.GetSafePrime(20)
-	pMin1 := new(big.Int).Sub(p, big.NewInt(1))
-	x := emmy.GetRandomInt(p)
+func get_params(t *testing.T) *params {
+	key, err := keygen.NewElGamal(20)
+	if err != nil {
+		t.Fatalf("Error during parameters generation: %v", err)
+	}
+	pMin1 := new(big.Int).Sub(key.P, big.NewInt(1))
 	return &params{
-		p:     p,
-		order: new(big.Int).Div(pMin1, big.NewInt(2)),
-		g:     new(big.Int).Exp(x, big.NewInt(2), p),
+		p:     key.P,
+		order: pMin1,
+		g:     key.G,
 	}
 }
 
 func TestDLog(t *testing.T) {
-	params := get_params()
+	params := get_params(t)
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {

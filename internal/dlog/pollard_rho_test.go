@@ -28,7 +28,7 @@ import (
 )
 
 func TestPollardRho(t *testing.T) {
-	params := get_params()
+	params := get_params(t)
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {
@@ -47,7 +47,7 @@ func TestPollardRho(t *testing.T) {
 }
 
 func TestPollardRhoParallel(t *testing.T) {
-	params := get_params()
+	params := get_params(t)
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {

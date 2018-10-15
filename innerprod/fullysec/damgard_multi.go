@@ -24,6 +24,7 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
+// TODO: check proofs and modfy code so that the input x, y can also be negative
 // DamgardMulti represents a multi input variant of the
 // underlying Damgard scheme.
 type DamgardMulti struct {

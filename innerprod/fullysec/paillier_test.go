@@ -14,73 +14,69 @@
  * limitations under the License.
  */
 
-package simple_test
+package fullysec_test
 
 import (
 	"math/big"
 	"testing"
 
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/innerprod/simple"
+	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple_DDH(t *testing.T) {
-	l := 3
-	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(20), big.NewInt(0))
-	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
-	modulusLength := 128
+func TestFullySec_Paillier(t *testing.T) {
+	l := 50
+	boundX := new(big.Int).Exp(big.NewInt(2), big.NewInt(64), nil)
+	boundY := new(big.Int).Exp(big.NewInt(2), big.NewInt(64), nil)
 
-	simpleDDH, err := simple.NewDDH(l, modulusLength, bound)
+	samplerX := sample.NewUniformRange(new(big.Int).Neg(boundX), boundX)
+	samplerY := sample.NewUniformRange(new(big.Int).Neg(boundY), boundY)
+	bitLength := 512
+	lambda := 128
 
+	paillier, err := fullysec.NewPaillier(l, lambda, bitLength, boundX, boundY)
 	if err != nil {
 		t.Fatalf("Error during simple inner product creation: %v", err)
 	}
 
-	masterSecKey, masterPubKey, err := simpleDDH.GenerateMasterKeys()
-
+	masterSecKey, masterPubKey, err := paillier.GenerateMasterKeys()
 	if err != nil {
 		t.Fatalf("Error during master key generation: %v", err)
 	}
 
-	y, err := data.NewRandomVector(l, sampler)
-
+	y, err := data.NewRandomVector(l, samplerY)
 	if err != nil {
 		t.Fatalf("Error during random generation: %v", err)
 	}
 
-	funcKey, err := simpleDDH.DeriveKey(masterSecKey, y)
-
+	key, err := paillier.DeriveKey(masterSecKey, y)
 	if err != nil {
 		t.Fatalf("Error during key derivation: %v", err)
 	}
 
-	x, err := data.NewRandomVector(l, sampler)
-
+	x, err := data.NewRandomVector(l, samplerX)
 	if err != nil {
 		t.Fatalf("Error during random generation: %v", err)
 	}
 
 	// simulate the instantiation of encryptor (which should be given masterPubKey)
-	encryptor := simple.NewDDHFromParams(simpleDDH.Params)
-	xyCheck, err := x.Dot(y)
+	encryptor := fullysec.NewPaillierFromParams(paillier.Params)
 
-	if err != nil {
-		t.Fatalf("Error during inner product calculation")
-	}
 	ciphertext, err := encryptor.Encrypt(x, masterPubKey)
-
 	if err != nil {
 		t.Fatalf("Error during encryption: %v", err)
 	}
 
-	decryptor := simple.NewDDHFromParams(simpleDDH.Params)
-	xy, err := decryptor.Decrypt(ciphertext, funcKey, y)
-
+	xy, err := paillier.Decrypt(ciphertext, key, y)
 	if err != nil {
-		t.Fatalf("Error during decryption: %v", err)
+		t.Fatalf("Error during decryption")
 	}
 
+	xyCheck, err := x.Dot(y)
+	if err != nil {
+		t.Fatalf("Error during inner product calculation")
+	}
 	assert.Equal(t, xy, xyCheck, "Original and decrypted values should match")
 }
