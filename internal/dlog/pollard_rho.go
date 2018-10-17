@@ -25,12 +25,6 @@ import (
 )
 
 // Pollard's rho algorithm - simple, non-parallel version.
-// Note that the function works only for g of prime order - otherwise in
-// g^(a1-a2) = h^(b2-b1) (mod order) the inverse of (b2-b1) modulo order
-// might not exist and we don't get h on the right side (we could use
-// Euler's totient function of n as modulo though - in this case we would
-// get bDiffInv such that (b2-b1) * bDiffInv = k*phi(n) + 1 and
-// g^((a1-a2)*bDiffInv) = h (mod n), because x^phi(n) = 1 (mod n)).
 func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 	n := new(big.Int).Set(order)
 
@@ -67,18 +61,33 @@ func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 		iterate(x1, a1, b1)
 		iterate(x2, a2, b2)
 		iterate(x2, a2, b2)
-
 		if x1.Cmp(x2) == 0 {
 			r.Mod(q.Sub(b2, b1), n)
-
+			t.Mod(q.Sub(a1, a2), n)
 			if r.Cmp(big.NewInt(0)) == 0 {
 				return nil, fmt.Errorf("error in Pollard rho: no modular inverse for factor")
 			}
+			d := new(big.Int).GCD(nil, nil, r, n)
 
-			q.ModInverse(r, n)
-			r.Sub(a1, a2)
+			// if r and n are coprime the algorithm is simple
+			if d.Cmp(big.NewInt(1)) == 0 {
+				q.ModInverse(r, n)
+				return q.Mod(q.Mul(q, t), n), nil
+			}
 
-			return r.Mod(t.Mul(q, r), n), nil
+			// in case r and n are not coprime additional computations are needed
+			r.Div(r, d)
+			t.Div(t, d)
+			nDivD := new(big.Int).Div(n, d)
+			q.ModInverse(r, nDivD)
+			q.Mod(q.Mul(q, t), nDivD)
+			one := big.NewInt(1)
+			for i := big.NewInt(0); i.Cmp(d) == -1; i.Add(i, one) {
+				if h.Cmp(new(big.Int).Exp(g, q, p)) == 0 {
+					return q, nil
+				}
+				q.Add(q, nDivD)
+			}
 		}
 	}
 
@@ -156,7 +165,7 @@ func pollardRhoParallel(h, g, p, order *big.Int) (*big.Int, error) {
 			b2 := el.b
 
 			r.Mod(q.Sub(b2, b1), n)
-
+			t.Mod(q.Sub(a1, a2), n)
 			// presume that at least one goroutine will compute the right value, do not terminate with error here
 			if r.Cmp(big.NewInt(0)) == 0 {
 				triples[str] = triple
@@ -165,11 +174,26 @@ func pollardRhoParallel(h, g, p, order *big.Int) (*big.Int, error) {
 
 			close(quit)
 
-			q.ModInverse(r, n)
-			r.Sub(a1, a2)
-			x := r.Mod(t.Mul(q, r), n)
+			d := new(big.Int).GCD(nil, nil, r, n)
+			// if r and n are coprime the algorithm is simple
+			if d.Cmp(big.NewInt(1)) == 0 {
+				q.ModInverse(r, n)
+				return q.Mod(q.Mul(q, t), n), nil
+			}
 
-			return x, nil
+			// in case r and n are not coprime additional computations are needed
+			r.Div(r, d)
+			t.Div(t, d)
+			nDivD := new(big.Int).Div(n, d)
+			q.ModInverse(r, nDivD)
+			q.Mod(q.Mul(q, t), nDivD)
+			one := big.NewInt(1)
+			for i := big.NewInt(0); i.Cmp(d) == -1; i.Add(i, one) {
+				if h.Cmp(new(big.Int).Exp(g, q, p)) == 0 {
+					return q, nil
+				}
+				q.Add(q, nDivD)
+			}
 
 		} else {
 			triples[str] = triple
