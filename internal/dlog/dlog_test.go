@@ -31,21 +31,25 @@ type params struct {
 	p, order, g *big.Int
 }
 
-func getParams(t *testing.T) *params {
+func getParams() (*params, error) {
 	key, err := keygen.NewElGamal(20)
 	if err != nil {
-		t.Fatalf("Error during parameters generation: %v", err)
+		return nil, err
 	}
-	pMin1 := new(big.Int).Sub(key.P, big.NewInt(1))
+
 	return &params{
 		p:     key.P,
-		order: pMin1,
+		order: new(big.Int).Sub(key.P, big.NewInt(1)),
 		g:     key.G,
-	}
+	}, nil
 }
 
 func TestDLog(t *testing.T) {
-	params := getParams(t)
+	params, err := getParams()
+	if err != nil {
+		t.Fatalf("Error during parameters generation: %v", err)
+	}
+
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {

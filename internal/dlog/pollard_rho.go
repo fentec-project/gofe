@@ -56,6 +56,7 @@ func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 	}
 
 	iterations := math.MaxInt32
+	one := big.NewInt(1)
 
 	for i := 0; i < iterations; i++ {
 		iterate(x1, a1, b1)
@@ -81,7 +82,7 @@ func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 			nDivD := new(big.Int).Div(n, d)
 			q.ModInverse(r, nDivD)
 			q.Mod(q.Mul(q, t), nDivD)
-			one := big.NewInt(1)
+
 			for i := big.NewInt(0); i.Cmp(d) == -1; i.Add(i, one) {
 				if h.Cmp(new(big.Int).Exp(g, q, p)) == 0 {
 					return q, nil
