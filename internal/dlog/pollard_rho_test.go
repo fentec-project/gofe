@@ -28,7 +28,11 @@ import (
 )
 
 func TestPollardRho(t *testing.T) {
-	params := get_params()
+	params, err := getParams()
+	if err != nil {
+		t.Fatalf("Error during parameters generation: %v", err)
+	}
+
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {
@@ -47,7 +51,11 @@ func TestPollardRho(t *testing.T) {
 }
 
 func TestPollardRhoParallel(t *testing.T) {
-	params := get_params()
+	params, err := getParams()
+	if err != nil {
+		t.Fatalf("Error during parameters generation: %v", err)
+	}
+
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {

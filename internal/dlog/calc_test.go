@@ -26,29 +26,6 @@ import (
 	emmy "github.com/xlab-si/emmy/crypto/common"
 )
 
-// TODO not really using schnorr group anymore...
-func TestCalcZp_BabyStepGiantStep_SchnorrGroup(t *testing.T) {
-	key := get_params()
-	bound := new(big.Int).Sqrt(key.p)
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), bound)
-	if err != nil {
-		t.Fatalf("Error during random int generation: %v", err)
-	}
-
-	calc, err := NewCalc().InZp(key.p, key.order)
-	if err != nil {
-		t.Fatal("Error in creation of new CalcZp:", err)
-	}
-
-	h := new(big.Int).Exp(key.g, xCheck, key.p)
-	x, err := calc.WithBound(nil).BabyStepGiantStep(h, key.g)
-	if err != nil {
-		t.Fatalf("Error in BabyStepGiantStep algorithm: %v", err)
-	}
-	assert.Equal(t, xCheck, x, "BabyStepGiantStep result is wrong")
-
-}
-
 func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	modulusLength := 44
 

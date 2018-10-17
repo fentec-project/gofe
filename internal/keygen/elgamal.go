@@ -17,8 +17,9 @@
 package keygen
 
 import (
-	"fmt"
 	"math/big"
+
+	"fmt"
 
 	emmy "github.com/xlab-si/emmy/crypto/common"
 )
@@ -27,51 +28,57 @@ type ElGamal struct {
 	Y *big.Int // public key
 	G *big.Int // generator
 	P *big.Int // modulus
-	Q *big.Int // order
+	Q *big.Int // (P - 1) / 2
 }
 
 // adapted from https://github.com/dlitz/pycrypto/blob/master/lib/Crypto/PublicKey/ElGamal.py
 func NewElGamal(modulusLength int) (*ElGamal, error) {
 	p, err := emmy.GetSafePrime(modulusLength)
-	g := big.NewInt(0)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate safe prime")
 	}
 
+	zero := big.NewInt(0)
+	one := big.NewInt(1)
+	two := big.NewInt(2)
+	three := big.NewInt(3)
+
+	// q = (p - 1) / 2
+	q := new(big.Int).Sub(p, one)
+	q.Div(q, two)
+	g := new(big.Int)
+
 	for {
-		r, err := emmy.GetRandomIntFromRange(big.NewInt(2), p)
+		g, err = emmy.GetRandomIntFromRange(three, p)
 		if err != nil {
 			return nil, err
 		}
 
-		g = new(big.Int).Exp(r, big.NewInt(2), p)
-
-		if g.Cmp(big.NewInt(2)) < 1 {
+		// check if g is a generator of Z_p*
+		if new(big.Int).Exp(g, q, p).Cmp(one) == 0 {
+			continue
+		}
+		if new(big.Int).Exp(g, two, p).Cmp(one) == 0 {
 			continue
 		}
 
-		if new(big.Int).Mod(new(big.Int).Sub(p, big.NewInt(1)), g).Cmp(big.NewInt(0)) == 0 {
+		// additional checks to avoid some known attacks
+		if new(big.Int).Mod(new(big.Int).Sub(p, one), g).Cmp(zero) == 0 {
 			continue
 		}
-
 		gInv := new(big.Int).ModInverse(g, p)
-		if new(big.Int).Mod(new(big.Int).Sub(p, big.NewInt(1)), gInv).Cmp(big.NewInt(0)) == 0 {
+		if new(big.Int).Mod(new(big.Int).Sub(p, one), gInv).Cmp(zero) == 0 {
 			continue
 		}
 
 		break
 	}
 
-	x, err := emmy.GetRandomIntFromRange(big.NewInt(2), new(big.Int).Sub(p, big.NewInt(1)))
+	x, err := emmy.GetRandomIntFromRange(two, new(big.Int).Sub(p, one))
 	if err != nil {
 		return nil, err
 	}
-
 	y := new(big.Int).Exp(g, x, p)
-
-	// order: q = (p - 1) / 2
-	q := new(big.Int).Div(new(big.Int).Sub(p, big.NewInt(1)), big.NewInt(2))
 
 	return &ElGamal{
 		Y: y,
