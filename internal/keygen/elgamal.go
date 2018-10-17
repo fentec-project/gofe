@@ -19,8 +19,9 @@ package keygen
 import (
 	"math/big"
 
-	emmy "github.com/xlab-si/emmy/crypto/common"
 	"fmt"
+
+	emmy "github.com/xlab-si/emmy/crypto/common"
 )
 
 type ElGamal struct {
