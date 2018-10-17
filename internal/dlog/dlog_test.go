@@ -31,7 +31,7 @@ type params struct {
 	p, order, g *big.Int
 }
 
-func get_params(t *testing.T) *params {
+func getParams(t *testing.T) *params {
 	key, err := keygen.NewElGamal(20)
 	if err != nil {
 		t.Fatalf("Error during parameters generation: %v", err)
@@ -45,7 +45,7 @@ func get_params(t *testing.T) *params {
 }
 
 func TestDLog(t *testing.T) {
-	params := get_params(t)
+	params := getParams(t)
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
 
 	if err != nil {

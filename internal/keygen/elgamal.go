@@ -40,7 +40,7 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 		return nil, fmt.Errorf("failed to generate safe prime")
 	}
 
-	g := big.NewInt(0)
+	g := new(big.Int)
 
 	for {
 		g, err = emmy.GetRandomIntFromRange(big.NewInt(3), p)
