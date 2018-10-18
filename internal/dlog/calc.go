@@ -69,7 +69,7 @@ func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 	return c
 }
 
-func (c *CalcZp) RunBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errChan chan error)  {
+func (c *CalcZp) RunBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
 	ret, err := c.BabyStepGiantStep(h, g)
 	retChan <- ret
 	errChan <- err
@@ -88,12 +88,12 @@ func (c *CalcZp) BabyStepGiantStepWithNeg(h, g *big.Int) (*big.Int, error) {
 	go c.RunBabyStepGiantStep(h, gInv, retChan, errChan)
 	// catch a value when the first routine finishes
 	ret := <-retChan
-	err := <- errChan
+	err := <-errChan
 	// prevent the situation when one routine exhausted all possibilities
 	// before the second found the solution
 	if err != nil {
 		ret = <-retChan
-		err = <- errChan
+		err = <-errChan
 	}
 	// if both routines give an error, return an error
 	if err != nil {
