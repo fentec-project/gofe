@@ -51,7 +51,7 @@ func TestFullySec_LWE(t *testing.T) {
 	assert.Error(t, err)
 	_, err = fsLWE.DeriveKey(y, emptyMat)
 	assert.Error(t, err)
-	_, err = fsLWE.DeriveKey(y.MulScalar(big.NewInt(1000)), emptyMat)
+	_, err = fsLWE.DeriveKey(y.MulScalar(big.NewInt(10000)), emptyMat)
 	assert.Error(t, err) // boundary violation
 	zY, err := fsLWE.DeriveKey(y, Z)
 	assert.NoError(t, err)
@@ -60,7 +60,7 @@ func TestFullySec_LWE(t *testing.T) {
 	assert.Error(t, err)
 	_, err = fsLWE.Encrypt(x, emptyMat)
 	assert.Error(t, err)
-	_, err = fsLWE.Encrypt(x.MulScalar(big.NewInt(1000)), U)
+	_, err = fsLWE.Encrypt(x.MulScalar(big.NewInt(10000)), U)
 	assert.Error(t, err) // boundary violation
 	cipher, err := fsLWE.Encrypt(x, U)
 	assert.NoError(t, err)
@@ -71,7 +71,7 @@ func TestFullySec_LWE(t *testing.T) {
 	assert.Error(t, err)
 	_, err = fsLWE.Decrypt(cipher, zY, emptyVec)
 	assert.Error(t, err)
-	_, err = fsLWE.Decrypt(cipher, zY, y.MulScalar(big.NewInt(1000)))
+	_, err = fsLWE.Decrypt(cipher, zY, y.MulScalar(big.NewInt(10000)))
 	assert.Error(t, err) // boundary violation
 	xyDecrypted, err := fsLWE.Decrypt(cipher, zY, y)
 	assert.NoError(t, err)
