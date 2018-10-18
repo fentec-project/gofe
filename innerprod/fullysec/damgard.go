@@ -263,16 +263,7 @@ func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vec
 		return nil, err
 	}
 
-	// TODO: this takes more time if the input is negative
-	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
-	if err != nil {
-		gInv := new(big.Int).ModInverse(d.Params.g, d.Params.p)
-		res, err = calc.WithBound(bound).BabyStepGiantStep(r, gInv)
-		if err != nil {
-			return nil, err
-		}
-		res.Neg(res)
-	}
+	res, err := calc.WithBound(bound).BabyStepGiantStepWithNeg(r, d.Params.g)
 
-	return res, nil
+	return res, err
 }

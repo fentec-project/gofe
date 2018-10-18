@@ -173,17 +173,8 @@ func (d *DDH) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*big.Int
 		return nil, err
 	}
 
-	// TODO: this runs much longer if the result is positive; parallel?
-	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
-	if err != nil {
-		gInv := new(big.Int).ModInverse(d.Params.g, d.Params.p)
-		res, err = calc.WithBound(bound).BabyStepGiantStep(r, gInv)
-		if err != nil {
-			return nil, err
-		}
-		res.Neg(res)
-	}
+	res, err := calc.WithBound(bound).BabyStepGiantStepWithNeg(r, d.Params.g)
 
-	return res, nil
+	return res, err
 
 }

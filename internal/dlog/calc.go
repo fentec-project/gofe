@@ -69,6 +69,45 @@ func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 	return c
 }
 
+func (c *CalcZp) RunBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errChan chan error)  {
+	ret, err := c.BabyStepGiantStep(h, g)
+	retChan <- ret
+	errChan <- err
+}
+
+// BabyStepGiantStepWithNeg uses the baby-step giant-step method to
+// compute the discrete logarithm in the Zp group if the answer is
+// within [-bound, bound]. It does so by running two goroutines, one
+// for negative answers and one for positive.
+func (c *CalcZp) BabyStepGiantStepWithNeg(h, g *big.Int) (*big.Int, error) {
+	// create two goroutines calculating positive and negative result
+	retChan := make(chan *big.Int)
+	errChan := make(chan error)
+	go c.RunBabyStepGiantStep(h, g, retChan, errChan)
+	gInv := new(big.Int).ModInverse(g, c.p)
+	go c.RunBabyStepGiantStep(h, gInv, retChan, errChan)
+	// catch a value when the first routine finishes
+	ret := <-retChan
+	err := <- errChan
+	// prevent the situation when one routine exhausted all possibilities
+	// before the second found the solution
+	if err != nil {
+		ret = <-retChan
+		err = <- errChan
+	}
+	// if both routines give an error, return an error
+	if err != nil {
+		return nil, err
+	}
+	// based on ret decide which routine gave the answer, thus if
+	// answer is negative
+	if h.Cmp(new(big.Int).Exp(g, ret, c.p)) != 0 {
+		ret.Neg(ret)
+	}
+
+	return ret, err
+}
+
 // BabyStepGiantStep implements the baby-step giant-step method to
 // compute the discrete logarithm in the Zp group.
 //
