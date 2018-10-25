@@ -72,12 +72,14 @@ func (v Vector) Mod(modulo *big.Int) Vector {
 	return NewVector(newCoords)
 }
 
-// CheckBound checks whether all vector elements are strictly
-// smaller than the provided bound.
-// It returns error if at least one element is >= bound.
+// CheckBound checks whether the absolute value of all vector elements
+// are strictly smaller than the provided bound.
+// It returns error if at least one element's absolute value is >= bound.
 func (v Vector) CheckBound(bound *big.Int) error {
+	abs := new(big.Int)
 	for _, c := range v {
-		if c.Cmp(bound) > -1 {
+		abs.Abs(c)
+		if abs.Cmp(bound) > -1 {
 			return fmt.Errorf("all coordinates of a vector should be smaller than bound")
 		}
 	}

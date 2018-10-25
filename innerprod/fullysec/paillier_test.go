@@ -78,5 +78,5 @@ func TestFullySec_Paillier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error during inner product calculation")
 	}
-	assert.Equal(t, xy, xyCheck, "Original and decrypted values should match")
+	assert.Equal(t, xy.Cmp(xyCheck), 0, "Original and decrypted values should match")
 }
