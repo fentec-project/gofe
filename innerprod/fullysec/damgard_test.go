@@ -82,5 +82,5 @@ func TestFullySec_DamgardDDH(t *testing.T) {
 		t.Fatalf("Error during decryption: %v", err)
 	}
 
-	assert.Equal(t, xy, xyCheck, "Original and decrypted values should match")
+	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
 }

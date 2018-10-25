@@ -36,6 +36,5 @@ func TestBruteForceBN256(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error in brute force algorithm: %v", err)
 	}
-
-	assert.Equal(t, xCheck, x, "bruteForce in BN256 result is wrong")
+	assert.Equal(t, xCheck.Cmp(x), 0, "obtained incorrect result")
 }

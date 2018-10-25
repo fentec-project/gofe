@@ -68,7 +68,7 @@ func TestSimple_LWE(t *testing.T) {
 	assert.Error(t, err)
 	xyDecrypted, err := simpleLWE.Decrypt(cipher, skY, y)
 	assert.NoError(t, err)
-	assert.Equal(t, xy, xyDecrypted, "obtained incorrect inner product")
+	assert.Equal(t, xy.Cmp(xyDecrypted), 0, "obtained incorrect inner product")
 }
 
 // testVectorData returns random vectors x, y, each containing

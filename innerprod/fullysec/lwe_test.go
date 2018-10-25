@@ -61,7 +61,7 @@ func TestFullySec_LWE(t *testing.T) {
 	_, err = fsLWE.Encrypt(x, emptyMat)
 	assert.Error(t, err)
 	_, err = fsLWE.Encrypt(x.MulScalar(big.NewInt(10000)), U)
-	//assert.Error(t, err) // boundary violation
+	assert.Error(t, err) // boundary violation
 	cipher, err := fsLWE.Encrypt(x, U)
 	assert.NoError(t, err)
 
@@ -72,10 +72,10 @@ func TestFullySec_LWE(t *testing.T) {
 	_, err = fsLWE.Decrypt(cipher, zY, emptyVec)
 	assert.Error(t, err)
 	_, err = fsLWE.Decrypt(cipher, zY, y.MulScalar(big.NewInt(10000)))
-	//assert.Error(t, err) // boundary violation
+	assert.Error(t, err) // boundary violation
 	xyDecrypted, err := fsLWE.Decrypt(cipher, zY, y)
 	assert.NoError(t, err)
-	assert.Equal(t, xy, xyDecrypted, "obtained incorrect inner product")
+	assert.Equal(t, xy.Cmp(xyDecrypted), 0, "obtained incorrect inner product")
 }
 
 // testVectorData returns random vectors x, y, each containing
@@ -86,7 +86,6 @@ func testVectorData(len int, boundX, boundY *big.Int) (data.Vector, data.Vector,
 	samplerY := sample.NewUniformRange(new(big.Int).Neg(boundY), boundY)
 	x, _ := data.NewRandomVector(len, samplerX)
 	y, _ := data.NewRandomVector(len, samplerY)
-	x = x.MulScalar(big.NewInt(0))
 	xy, _ := x.Dot(y)
 
 	return x, y, xy

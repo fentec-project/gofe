@@ -47,7 +47,7 @@ func TestPollardRho(t *testing.T) {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
 
-	assert.Equal(t, xCheck, x, "pollardRho result is wrong")
+	assert.Equal(t, xCheck.Cmp(x), 0, "pollardRho result is wrong")
 }
 
 func TestPollardRhoParallel(t *testing.T) {
@@ -69,7 +69,7 @@ func TestPollardRhoParallel(t *testing.T) {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
 
-	assert.Equal(t, xCheck, x, "pollardRho result is wrong")
+	assert.Equal(t, xCheck.Cmp(x), 0, "pollardRho result is wrong")
 }
 
 func TestPollardRhoFactorization(t *testing.T) {
@@ -106,7 +106,7 @@ func TestPollardRhoElGamal(t *testing.T) {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
 
-	assert.Equal(t, xCheck, x, "pollardRho result is wrong")
+	assert.Equal(t, xCheck.Cmp(x), 0, "pollardRho result is wrong")
 }
 
 func checkFactorization(factorization map[string]int, n *big.Int, t *testing.T) {
@@ -122,7 +122,7 @@ func checkFactorization(factorization map[string]int, n *big.Int, t *testing.T) 
 		nCheck.Mul(nCheck, new(big.Int).Exp(prime, big.NewInt(int64(power)), big.NewInt(0)))
 	}
 
-	assert.Equal(t, n, nCheck, "Product of factor powers should match original number")
+	assert.Equal(t, nCheck.Cmp(n), 0, "Product of factor powers should match original number")
 }
 
 // Hard factorization problem - the number is a product of two large primes

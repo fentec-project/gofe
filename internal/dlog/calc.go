@@ -114,7 +114,7 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 	}
 	// based on ret decide which routine gave the answer, thus if
 	// answer is negative
-	if c.neg == true && h.Cmp(new(big.Int).Exp(g, ret, c.p)) != 0 {
+	if c.neg && h.Cmp(new(big.Int).Exp(g, ret, c.p)) != 0 {
 		ret.Neg(ret)
 	}
 

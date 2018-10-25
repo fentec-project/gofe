@@ -72,9 +72,7 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
 	}
-
-	assert.Equal(t, xCheck, x, "BabyStepGiantStep result is wrong")
-
+	assert.Equal(t, xCheck.Cmp(x), 0, "BabyStepGiantStep result is wrong")
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
@@ -91,5 +89,5 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
 	}
 
-	assert.Equal(t, xCheck, x, "BabyStepGiantStep in BN256 returns wrong dlog")
+	assert.Equal(t, xCheck.Cmp(x), 0, "BabyStepGiantStep in BN256 returns wrong dlog")
 }
