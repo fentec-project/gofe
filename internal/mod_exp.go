@@ -18,7 +18,7 @@ package internal
 
 import "math/big"
 
-// ModExp calculates g^x in Z_m*, even if x < 0
+// ModExp calculates g^x in Z_m*, even if x < 0.
 func ModExp(g, x, m *big.Int) *big.Int {
 	ret := new(big.Int)
 	if x.Cmp(big.NewInt(0)) == -1 {

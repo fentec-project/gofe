@@ -78,8 +78,12 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 	if err != nil {
 		return nil, err
 	}
+	zero := big.NewInt(0)
+	one := big.NewInt(1)
+	two := big.NewInt(2)
 
-	bSquared := new(big.Int).Exp(bound, big.NewInt(2), big.NewInt(0))
+
+	bSquared := new(big.Int).Exp(bound, two, nil)
 	prod := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
 	if prod.Cmp(key.P) > 0 {
 		return nil, fmt.Errorf("l * bound^2 should be smaller than group order")
@@ -87,26 +91,26 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 
 	h := new(big.Int)
 	for {
-		r, err := emmy.GetRandomIntFromRange(big.NewInt(1), key.P)
+		r, err := emmy.GetRandomIntFromRange(one, key.P)
 		if err != nil {
 			return nil, err
 		}
 		h.Exp(key.G, r, key.P)
 
 		// check if h is a generator of Z_p*
-		if new(big.Int).Exp(h, key.Q, key.P).Cmp(big.NewInt(1)) == 0 {
+		if new(big.Int).Exp(h, key.Q, key.P).Cmp(one) == 0 {
 			continue
 		}
-		if new(big.Int).Exp(h, big.NewInt(2), key.P).Cmp(big.NewInt(1)) == 0 {
+		if new(big.Int).Exp(h, two, key.P).Cmp(one) == 0 {
 			continue
 		}
 
 		// additional checks to avoid some known attacks
-		if new(big.Int).Mod(new(big.Int).Sub(key.P, big.NewInt(1)), h).Cmp(big.NewInt(0)) == 0 {
+		if new(big.Int).Mod(new(big.Int).Sub(key.P, one), h).Cmp(zero) == 0 {
 			continue
 		}
 		hInv := new(big.Int).ModInverse(h, key.P)
-		if new(big.Int).Mod(new(big.Int).Sub(key.P, big.NewInt(1)), hInv).Cmp(big.NewInt(0)) == 0 {
+		if new(big.Int).Mod(new(big.Int).Sub(key.P, one), hInv).Cmp(zero) == 0 {
 			continue
 		}
 		break
@@ -262,8 +266,8 @@ func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vec
 	if err != nil {
 		return nil, err
 	}
+	calc = calc.WithNeg()
 
-	res, err := calc.WithBound(bound).BabyStepGiantStepWithNeg(r, d.Params.g)
-
+	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
 	return res, err
 }

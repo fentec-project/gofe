@@ -75,8 +75,10 @@ func TestSimple_LWE(t *testing.T) {
 // elements up to the respective bound.
 // It also returns the dot product of the vectors.
 func testVectorData(len int, boundX, boundY *big.Int) (data.Vector, data.Vector, *big.Int) {
-	x, _ := data.NewRandomVector(len, sample.NewUniformRange(new(big.Int).Neg(boundX), boundX))
-	y, _ := data.NewRandomVector(len, sample.NewUniformRange(new(big.Int).Neg(boundY), boundY))
+	samplerX := sample.NewUniformRange(new(big.Int).Neg(boundX), boundX)
+	samplerY := sample.NewUniformRange(new(big.Int).Neg(boundY), boundY)
+	x, _ := data.NewRandomVector(len, samplerX)
+	y, _ := data.NewRandomVector(len, samplerY)
 	xy, _ := x.Dot(y)
 
 	return x, y, xy

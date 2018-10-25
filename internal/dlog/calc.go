@@ -27,6 +27,7 @@ type CalcZp struct {
 	p     *big.Int
 	bound *big.Int
 	m     *big.Int
+	neg   bool
 }
 
 func (*Calc) InZp(p, order *big.Int) (*CalcZp, error) {
@@ -52,6 +53,7 @@ func (*Calc) InZp(p, order *big.Int) (*CalcZp, error) {
 		p:     p,
 		bound: bound,
 		m:     m,
+		neg:   false,
 	}, nil
 }
 
@@ -64,34 +66,45 @@ func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 			bound: bound,
 			m:     m,
 			p:     c.p,
+			neg:   c.neg,
 		}
 	}
 	return c
 }
 
-func (c *CalcZp) RunBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
-	ret, err := c.BabyStepGiantStep(h, g)
-	retChan <- ret
-	errChan <- err
+func (c *CalcZp) WithNeg() *CalcZp {
+	return &CalcZp{
+		bound: c.bound,
+		m:     c.m,
+		p:     c.p,
+		neg:   true,
+	}
 }
 
-// BabyStepGiantStepWithNeg uses the baby-step giant-step method to
-// compute the discrete logarithm in the Zp group if the answer is
-// within [-bound, bound]. It does so by running two goroutines, one
-// for negative answers and one for positive.
-func (c *CalcZp) BabyStepGiantStepWithNeg(h, g *big.Int) (*big.Int, error) {
-	// create two goroutines calculating positive and negative result
+// BabyStepGiantStep uses the baby-step giant-step method to
+// compute the discrete logarithm in the Zp group. If c.neg is
+// set to true it searches for the answer within [-bound, bound].
+// It does so by running two goroutines, one for negative
+// answers and one for positive. If c.neg is set to false
+// only one goroutine is started, searching for the answer
+// within [0, bound].
+func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
+	// create goroutines calculating positive and possibly negative
+	// result if c.neg is set to true
 	retChan := make(chan *big.Int)
 	errChan := make(chan error)
-	go c.RunBabyStepGiantStep(h, g, retChan, errChan)
-	gInv := new(big.Int).ModInverse(g, c.p)
-	go c.RunBabyStepGiantStep(h, gInv, retChan, errChan)
+	go c.runBabyStepGiantStep(h, g, retChan, errChan)
+	if c.neg == true {
+		gInv := new(big.Int).ModInverse(g, c.p)
+		go c.runBabyStepGiantStep(h, gInv, retChan, errChan)
+	}
+
 	// catch a value when the first routine finishes
 	ret := <-retChan
 	err := <-errChan
 	// prevent the situation when one routine exhausted all possibilities
 	// before the second found the solution
-	if err != nil {
+	if c.neg == true && err != nil {
 		ret = <-retChan
 		err = <-errChan
 	}
@@ -101,22 +114,20 @@ func (c *CalcZp) BabyStepGiantStepWithNeg(h, g *big.Int) (*big.Int, error) {
 	}
 	// based on ret decide which routine gave the answer, thus if
 	// answer is negative
-	if h.Cmp(new(big.Int).Exp(g, ret, c.p)) != 0 {
+	if c.neg == true && h.Cmp(new(big.Int).Exp(g, ret, c.p)) != 0 {
 		ret.Neg(ret)
 	}
 
 	return ret, err
 }
 
-// BabyStepGiantStep implements the baby-step giant-step method to
-// compute the discrete logarithm in the Zp group.
+// runBabyStepGiantStep implements the baby-step giant-step method to
+// compute the discrete logarithm in the Zp group. It is meant to be run
+// as a goroutine.
 //
-// It searches for a solution <= sqrt(bound). If bound argument is nil,
-// the bound is automatically set to p-1.
-//
-// The function returns x, where h = g^x mod p. If the solution was not found
+// The function searches for x, where h = g^x mod p. If the solution was not found
 // within the provided bound, it returns an error.
-func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
+func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
 	one := big.NewInt(1)
 
 	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
@@ -136,12 +147,14 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 	x = new(big.Int).Set(h)
 	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
 		if e, ok := T[string(x.Bytes())]; ok {
-			return new(big.Int).Add(new(big.Int).Mul(i, c.m), e), nil
+			retChan <- new(big.Int).Add(new(big.Int).Mul(i, c.m), e)
+			errChan <- nil
+			return
 		}
 		x = new(big.Int).Mod(new(big.Int).Mul(x, z), c.p)
 	}
-
-	return nil, fmt.Errorf("failed to find discrete logarithm within bound")
+	retChan <- nil
+	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound")
 }
 
 // CalcBN256 represents a calculator for discrete logarithms

@@ -24,6 +24,7 @@ import (
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/internal"
 )
 
 func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
@@ -37,6 +38,7 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	//order := new(big.Int).Sub(key.P, big.NewInt(1))
 	bound := new(big.Int).Sqrt(key.P)
 
+	// first test when x is positive
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), bound)
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
@@ -55,6 +57,24 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	}
 
 	assert.Equal(t, xCheck, x, "BabyStepGiantStep result is wrong")
+
+	// second test when the answer can also be negative
+	xCheck, err = emmy.GetRandomIntFromRange(new(big.Int).Neg(bound), bound)
+	if err != nil {
+		t.Fatalf("Error during random int generation: %v", err)
+	}
+
+	h = internal.ModExp(key.G, xCheck, key.P)
+
+	calc = calc.WithNeg()
+
+	x, err = calc.BabyStepGiantStep(h, key.G)
+	if err != nil {
+		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
+	}
+
+	assert.Equal(t, xCheck, x, "BabyStepGiantStep result is wrong")
+
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {

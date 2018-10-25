@@ -172,9 +172,9 @@ func (d *DDH) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*big.Int
 	if err != nil {
 		return nil, err
 	}
+	calc = calc.WithNeg()
 
-	res, err := calc.WithBound(bound).BabyStepGiantStepWithNeg(r, d.Params.g)
-
+	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.g)
 	return res, err
 
 }
