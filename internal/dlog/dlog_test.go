@@ -70,8 +70,8 @@ func TestDLog(t *testing.T) {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
 
-	assert.Equal(t, xCheck, x1, "BabyStepGiantStep result is wrong")
-	assert.Equal(t, xCheck, x2, "pollardRho result is wrong")
+	assert.Equal(t, xCheck.Cmp(x1), 0, "BabyStepGiantStep result is wrong")
+	assert.Equal(t, xCheck.Cmp(x2), 0, "pollardRho result is wrong")
 	//fmt.Printf("BabyStepGiantStep time: %.5f s, pollardRho time: %.5f s\n", elapsed1.Seconds(), elapsed2.Seconds())
 	//fmt.Printf("BabyStepGiantStep speedup: %.3f\n", elapsed2.Seconds()/elapsed1.Seconds())
 }

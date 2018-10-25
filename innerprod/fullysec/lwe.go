@@ -73,9 +73,9 @@ type LWE struct {
 // not be generated.
 func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
-	// K = l * boundX * boundY
+	// K = 2 * l * boundX * boundY
 	K := new(big.Int).Mul(boundX, boundY)
-	K.Mul(K, big.NewInt(int64(l)))
+	K.Mul(K, big.NewInt(int64(l*2)))
 
 	nF := float64(n)
 
@@ -333,7 +333,9 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 
 	mu1 := new(big.Int).Sub(yDotC1, zYDotC0)
 	mu1.Mod(mu1, s.params.q)
-
+	if mu1.Cmp(new(big.Int).Quo(s.params.q, big.NewInt(2))) == 1 {
+		mu1.Sub(mu1, s.params.q)
+	}
 	// TODO Improve!
 	kTimes2 := new(big.Int).Lsh(s.params.K, 1)
 	qDivK := new(big.Int).Div(s.params.q, s.params.K)
@@ -341,7 +343,6 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 
 	mu := new(big.Int).Add(mu1, qDivKTimes2)
 	mu.Div(mu, qDivK)
-	mu.Mod(mu, s.params.K)
 
 	return mu, nil
 }

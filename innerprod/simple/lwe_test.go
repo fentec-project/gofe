@@ -68,15 +68,17 @@ func TestSimple_LWE(t *testing.T) {
 	assert.Error(t, err)
 	xyDecrypted, err := simpleLWE.Decrypt(cipher, skY, y)
 	assert.NoError(t, err)
-	assert.Equal(t, xy, xyDecrypted, "obtained incorrect inner product")
+	assert.Equal(t, xy.Cmp(xyDecrypted), 0, "obtained incorrect inner product")
 }
 
 // testVectorData returns random vectors x, y, each containing
 // elements up to the respective bound.
 // It also returns the dot product of the vectors.
-func testVectorData(len int, xBound, yBound *big.Int) (data.Vector, data.Vector, *big.Int) {
-	x, _ := data.NewRandomVector(len, sample.NewUniform(xBound))
-	y, _ := data.NewRandomVector(len, sample.NewUniform(yBound))
+func testVectorData(len int, boundX, boundY *big.Int) (data.Vector, data.Vector, *big.Int) {
+	samplerX := sample.NewUniformRange(new(big.Int).Neg(boundX), boundX)
+	samplerY := sample.NewUniformRange(new(big.Int).Neg(boundY), boundY)
+	x, _ := data.NewRandomVector(len, samplerX)
+	y, _ := data.NewRandomVector(len, samplerY)
 	xy, _ := x.Dot(y)
 
 	return x, y, xy

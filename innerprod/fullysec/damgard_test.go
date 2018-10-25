@@ -29,7 +29,7 @@ import (
 func TestFullySec_DamgardDDH(t *testing.T) {
 	l := 3
 	bound := big.NewInt(1000)
-	sampler := sample.NewUniform(bound)
+	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
 	modulusLength := 64
 
 	damgard, err := fullysec.NewDamgard(l, modulusLength, bound)
@@ -82,5 +82,5 @@ func TestFullySec_DamgardDDH(t *testing.T) {
 		t.Fatalf("Error during decryption: %v", err)
 	}
 
-	assert.Equal(t, xy, xyCheck, "Original and decrypted values should match")
+	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
 }

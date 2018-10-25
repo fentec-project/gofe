@@ -29,13 +29,13 @@ import (
 func TestSimple_RingLWE(t *testing.T) {
 	l := 100
 	n := 256
-	b := big.NewInt(10000000)
+	b := big.NewInt(1000000)
 	p, _ := new(big.Int).SetString("10000000000000000", 10)
 	q, _ := new(big.Int).SetString("903468688179973616387830299599", 10)
 
 	sigma := big.NewFloat(20)
 
-	sampler := sample.NewUniform(b)
+	sampler := sample.NewUniformRange(new(big.Int).Neg(b), b)
 	y, _ := data.NewRandomVector(l, sampler)
 	X, _ := data.NewRandomMatrix(l, n, sampler)
 	xy, _ := X.Transpose().MulVec(y)

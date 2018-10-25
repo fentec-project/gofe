@@ -29,7 +29,7 @@ import (
 func TestSimple_DDH(t *testing.T) {
 	l := 3
 	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(20), big.NewInt(0))
-	sampler := sample.NewUniform(bound)
+	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
 	modulusLength := 128
 
 	simpleDDH, err := simple.NewDDH(l, modulusLength, bound)

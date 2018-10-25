@@ -68,11 +68,12 @@ type RingLWE struct {
 // for the scheme cannot be generated for some other reason,
 // an error is returned.
 func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, error) {
-	// Ensure that p >= l * B² holds
+	// Ensure that p >= 2 * l * B² holds
 	bSquared := new(big.Int).Mul(bound, bound)
 	lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
-	if p.Cmp(lTimesBsquared) < 0 {
-		return nil, fmt.Errorf("precondition violated: p >= l*b² doesn't hold")
+	twolTimesBsquared := new(big.Int).Mul(big.NewInt(2), lTimesBsquared)
+	if p.Cmp(twolTimesBsquared) < 0 {
+		return nil, fmt.Errorf("precondition violated: p >= 2*l*b² doesn't hold")
 	}
 	if !isPowOf2(n) {
 		return nil, fmt.Errorf("security parameter n is not a power of 2")
@@ -255,12 +256,15 @@ func (s *RingLWE) Decrypt(CT data.Matrix, skY, y data.Vector) (data.Vector, erro
 
 	d := CT0TransMulY.Add(ct1MulSkY)
 	d = d.Mod(s.params.q)
-	d = d.MulScalar(s.params.p)
 	halfQ := new(big.Int).Div(s.params.q, big.NewInt(2))
+
 	d = d.Apply(func(x *big.Int) *big.Int {
+		if x.Cmp(halfQ) == 1 {
+			x.Sub(x, s.params.q)
+		}
+		x.Mul(x, s.params.p)
 		x.Add(x, halfQ)
 		x.Div(x, s.params.q)
-		x.Mod(x, s.params.p)
 
 		return x
 	})

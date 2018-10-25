@@ -14,27 +14,19 @@
  * limitations under the License.
  */
 
-package dlog
+package internal
 
-import (
-	"math/big"
-	"testing"
+import "math/big"
 
-	"github.com/cloudflare/bn256"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestBruteForceBN256(t *testing.T) {
-	xCheck := big.NewInt(1000)
-	bound := big.NewInt(1000)
-	g1gen := new(bn256.G1).ScalarBaseMult(big.NewInt(1))
-	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	g := bn256.Pair(g1gen, g2gen)
-	h := new(bn256.GT).ScalarMult(g, xCheck)
-
-	x, err := bruteForceBN256(h, g, bound)
-	if err != nil {
-		t.Fatalf("error in brute force algorithm: %v", err)
+// ModExp calculates g^x in Z_m*, even if x < 0.
+func ModExp(g, x, m *big.Int) *big.Int {
+	ret := new(big.Int)
+	if x.Cmp(big.NewInt(0)) == -1 {
+		xNeg := new(big.Int).Neg(x)
+		ret.Exp(g, xNeg, m)
+		ret.ModInverse(ret, m)
+	} else {
+		ret.Exp(g, x, m)
 	}
-	assert.Equal(t, xCheck.Cmp(x), 0, "obtained incorrect result")
+	return ret
 }

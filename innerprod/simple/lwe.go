@@ -70,7 +70,8 @@ type LWE struct {
 func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 
 	// generate parameters
-	nBitsP := boundX.BitLen() + boundY.BitLen() + bits.Len(uint(l)) + 1
+	// p > boundX * boundY * l * 2
+	nBitsP := boundX.BitLen() + boundY.BitLen() + bits.Len(uint(l)) + 2
 	p, err := rand.Prime(rand.Reader, nBitsP)
 	pF := new(big.Float).SetInt(p)
 	boundXF := new(big.Float).SetInt(boundX)
@@ -280,10 +281,13 @@ func (s *LWE) Decrypt(ct, skY, y data.Vector) (*big.Int, error) {
 
 	// d will hold the decrypted message
 	d := new(big.Int).Sub(yDotCtLast, ct0DotSkY)
+	// in case d > q/2 the result will be negative
+	if d.Cmp(halfQ) == 1 {
+		d.Sub(d, s.params.q)
+	}
+
 	d.Mul(d, s.params.p)
 	d.Add(d, halfQ)
 	d.Div(d, s.params.q)
-	d.Mod(d, s.params.p)
-
 	return d, nil
 }
