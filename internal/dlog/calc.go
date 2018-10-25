@@ -94,7 +94,7 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 	retChan := make(chan *big.Int)
 	errChan := make(chan error)
 	go c.runBabyStepGiantStep(h, g, retChan, errChan)
-	if c.neg == true {
+	if c.neg {
 		gInv := new(big.Int).ModInverse(g, c.p)
 		go c.runBabyStepGiantStep(h, gInv, retChan, errChan)
 	}
