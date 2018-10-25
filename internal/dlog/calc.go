@@ -104,7 +104,7 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 	err := <-errChan
 	// prevent the situation when one routine exhausted all possibilities
 	// before the second found the solution
-	if c.neg == true && err != nil {
+	if c.neg && err != nil {
 		ret = <-retChan
 		err = <-errChan
 	}
