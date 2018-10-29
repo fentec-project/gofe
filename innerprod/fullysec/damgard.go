@@ -82,7 +82,6 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
 
-
 	bSquared := new(big.Int).Exp(bound, two, nil)
 	prod := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
 	if prod.Cmp(key.P) > 0 {

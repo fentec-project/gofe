@@ -72,7 +72,7 @@ func (v Vector) Mod(modulo *big.Int) Vector {
 	return NewVector(newCoords)
 }
 
-// CheckBound checks whether the absolute value of all vector elements
+// CheckBound checks whether the absolute values of all vector elements
 // are strictly smaller than the provided bound.
 // It returns error if at least one element's absolute value is >= bound.
 func (v Vector) CheckBound(bound *big.Int) error {

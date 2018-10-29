@@ -56,7 +56,7 @@ type Paillier struct {
 // It returns an error in the case the scheme could not be properly
 // configured, or if the precondition boundX, boundY < (n / l)^(1/2)
 // is not satisfied.
-func NewPaillier(l, lambda int, bitLen int, boundX, boundY *big.Int) (*Paillier, error) {
+func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, error) {
 	// generate two safe primes
 	p, err := emmy.GetSafePrime(bitLen)
 	if err != nil {
@@ -92,6 +92,9 @@ func NewPaillier(l, lambda int, bitLen int, boundX, boundY *big.Int) (*Paillier,
 
 	// generate a generator for the 2n-th residues subgroup of Z_n^2*
 	gPrime, err := rand.Int(rand.Reader, nSquare)
+	if err != nil {
+		return nil, err
+	}
 	g := new(big.Int).Exp(gPrime, n, nSquare)
 	g.Exp(g, big.NewInt(2), nSquare)
 
@@ -154,8 +157,7 @@ func (d *Paillier) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 
 	// derive the public key from the generated secret key
 	pubKey := secKey.Apply(func(x *big.Int) *big.Int {
-		return internal.ModExp(d.Params.g,
-			x, d.Params.nSquare)
+		return internal.ModExp(d.Params.g, x, d.Params.nSquare)
 	})
 	return secKey, pubKey, nil
 }
@@ -169,11 +171,7 @@ func (d *Paillier) DeriveKey(masterSecKey data.Vector, y data.Vector) (*big.Int,
 		return nil, err
 	}
 
-	key, err := masterSecKey.Dot(y)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
+	return masterSecKey.Dot(y)
 }
 
 // Encrypt encrypts input vector x with the provided master public key.
