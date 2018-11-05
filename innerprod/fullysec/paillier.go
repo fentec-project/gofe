@@ -37,7 +37,7 @@ type paillerParams struct {
 	boundX  *big.Int   // a bound on the entries of the input vector
 	boundY  *big.Int   // a bound on the entries of the inner product vector
 	sigma   *big.Float // the standard deviation for the sampling a secret key
-	lambda  int        // safety parameter
+	lambda  int        // security parameter
 	g       *big.Int   // generator of the 2n-th residues subgroup of Z_n^2*
 }
 
@@ -87,7 +87,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	}
 	if n.Cmp(ySquareL) < 1 {
 		return nil, fmt.Errorf("parameters generation failed," +
-			"boundX and l too big for bitLen")
+			"boundY and l too big for bitLen")
 	}
 
 	// generate a generator for the 2n-th residues subgroup of Z_n^2*
@@ -100,8 +100,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 
 	// check if generated g is invertible, which should be the case except with
 	// negligible probability
-	check := new(big.Int).ModInverse(g, nSquare)
-	if check == nil {
+	if check := new(big.Int).ModInverse(g, nSquare); check == nil {
 		return nil, fmt.Errorf("parameters generation failed," +
 			"unexpected event of generator g is not invertible")
 	}
@@ -112,7 +111,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	sigma.Mul(sigma, big.NewFloat(float64(lambda)))
 	sigma.Sqrt(sigma)
 	sigma.Add(sigma, big.NewFloat(2))
-	// make it an integer for faster sampling with sample_double
+	// make it an integer for faster sampling with sample.NormalDouble
 	sigmaI, _ := sigma.Int(nil)
 	sigma.SetInt(sigmaI)
 
@@ -162,7 +161,7 @@ func (s *Paillier) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 	return secKey, pubKey, nil
 }
 
-// DeriveKey accepts input master secret key SK and vector y, and derives a
+// DeriveKey accepts master secret key masterSecKey and input vector y, and derives a
 // functional encryption key for the inner product with y.
 // In case of malformed secret key or input vector that violates the configured
 // bound, it returns an error.
@@ -189,10 +188,10 @@ func (s *Paillier) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 	}
 
 	// encrypt x under randomness r
-	ciphertext := make([]*big.Int, s.Params.l+1)
+	cipher := make(data.Vector, s.Params.l+1)
 	// c_0 = g^r in Z_n^2
 	c0 := new(big.Int).Exp(s.Params.g, r, s.Params.nSquare)
-	ciphertext[0] = c0
+	cipher[0] = c0
 	for i := 0; i < s.Params.l; i++ {
 		// c_i = (1 + x_i * n) * pubKey_i^r in Z_n^2
 		t1 := new(big.Int).Mul(x[i], s.Params.n)
@@ -200,10 +199,10 @@ func (s *Paillier) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		t2 := new(big.Int).Exp(masterPubKey[i], r, s.Params.nSquare)
 		ct := new(big.Int).Mul(t1, t2)
 		ct.Mod(ct, s.Params.nSquare)
-		ciphertext[i+1] = ct
+		cipher[i+1] = ct
 	}
 
-	return data.NewVector(ciphertext), nil
+	return cipher, nil
 }
 
 // Decrypt accepts the encrypted vector, functional encryption key, and
@@ -212,7 +211,7 @@ func (s *Paillier) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*bi
 	if err := y.CheckBound(s.Params.boundY); err != nil {
 		return nil, err
 	}
-	// tmp value cX is calculated as (prod_{i=1 to l) c_i^y_i) * c_0^(-key) in Z_n^2
+	// tmp value cX is calculated as (prod_{i=1 to l} c_i^y_i) * c_0^(-key) in Z_n^2
 	keyNeg := new(big.Int).Neg(key)
 	cX := internal.ModExp(cipher[0], keyNeg, s.Params.nSquare)
 
