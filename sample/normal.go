@@ -113,7 +113,7 @@ func (c normal) isExpGreater(y *big.Float, x *big.Int) bool {
 	return false
 }
 
-// taylorExp approximates exp(-x/alpha) with taylor polinomial
+// taylorExp approximates exp(-x/alpha) with taylor polynomial
 // of degree k, precise at least up to 2^-n.
 func taylorExp(x *big.Int, alpha *big.Float, k uint, n uint) *big.Float {
 	// prepare the values for calculating the taylor polynomial of exp(x/sigma)
@@ -136,6 +136,13 @@ func taylorExp(x *big.Int, alpha *big.Float, k uint, n uint) *big.Float {
 	tmp := new(big.Float)
 	tmp.SetPrec(n)
 
+	// set up a minimal value up to which it calculates the precision
+	oneOverEps := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(n)), nil)
+	eps := new(big.Float)
+	eps.SetPrec(n)
+	eps.SetInt(oneOverEps)
+	eps.Quo(big.NewFloat(1), eps)
+
 	// computation of the polynomial
 	for i := uint(1); i <= k; i++ {
 		tmp.Quo(powVal, factorial)
@@ -144,6 +151,9 @@ func taylorExp(x *big.Int, alpha *big.Float, k uint, n uint) *big.Float {
 
 		powVal.Mul(powVal, val)
 		factorial.Mul(factorial, big.NewFloat(float64(i+1)))
+		if tmp.Cmp(eps) == -1 {
+			break
+		}
 	}
 	res.Quo(big.NewFloat(1), res)
 

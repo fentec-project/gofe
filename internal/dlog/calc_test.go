@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/fentec-project/gofe/internal"
 )
 
 func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
