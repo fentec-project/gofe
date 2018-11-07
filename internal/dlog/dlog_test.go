@@ -39,7 +39,7 @@ func getParams() (*params, error) {
 
 	return &params{
 		p:     key.P,
-		order: new(big.Int).Sub(key.P, big.NewInt(1)),
+		order: key.Q,
 		g:     key.G,
 	}, nil
 }

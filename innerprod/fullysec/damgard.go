@@ -29,15 +29,17 @@ import (
 
 // l (int): The length of vectors to be encrypted.
 // bound (int): The value by which coordinates of vectors x and y are bounded.
-// g (int): Generator of a cyclic group Z_p: g**(p-1) = 1 (mod p).
-// h (int): Generator of a cyclic group Z_p: h**(p-1) = 1 (mod p).
+// g (int): Generator of a cyclic group Z_p: g**(q) = 1 (mod p).
+// h (int): Generator of a cyclic group Z_p: h**(q) = 1 (mod p).
 // p (int): Modulus - we are operating in a cyclic group Z_p.
+// q (int): Multiplicative order of g and h.
 type damgardParams struct {
 	l     int
 	bound *big.Int
 	g     *big.Int
 	h     *big.Int
 	p     *big.Int
+	q     *big.Int
 }
 
 // Based on DDH variant of:
@@ -90,19 +92,13 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 
 	h := new(big.Int)
 	for {
-		r, err := emmy.GetRandomIntFromRange(one, key.P)
+		r, err := emmy.GetRandomIntFromRange(one, key.Q)
 		if err != nil {
 			return nil, err
 		}
-		h.Exp(key.G, r, key.P)
 
-		// check if h is a generator of Z_p*
-		if new(big.Int).Exp(h, key.Q, key.P).Cmp(one) == 0 {
-			continue
-		}
-		if new(big.Int).Exp(h, two, key.P).Cmp(one) == 0 {
-			continue
-		}
+		// h generated in the following way is always a generator with order q
+		h.Exp(key.G, r, key.P)
 
 		// additional checks to avoid some known attacks
 		if new(big.Int).Mod(new(big.Int).Sub(key.P, one), h).Cmp(zero) == 0 {
@@ -122,6 +118,7 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 			g:     key.G,
 			h:     h,
 			p:     key.P,
+			q:     key.Q,
 		},
 	}, nil
 }
@@ -152,13 +149,13 @@ func (d *Damgard) GenerateMasterKeys() (*DamgardSecKey, data.Vector, error) {
 	masterPubKey := make([]*big.Int, d.Params.l)
 
 	for i := 0; i < d.Params.l; i++ {
-		s, err := emmy.GetRandomIntFromRange(big.NewInt(2), new(big.Int).Sub(d.Params.p, big.NewInt(1)))
+		s, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.q)
 		if err != nil {
 			return nil, nil, err
 		}
 		mskS[i] = s
 
-		t, err := emmy.GetRandomIntFromRange(big.NewInt(2), new(big.Int).Sub(d.Params.p, big.NewInt(1)))
+		t, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.q)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -198,8 +195,8 @@ func (d *Damgard) DeriveKey(masterSecKey *DamgardSecKey, y data.Vector) (*Damgar
 		return nil, err
 	}
 
-	k1 := new(big.Int).Mod(key1, new(big.Int).Sub(d.Params.p, big.NewInt(1)))
-	k2 := new(big.Int).Mod(key2, new(big.Int).Sub(d.Params.p, big.NewInt(1)))
+	k1 := new(big.Int).Mod(key1, d.Params.q)
+	k2 := new(big.Int).Mod(key2, d.Params.q)
 
 	return &DamgardDerivedKey{key1: k1, key2: k2}, nil
 }
@@ -257,11 +254,10 @@ func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vec
 	denomInv := new(big.Int).ModInverse(denom, d.Params.p)
 	r := new(big.Int).Mod(new(big.Int).Mul(num, denomInv), d.Params.p)
 
-	order := new(big.Int).Sub(d.Params.p, big.NewInt(1))
 	bSquared := new(big.Int).Exp(d.Params.bound, big.NewInt(2), big.NewInt(0))
 	bound := new(big.Int).Mul(big.NewInt(int64(d.Params.l)), bSquared)
 
-	calc, err := dlog.NewCalc().InZp(d.Params.p, order)
+	calc, err := dlog.NewCalc().InZp(d.Params.p, d.Params.q)
 	if err != nil {
 		return nil, err
 	}

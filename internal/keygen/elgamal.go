@@ -28,7 +28,7 @@ type ElGamal struct {
 	Y *big.Int // public key
 	G *big.Int // generator
 	P *big.Int // modulus
-	Q *big.Int // (P - 1) / 2
+	Q *big.Int // (P - 1) / 2, i.e. order of G
 }
 
 // adapted from https://github.com/dlitz/pycrypto/blob/master/lib/Crypto/PublicKey/ElGamal.py
@@ -54,13 +54,8 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 			return nil, err
 		}
 
-		// check if g is a generator of Z_p*
-		if new(big.Int).Exp(g, q, p).Cmp(one) == 0 {
-			continue
-		}
-		if new(big.Int).Exp(g, two, p).Cmp(one) == 0 {
-			continue
-		}
+		// make g an element of the subgroup of quadratic residues
+		g.Exp(g, two, p)
 
 		// additional checks to avoid some known attacks
 		if new(big.Int).Mod(new(big.Int).Sub(p, one), g).Cmp(zero) == 0 {
@@ -74,7 +69,7 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 		break
 	}
 
-	x, err := emmy.GetRandomIntFromRange(two, new(big.Int).Sub(p, one))
+	x, err := emmy.GetRandomIntFromRange(two, q)
 	if err != nil {
 		return nil, err
 	}

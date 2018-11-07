@@ -33,10 +33,12 @@ type ddhParams struct {
 	l int
 	// The value by which coordinates of input vectors x and y are bounded.
 	bound *big.Int
-	// Generator of a cyclic group Z_p: g^(p-1) = 1 (mod p).
+	// Generator of a cyclic group Z_p: g^(q) = 1 (mod p).
 	g *big.Int
 	// Modulus - we are operating in a cyclic group Z_p.
 	p *big.Int
+	// Order of the generator g.
+	q *big.Int
 }
 
 // DDH represents a scheme instantiated from the DDH assumption.
@@ -68,6 +70,7 @@ func NewDDH(l, modulusLength int, bound *big.Int) (*DDH, error) {
 			bound: bound,
 			g:     key.G,
 			p:     key.P,
+			q:     key.Q,
 		},
 	}
 
@@ -91,7 +94,7 @@ func (d *DDH) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 	masterPubKey := make(data.Vector, d.Params.l)
 
 	for i := 0; i < d.Params.l; i++ {
-		x, err := emmy.GetRandomIntFromRange(big.NewInt(2), new(big.Int).Sub(d.Params.p, big.NewInt(1)))
+		x, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.q)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -115,7 +118,7 @@ func (d *DDH) DeriveKey(masterSecKey, y data.Vector) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Mod(key, new(big.Int).Sub(d.Params.p, big.NewInt(1))), nil
+	return new(big.Int).Mod(key, d.Params.q), nil
 }
 
 // Encrypt encrypts input vector x with the provided master public key.
@@ -165,10 +168,9 @@ func (d *DDH) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*big.Int
 	denomInv := new(big.Int).ModInverse(denom, d.Params.p)
 	r := new(big.Int).Mod(new(big.Int).Mul(num, denomInv), d.Params.p)
 
-	order := new(big.Int).Sub(d.Params.p, big.NewInt(1))
 	bound := new(big.Int).Mul(big.NewInt(int64(d.Params.l)), new(big.Int).Exp(d.Params.bound, big.NewInt(2), big.NewInt(0)))
 
-	calc, err := dlog.NewCalc().InZp(d.Params.p, order)
+	calc, err := dlog.NewCalc().InZp(d.Params.p, d.Params.q)
 	if err != nil {
 		return nil, err
 	}
