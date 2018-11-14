@@ -1,26 +1,27 @@
 package abe
 
 import (
-	"math/big"
-	"github.com/fentec-project/gofe/sample"
-	"github.com/fentec-project/gofe/data"
-	"github.com/cloudflare/bn256"
 	"fmt"
+	"math/big"
+
+	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/sample"
 )
 
 type abeParams struct {
-	l     int   // number of attributes
-	p     *big.Int  // order of the elliptic curve
+	l int      // number of attributes
+	p *big.Int // order of the elliptic curve
 }
 
 type Abe struct {
 	Params *abeParams
 }
 
-func newAbe(l int) (*Abe){
+func newAbe(l int) *Abe {
 	return &Abe{Params: &abeParams{
-		l:	l,  // number of attributes in the whole universe
-		p:  bn256.Order,
+		l: l, // number of attributes in the whole universe
+		p: bn256.Order,
 	}}
 }
 
@@ -32,20 +33,21 @@ type AbePubKey struct {
 // should we put public key into Abe struct
 func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 	sampler := sample.NewUniform(a.Params.p)
-	sk, err := data.NewRandomVector(a.Params.l + 1, sampler)
+	sk, err := data.NewRandomVector(a.Params.l+1, sampler)
 	if err != nil {
 		return nil, nil, err
 	}
 	t := sk[:a.Params.l].MulG2()
 	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.l])
-	return &AbePubKey{t: t, y: y,}, sk, nil
+
+	return &AbePubKey{t: t, y: y}, sk, nil
 }
 
 type AbeCipher struct {
-	gamma []int
+	gamma     []int
 	attribToI map[int]int
-	e0 *bn256.GT
-	e data.VectorG2
+	e0        *bn256.GT
+	e         data.VectorG2
 }
 
 func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
@@ -54,35 +56,37 @@ func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, err
 	if err != nil {
 		return nil, err
 	}
+
 	e0 := new(bn256.GT).Add(msg, new(bn256.GT).ScalarMult(pk.y, s))
 	e := make(data.VectorG2, len(gamma))
 	attribToI := make(map[int]int)
-	for  i, el := range gamma {
+	for i, el := range gamma {
 		e[i] = new(bn256.G2).ScalarMult(pk.t[el], s)
 		attribToI[el] = i
 	}
 
-	return &AbeCipher{gamma:     gamma,
-					  attribToI: attribToI,
-					  e0:        e0,
-					  e:         e,}, nil
+	return &AbeCipher{gamma: gamma,
+		attribToI: attribToI,
+		e0:        e0,
+		e:         e}, nil
 }
 
-
 type Msp struct {
-	mat data.Matrix
-	rows int
-	cols int
+	mat         data.Matrix
 	rowToAttrib []int
 }
 
 func (a Abe) KeyGen(msp Msp, sk data.Vector) (data.VectorG1, error) {
-	u, err := getSum(sk[a.Params.l], a.Params.p, msp.cols)
+	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
+		return nil, fmt.Errorf("empty msp matrix")
+	}
+	u, err := getSum(sk[a.Params.l], a.Params.p, len(msp.mat[0]))
 	if err != nil {
 		return nil, err
 	}
-	key := make(data.VectorG1, msp.rows)
-	for i := 0; i < msp.rows; i++ {
+
+	key := make(data.VectorG1, len(msp.mat))
+	for i := 0; i < len(msp.mat); i++ {
 		tMapIInv := new(big.Int).ModInverse(sk[msp.rowToAttrib[i]], a.Params.p)
 		matTimesU, err := msp.mat[i].Dot(u)
 		if err != nil {
@@ -100,7 +104,7 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	sampler := sample.NewUniform(p)
 	var err error
 	sum := big.NewInt(0)
-	for i := 0; i < d - 1; i++ {
+	for i := 0; i < d-1; i++ {
 		ret[i], err = sampler.Sample()
 		if err != nil {
 			return nil, err
@@ -110,24 +114,26 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	}
 	ret[d-1] = new(big.Int).Sub(y, sum)
 	ret[d-1].Mod(ret[d-1], p)
+
 	return ret, nil
 }
 
 type AbeKey struct {
-	mat data.Matrix
-	d data.VectorG1
+	mat         data.Matrix
+	d           data.VectorG1
 	rowToAttrib []int
 }
 
-func (a Abe) DelagateKeys(keys data.VectorG1, msp Msp, attrib []int) (*AbeKey) {
+func (a Abe) DelagateKeys(keys data.VectorG1, msp Msp, attrib []int) *AbeKey {
 	attribMap := make(map[int]bool)
 	for _, e := range attrib {
 		attribMap[e] = true
 	}
+
 	mat := make([]data.Vector, 0)
 	d := make(data.VectorG1, 0)
 	rowToAttrib := make([]int, 0)
-	for i := 0; i < msp.rows; i++ {
+	for i := 0; i < len(msp.mat); i++ {
 		if attribMap[msp.rowToAttrib[i]] {
 			mat = append(mat, msp.mat[i])
 			d = append(d, keys[i])
@@ -135,13 +141,12 @@ func (a Abe) DelagateKeys(keys data.VectorG1, msp Msp, attrib []int) (*AbeKey) {
 		}
 	}
 
-	return &AbeKey{mat:     mat,
-				   d:       d,
-				   rowToAttrib:  rowToAttrib,}
+	return &AbeKey{mat: mat,
+		d:           d,
+		rowToAttrib: rowToAttrib}
 }
 
-
-func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey, pk *AbePubKey) (*bn256.GT, error) {
+func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	ones := make(data.Vector, len(key.mat[0]))
 	for i := 0; i < len(ones); i++ {
 		ones[i] = big.NewInt(1)
@@ -162,10 +167,21 @@ func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey, pk *AbePubKey) (*bn256.GT, 
 	return ret, nil
 }
 
+// gaussianElimination solves a vector equation mat * x = v and finds vector x,
+// using Gaussian elimination. Arithmetic operations are considered to be over
+// Z_p, where p should be a prime number. If such x does not exist, then the
+// function returns an error.
 func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vector, error) {
-	cpMat := make([] data.Vector, len(mat))
+	if len(mat) == 0 || len(mat[0]) == 0 {
+		return nil, fmt.Errorf("the matrix should not be empty")
+	}
+	if len(mat) != len(v) {
+		return nil, fmt.Errorf("dimensions should match")
+	}
+
+	// we copy matrix mat into m and v into u
+	cpMat := make([]data.Vector, len(mat))
 	u := make(data.Vector, len(mat))
-	//fmt.Println(len(mat), len(mat[0]))
 	for i := 0; i < len(mat); i++ {
 		cpMat[i] = make(data.Vector, len(mat[0]))
 		for j := 0; j < len(mat[0]); j++ {
@@ -174,14 +190,14 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		u[i] = new(big.Int).Set(v[i])
 	}
 	m, _ := data.NewMatrix(cpMat) // error is impossible to happen
+
+	// m and u are transformed to be in upper triangular form
 	ret := make(data.Vector, len(mat[0]))
 	h, k := 0, 0
 	for h < len(m) && k < len(m[0]) {
 		zero := true
 		for i := h; i < len(m); i++ {
 			if m[i][k].Sign() != 0 {
-				//fmt.Println(h, i)
-				//fmt.Println(m)
 				m[h], m[i] = m[i], m[h]
 
 				u[h], u[i] = u[i], u[h]
@@ -199,24 +215,20 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 			continue
 		}
 		mHKInv := new(big.Int).ModInverse(m[h][k], p)
-		//fmt.Println(mHKInv, "inv")
 		for i := h + 1; i < len(m); i++ {
 			f := new(big.Int).Mul(mHKInv, m[i][k])
-			//fmt.Println(f, "f")
 			m[i][k] = big.NewInt(0)
 			for j := k + 1; j < len(m[0]); j++ {
-				//fmt.Println(m[i][j], m[h][j], new(big.Int).Mul(f, m[h][j]))
 				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
-				//fmt.Println(m[i][j])
 				m[i][j].Mod(m[i][j], p)
 			}
 			u[i].Sub(u[i], new(big.Int).Mul(f, u[h]))
 			u[i].Mod(u[i], p)
 		}
-		//fmt.Println(m)
 		k++
 		h++
 	}
+
 	for i := h; i < len(m); i++ {
 		if u[i].Sign() != 0 {
 			return nil, fmt.Errorf("no solution")
@@ -226,17 +238,12 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		ret[j] = big.NewInt(0)
 	}
 
-	//fmt.Println(m, u)
-	//fmt.Println(h, k)
-	//fmt.Println(ret)
+	// use the upper triangular form to obtain the solution
 	for h > 0 {
 		h--
 		for k > 0 {
 			k--
-			//fmt.Println(ret[k])
 			if ret[k] == nil {
-				//fmt.Println(ret[k], 2)
-				//fmt.Println(len(m[h][k+1:]), len(ret[k+1:]))
 				tmpSum, _ := m[h][k+1:].Dot(ret[k+1:])
 				ret[k] = new(big.Int).Sub(u[h], tmpSum)
 				mHKInv := new(big.Int).ModInverse(m[h][k], p)
@@ -246,7 +253,6 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 			}
 		}
 	}
-	//fmt.Println(ret)
 
 	return ret, nil
 }
