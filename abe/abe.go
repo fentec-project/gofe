@@ -19,7 +19,7 @@ type Abe struct {
 
 func newAbe(l int) (*Abe){
 	return &Abe{Params: &abeParams{
-		l:	l,
+		l:	l,  // number of attributes in the whole universe
 		p:  bn256.Order,
 	}}
 }
@@ -37,13 +37,13 @@ func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 		return nil, nil, err
 	}
 	t := sk[:a.Params.l].MulG2()
-	y := bn256.Pair(new(bn256.G1), new(bn256.G2)) // is this the same as new(bn256.GT)?
-	y.ScalarMult(y, sk[a.Params.l])
+	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.l])
 	return &AbePubKey{t: t, y: y,}, sk, nil
 }
 
 type AbeCipher struct {
 	gamma []int
+	attribToI map[int]int
 	e0 *bn256.GT
 	e data.VectorG2
 }
@@ -56,11 +56,16 @@ func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, err
 	}
 	e0 := new(bn256.GT).Add(msg, new(bn256.GT).ScalarMult(pk.y, s))
 	e := make(data.VectorG2, len(gamma))
+	attribToI := make(map[int]int)
 	for  i, el := range gamma {
 		e[i] = new(bn256.G2).ScalarMult(pk.t[el], s)
+		attribToI[el] = i
 	}
 
-	return &AbeCipher{gamma: gamma, e0: e0, e: e,}, nil
+	return &AbeCipher{gamma:     gamma,
+					  attribToI: attribToI,
+					  e0:        e0,
+					  e:         e,}, nil
 }
 
 
@@ -68,17 +73,17 @@ type Msp struct {
 	mat data.Matrix
 	rows int
 	cols int
-	rowToI []int
+	rowToAttrib []int
 }
 
-func (a Abe) KeyGen(msp Msp, msk data.Vector, mpk AbePubKey) (data.VectorG1, error) {
-	u, err := getSum(msk[a.Params.l], a.Params.p, msp.cols)
+func (a Abe) KeyGen(msp Msp, sk data.Vector) (data.VectorG1, error) {
+	u, err := getSum(sk[a.Params.l], a.Params.p, msp.cols)
 	if err != nil {
 		return nil, err
 	}
 	key := make(data.VectorG1, msp.rows)
 	for i := 0; i < msp.rows; i++ {
-		tMapIInv := new(big.Int).ModInverse(msk[msp.rowToI[i]], a.Params.p)
+		tMapIInv := new(big.Int).ModInverse(sk[msp.rowToAttrib[i]], a.Params.p)
 		matTimesU, err := msp.mat[i].Dot(u)
 		if err != nil {
 			return nil, err
@@ -108,14 +113,59 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	return ret, nil
 }
 
-//func (a Abe) Decrypt(cipher *AbeCipher, key data.VectorG1, pk *AbePubKey) (bn256.GT, error) {
-//
-//}
+type AbeKey struct {
+	mat data.Matrix
+	d data.VectorG1
+	rowToAttrib []int
+}
+
+func (a Abe) DelagateKeys(keys data.VectorG1, msp Msp, attrib []int) (*AbeKey) {
+	attribMap := make(map[int]bool)
+	for _, e := range attrib {
+		attribMap[e] = true
+	}
+	mat := make([]data.Vector, 0)
+	d := make(data.VectorG1, 0)
+	rowToAttrib := make([]int, 0)
+	for i := 0; i < msp.rows; i++ {
+		if attribMap[msp.rowToAttrib[i]] {
+			mat = append(mat, msp.mat[i])
+			d = append(d, keys[i])
+			rowToAttrib = append(rowToAttrib, msp.rowToAttrib[i])
+		}
+	}
+
+	return &AbeKey{mat:     mat,
+				   d:       d,
+				   rowToAttrib:  rowToAttrib,}
+}
+
+
+func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey, pk *AbePubKey) (*bn256.GT, error) {
+	ones := make(data.Vector, len(key.mat[0]))
+	for i := 0; i < len(ones); i++ {
+		ones[i] = big.NewInt(1)
+	}
+
+	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.p)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := new(bn256.GT).Set(cipher.e0)
+	for i := 0; i < len(ones); i++ {
+		pair := bn256.Pair(key.d[i], cipher.e[cipher.attribToI[key.rowToAttrib[i]]])
+		pair.ScalarMult(pair, alpha[i])
+		pair.Neg(pair)
+		ret.Add(ret, pair)
+	}
+	return ret, nil
+}
 
 func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vector, error) {
 	cpMat := make([] data.Vector, len(mat))
 	u := make(data.Vector, len(mat))
-	fmt.Println(len(mat), len(mat[0]))
+	//fmt.Println(len(mat), len(mat[0]))
 	for i := 0; i < len(mat); i++ {
 		cpMat[i] = make(data.Vector, len(mat[0]))
 		for j := 0; j < len(mat[0]); j++ {
@@ -130,7 +180,7 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		zero := true
 		for i := h; i < len(m); i++ {
 			if m[i][k].Sign() != 0 {
-				fmt.Println(h, i)
+				//fmt.Println(h, i)
 				//fmt.Println(m)
 				m[h], m[i] = m[i], m[h]
 
@@ -149,21 +199,21 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 			continue
 		}
 		mHKInv := new(big.Int).ModInverse(m[h][k], p)
-		fmt.Println(mHKInv, "inv")
+		//fmt.Println(mHKInv, "inv")
 		for i := h + 1; i < len(m); i++ {
 			f := new(big.Int).Mul(mHKInv, m[i][k])
-			fmt.Println(f, "f")
+			//fmt.Println(f, "f")
 			m[i][k] = big.NewInt(0)
 			for j := k + 1; j < len(m[0]); j++ {
-				fmt.Println(m[i][j], m[h][j], new(big.Int).Mul(f, m[h][j]))
+				//fmt.Println(m[i][j], m[h][j], new(big.Int).Mul(f, m[h][j]))
 				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
-				fmt.Println(m[i][j])
+				//fmt.Println(m[i][j])
 				m[i][j].Mod(m[i][j], p)
 			}
 			u[i].Sub(u[i], new(big.Int).Mul(f, u[h]))
 			u[i].Mod(u[i], p)
 		}
-		fmt.Println(m)
+		//fmt.Println(m)
 		k++
 		h++
 	}
@@ -176,9 +226,9 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		ret[j] = big.NewInt(0)
 	}
 
-	fmt.Println(m, u)
+	//fmt.Println(m, u)
 	//fmt.Println(h, k)
-	fmt.Println(ret)
+	//fmt.Println(ret)
 	for h > 0 {
 		h--
 		for k > 0 {
