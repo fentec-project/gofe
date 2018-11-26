@@ -49,7 +49,7 @@ func TestAbe(t *testing.T) {
 	}
 
 	// generate keys for decryption, i.e. a vector of keys, for each row in
-	// the msp matrix one ky
+	// the msp matrix one key
 	keys, err := a.KeyGen(msp, sk)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
