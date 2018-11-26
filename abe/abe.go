@@ -17,6 +17,7 @@ type abeParams struct {
 	l int      // number of attributes
 	p *big.Int // order of the elliptic curve
 }
+
 // Abe represents an ABE scheme.
 type Abe struct {
 	Params *abeParams
@@ -57,9 +58,9 @@ func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 
 // AbeCipher represents a ciphertext of an ABE scheme.
 type AbeCipher struct {
-	gamma     []int // the set of attributes that can be used for policy of decryption
-	attribToI map[int]int // a map that connects the attributes in gamma with elements of e
-	e0        *bn256.GT // the first part of the encryption
+	gamma     []int         // the set of attributes that can be used for policy of decryption
+	attribToI map[int]int   // a map that connects the attributes in gamma with elements of e
+	e0        *bn256.GT     // the first part of the encryption
 	e         data.VectorG2 // the second part of the encryption
 }
 
@@ -224,9 +225,9 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 
 	// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
 	perm := make(data.Matrix, len(msp.mat[0]))
-	for i:=0; i < len(msp.mat[0]); i++ {
+	for i := 0; i < len(msp.mat[0]); i++ {
 		perm[i] = make(data.Vector, len(msp.mat[0]))
-		for j:=0; j < len(msp.mat[0]); j++ {
+		for j := 0; j < len(msp.mat[0]); j++ {
 			if i == 0 || j == i {
 				perm[i][j] = big.NewInt(1)
 			} else {
