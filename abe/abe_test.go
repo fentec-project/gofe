@@ -23,7 +23,7 @@ func TestAbe(t *testing.T) {
 	}
 
 	// create a random message to be encrypted, for now
-	// this is an element of a elliptic curve
+	// this is an element of an elliptic curve
 	sampler := sample.NewUniform(a.Params.p)
 	exponent, err := sampler.Sample()
 	if err != nil {

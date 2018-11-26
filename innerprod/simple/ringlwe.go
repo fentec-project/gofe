@@ -168,6 +168,7 @@ func (s *RingLWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) 
 
 	return skY, nil
 }
+
 // Encrypt encrypts matrix X using public key PK.
 // It returns the resulting ciphertext matrix. In case of malformed
 // public key or input matrix that violates the configured bound,
