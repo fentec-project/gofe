@@ -12,15 +12,20 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
+// abeParams represents configuration parameters for the ABE scheme instance.
 type abeParams struct {
 	l int      // number of attributes
 	p *big.Int // order of the elliptic curve
 }
-
+// Abe represents an ABE scheme.
 type Abe struct {
 	Params *abeParams
 }
 
+// NewAbe configures a new instance of the scheme.
+// It accepts l the number of attributes possibly used in
+// the scheme. Attributes' names will be considered as
+// elements of a set {0, 1,..., l-1}.
 func newAbe(l int) *Abe {
 	return &Abe{Params: &abeParams{
 		l: l, // number of attributes in the whole universe
@@ -28,13 +33,17 @@ func newAbe(l int) *Abe {
 	}}
 }
 
+// AbePubKey represents a public key of an ABE scheme.
 type AbePubKey struct {
 	t data.VectorG2
 	y *bn256.GT
 }
 
-// should we put public key into Abe struct
+// GenerateMasterKeys generates a new set of public keys, needed
+// for encrypting data, and secret keys needed for generating keys
+// for decryption.
 func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
+	// todo: should we put public key into Abe struct?
 	sampler := sample.NewUniform(a.Params.p)
 	sk, err := data.NewRandomVector(a.Params.l+1, sampler)
 	if err != nil {
@@ -46,13 +55,18 @@ func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 	return &AbePubKey{t: t, y: y}, sk, nil
 }
 
+// AbeCipher represents a ciphertext of an ABE scheme.
 type AbeCipher struct {
-	gamma     []int
-	attribToI map[int]int
-	e0        *bn256.GT
-	e         data.VectorG2
+	gamma     []int // the set of attributes that can be used for policy of decryption
+	attribToI map[int]int // a map that connects the attributes in gamma with elements of e
+	e0        *bn256.GT // the first part of the encryption
+	e         data.VectorG2 // the second part of the encryption
 }
 
+// Encrypt takes as an input a message msg represented as an element of an elliptic
+// curve, gamma a set of attributes that can be latter used to in the decryption policy
+// and a public key pk. It returns an encryption of msk. An case of a failed procedure
+// an error is returned.
 func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
 	sampler := sample.NewUniform(a.Params.p)
 	s, err := sampler.Sample()
@@ -74,11 +88,23 @@ func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, err
 		e:         e}, nil
 }
 
+// Msp represents a monotone span program (MSP) describing a policy which
+// attributes are needed to decrypt the ciphertext. It includes a matrix
+// mat and a mapping from the rows of the mat to attributes. A MSP policy
+// allows decryption of an entity with a set of attributes A iff all the
+// rows of the matrix mapped to an element of A span the vector [1, 1,..., 1]
+// in Z_p.
 type Msp struct {
+	p           *big.Int
 	mat         data.Matrix
 	rowToAttrib []int
 }
 
+// KeyGen given a monotone span program (MSP) msp and the vector of secret
+// keys produces a vector of keys needed for the decryption. In particular,
+// for each row of the MSP matrix msp.mat it creates a corresponding key. Since
+// each row of msp.mat has a corresponding key, this keys can be latter delegated
+// to entities with corresponding attributes.
 func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
@@ -102,6 +128,8 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 	return key, nil
 }
 
+// getSum is a helping function that given integers y, p and d generates a
+// d dimesional vector over Z_p whose entries sum to y in Z_p.
 func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	ret := make(data.Vector, d)
 	sampler := sample.NewUniform(p)
@@ -121,18 +149,24 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	return ret, nil
 }
 
+// AbeKey represents a key structure for decrypting a ciphertext. It includes
+// mat a matrix, d a set of vectors and rowToAttib a mapping from rows of mat
+// (or entries of d) to corresponding attributes. Vector d is a set of keys
+// that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
 type AbeKey struct {
 	mat         data.Matrix
 	d           data.VectorG1
 	rowToAttrib []int
 }
 
+// DelegateKeys given the set of all keys produced from the MSP struct msp joins
+// those that correspond to attributes listed in attrib and creates an AbeKey
+// for the decryption.
 func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
 	attribMap := make(map[int]bool)
 	for _, e := range attrib {
 		attribMap[e] = true
 	}
-
 	mat := make([]data.Vector, 0)
 	d := make(data.VectorG1, 0)
 	rowToAttrib := make([]int, 0)
@@ -149,6 +183,10 @@ func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
 		rowToAttrib: rowToAttrib}
 }
 
+// Decrypt takes as an input a cipher and an AbeKey key and tries to decrypt
+// the cipher. If the AbeKey is properly generated, this is possible iff
+// the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
+// is not possible, an error is returned.
 func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	ones := make(data.Vector, len(key.mat[0]))
 	for i := 0; i < len(ones); i++ {
@@ -156,20 +194,17 @@ func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	}
 
 	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.p)
-	ww, _ := key.mat.Transpose().MulVec(alpha)
-	ww = ww.Mod(a.Params.p)
-	fmt.Println("here2", ww)
 	if err != nil {
 		return nil, err
 	}
-
 	ret := new(bn256.GT).Set(cipher.e0)
-	for i := 0; i < len(ones); i++ {
+	for i := 0; i < len(alpha); i++ {
 		pair := bn256.Pair(key.d[i], cipher.e[cipher.attribToI[key.rowToAttrib[i]]])
 		pair.ScalarMult(pair, alpha[i])
 		pair.Neg(pair)
 		ret.Add(ret, pair)
 	}
+
 	return ret, nil
 }
 
@@ -189,7 +224,6 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 
 	// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
 	perm := make(data.Matrix, len(msp.mat[0]))
-	fmt.Println(msp.mat)
 	for i:=0; i < len(msp.mat[0]); i++ {
 		perm[i] = make(data.Vector, len(msp.mat[0]))
 		for j:=0; j < len(msp.mat[0]); j++ {
@@ -201,9 +235,9 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 
 		}
 	}
-	fmt.Println(perm)
 	msp.mat, err = msp.mat.Mul(perm)
 	msp.mat = msp.mat.Mod(p)
+	msp.p = p
 	return msp, err
 }
 
@@ -284,8 +318,13 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 		mat := make(data.Matrix, 1)
 		mat[0] = make(data.Vector, c)
 		for i := 0; i < c; i++ {
-			mat[0][i] = new(big.Int).Set(vec[i])
+			if i < len(vec) {
+				mat[0][i] = new(big.Int).Set(vec[i])
+			} else {
+				mat[0][i] = big.NewInt(0)
+			}
 		}
+
 		rowToAttrib := make([]int, 1)
 		rowToAttrib[0] = attrib
 		return &Msp{mat: mat, rowToAttrib: rowToAttrib}, c, nil
@@ -335,7 +374,6 @@ func makeAndVecs(vec data.Vector, c int) (data.Vector, data.Vector) {
 // Z_p, where p should be a prime number. If such x does not exist, then the
 // function returns an error.
 func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vector, error) {
-	fmt.Println(mat, v, p)
 	if len(mat) == 0 || len(mat[0]) == 0 {
 		return nil, fmt.Errorf("the matrix should not be empty")
 	}
