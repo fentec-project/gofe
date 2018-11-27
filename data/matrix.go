@@ -69,6 +69,19 @@ func NewRandomMatrix(rows, cols int, sampler sample.Sampler) (Matrix, error) {
 	return NewMatrix(mat)
 }
 
+// NewConstantMatrix returns a new Matrix instance
+// with all elements set to a constant.
+func NewConstantMatrix(rows, cols int, constant *big.Int) (Matrix, error) {
+	mat := make([]Vector, rows)
+
+	for i := 0; i < rows; i++ {
+		vec := NewConstantVector(cols, constant)
+		mat[i] = vec
+	}
+
+	return NewMatrix(mat)
+}
+
 // Rows returns the number of rows of matrix m.
 func (m Matrix) Rows() int {
 	return len(m)
@@ -194,6 +207,27 @@ func (m Matrix) Add(other Matrix) (Matrix, error) {
 
 	for i, v := range m {
 		vectors[i] = v.Add(other[i])
+	}
+
+	matrix, err := NewMatrix(vectors)
+	if err != nil {
+		return nil, err
+	}
+	return matrix, nil
+}
+
+// Sub adds matrices m and other.
+// The result is returned in a new Matrix.
+// Error is returned if m and other have different dimensions.
+func (m Matrix) Sub(other Matrix) (Matrix, error) {
+	if !m.DimsMatch(other) {
+		return nil, fmt.Errorf("matrices mismatch in dimensions")
+	}
+
+	vectors := make([]Vector, m.Rows())
+
+	for i, v := range m {
+		vectors[i] = v.Sub(other[i])
 	}
 
 	matrix, err := NewMatrix(vectors)

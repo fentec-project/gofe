@@ -49,6 +49,17 @@ func NewRandomVector(len int, sampler sample.Sampler) (Vector, error) {
 	return NewVector(vec), nil
 }
 
+// NewConstantVector returns a new Vector instance
+// with all elements set to a constant.
+func NewConstantVector(len int, constant *big.Int) Vector {
+	vec := make([]*big.Int, len)
+	for i := 0; i < len; i++ {
+		vec[i] = constant
+	}
+
+	return NewVector(vec)
+}
+
 // MulScalar multiplies vector v by a given scalar x.
 // The result is returned in a new Vector.
 func (v Vector) MulScalar(x *big.Int) Vector {
@@ -106,6 +117,18 @@ func (v Vector) Add(other Vector) Vector {
 
 	for i, c := range v {
 		sum[i] = new(big.Int).Add(c, other[i])
+	}
+
+	return NewVector(sum)
+}
+
+// Sub subtracts vectors v and other.
+// The result is returned in a new Vector.
+func (v Vector) Sub(other Vector) Vector {
+	sum := make([]*big.Int, len(v))
+
+	for i, c := range v {
+		sum[i] = new(big.Int).Sub(c, other[i])
 	}
 
 	return NewVector(sum)
