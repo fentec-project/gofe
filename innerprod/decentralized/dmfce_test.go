@@ -77,15 +77,33 @@ func Test_DMFCE(t *testing.T) {
 	*/
 
 	label := "some label"
-	y, err := data.NewRandomVector(numClients, sampler)
+	/*
+		y, err := data.NewRandomVector(numClients, sampler)
+		if err != nil {
+			t.Fatalf("could not create random vector: %v", err)
+		}
+	*/
+	y := make([]*big.Int, numClients) // only for testing
+	y[0] = big.NewInt(1)
+	y[1] = big.NewInt(1)
+	y[2] = big.NewInt(1)
+
+	x := make([]*big.Int, numClients) // only for testing
+	x[0] = big.NewInt(3)
+	x[1] = big.NewInt(4)
+	x[2] = big.NewInt(5)
+
+	xv := data.NewVector(x)
+	yv := data.NewVector(y)
+	xy, err := xv.Dot(yv)
 	if err != nil {
-		t.Fatalf("could not create random vector: %v", err)
+		t.Fatalf("could not compute inner product: %v", err)
 	}
 
 	ciphertexts := make([]*bn256.G1, numClients)
 	keyShares := make([]data.VectorG2, numClients)
 	for i := 0; i < numClients; i++ {
-		c, err := clients[i].Encrypt(big.NewInt(3), label)
+		c, err := clients[i].Encrypt(x[i], label)
 		if err != nil {
 			t.Fatalf("could not encrypt: %v", err)
 		}
@@ -98,4 +116,13 @@ func Test_DMFCE(t *testing.T) {
 		keyShares[i] = keyShare
 	}
 
+	dec := decentralized.NewDecryptor(y, label, ciphertexts, keyShares)
+	r := dec.Decrypt()
+
+	xyG := new(bn256.GT).ScalarBaseMult(xy)
+
+	t.Log("=============================================\n\n")
+	t.Log(r)
+	t.Log("\n\n")
+	t.Log(xyG)
 }
