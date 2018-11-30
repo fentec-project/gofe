@@ -22,6 +22,7 @@ import (
 
 	"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
 
 	"crypto/sha256"
@@ -30,11 +31,11 @@ import (
 
 type Client struct {
 	Index int
-	T     data.Matrix
-	s     data.Vector
+	t     data.Matrix // TODO: make it small
+	s     data.Vector // TODO: make it small again, only for debugging
 }
 
-func NewClient(index int, T data.Matrix) (*Client, error) {
+func NewClient(index int, t data.Matrix) (*Client, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	s, err := data.NewRandomVector(2, sampler)
 	if err != nil {
@@ -43,7 +44,7 @@ func NewClient(index int, T data.Matrix) (*Client, error) {
 
 	return &Client{
 		Index: index,
-		T:     T,
+		t:     t,
 		s:     s,
 	}, nil
 }
@@ -68,13 +69,13 @@ func (c *Client) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	v := hash(yRepr)
 
 	keyShare1 := c.s.MulScalar(y[c.Index])
-	keyShare2, err := c.T.MulVec(v)
+	keyShare2, err := c.t.MulVec(v)
 	if err != nil {
 		return nil, fmt.Errorf("error when multiplying matrix with vector: %v", err)
 	}
 
 	keyShare := keyShare1.Add(keyShare2)
-	keyShare.Mod(bn256.Order)
+	keyShare = keyShare.Mod(bn256.Order)
 	k1 := new(bn256.G2).ScalarBaseMult(keyShare[0])
 	k2 := new(bn256.G2).ScalarBaseMult(keyShare[1])
 
@@ -99,25 +100,33 @@ type Decryptor struct {
 	ciphertexts []*bn256.G1
 	key1        *bn256.G2
 	key2        *bn256.G2
+	bound       *big.Int
+	gCalc       *dlog.CalcBN256
+	gInvCalc    *dlog.CalcBN256
 }
 
-func NewDecryptor(y data.Vector, label string, ciphertexts []*bn256.G1, keyShares []data.VectorG2) *Decryptor {
+func NewDecryptor(y data.Vector, label string, ciphertexts []*bn256.G1, keyShares []data.VectorG2,
+	bound *big.Int) *Decryptor {
 	key1 := keyShares[0][0]
 	key2 := keyShares[0][1]
 	for i := 1; i < len(keyShares); i++ {
 		key1.Add(key1, keyShares[i][0])
-		key2.Add(key2, keyShares[i][0])
+		key2.Add(key2, keyShares[i][1])
 	}
+
 	return &Decryptor{
 		y:           y,
 		label:       label,
 		ciphertexts: ciphertexts,
 		key1:        key1,
 		key2:        key2,
+		bound: bound,
+		gCalc:       dlog.NewCalc().InBN256(), //.WithBound(b),
+		gInvCalc:    dlog.NewCalc().InBN256(), //.WithBound(b),
 	}
 }
 
-func (d *Decryptor) Decrypt() *bn256.GT {
+func (d *Decryptor) Decrypt() (*big.Int, error) {
 	y0 := new(bn256.G2).ScalarBaseMult(d.y[0])
 	s := bn256.Pair(d.ciphertexts[0], y0)
 	for i := 1; i < len(d.ciphertexts); i++ {
@@ -135,7 +144,20 @@ func (d *Decryptor) Decrypt() *bn256.GT {
 	t1.Neg(t1)
 	s.Add(s, t1)
 
-	// TODO: discrete log
+	g1gen := new(bn256.G1).ScalarBaseMult(big.NewInt(1))
+	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
+	g := bn256.Pair(g1gen, g2gen)
 
-	return s
+	var dec *big.Int // dec is decryption
+	dec, err := d.gCalc.WithBound(d.bound).BabyStepGiantStep(s, g)
+	if err != nil {
+		gInv := new(bn256.GT).Neg(g)
+		dec, err = d.gInvCalc.WithBound(d.bound).BabyStepGiantStep(s, gInv)
+		if err != nil {
+			return nil, err
+		}
+		dec.Neg(dec)
+	}
+
+	return dec, nil
 }

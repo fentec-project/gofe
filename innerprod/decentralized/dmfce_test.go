@@ -22,7 +22,7 @@ import (
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	//"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/innerprod/decentralized"
 )
@@ -35,6 +35,9 @@ func Test_DMFCE(t *testing.T) {
 		t.Fatalf("error when initializing constant matrix: %v", err)
 	}
 
+	// Generate one matrix per client - the sum of matrices needs to be 0 (modulo order of the group).
+	// In real world setting matrices should be generated using secure multi-party computation. However,
+	// a new scheme is coming which won't require multi-party computation.
 	lim := new(big.Int).Div(bn256.Order, big.NewInt(int64(numClients)))
 	sampler := sample.NewUniform(lim)
 	for i := 0; i < numClients; i++ {
@@ -47,7 +50,6 @@ func Test_DMFCE(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error when adding matrices: %v", err)
 			}
-			t.Log(T)
 		} else {
 			m, err := data.NewConstantMatrix(2, 2, bn256.Order)
 			if err != nil {
@@ -66,32 +68,17 @@ func Test_DMFCE(t *testing.T) {
 		clients[i] = c
 	}
 
-	/*
-		checkT, _ := data.NewConstantMatrix(2, 2, big.NewInt(0))
-		for i := 0; i < len(clients); i++ {
-			checkT, _ = checkT.Add(clients[i].T)
-		}
-		t.Log("??/////-----------")
-		t.Log(checkT)
-		t.Log(bn256.Order)
-	*/
-
 	label := "some label"
-	/*
-		y, err := data.NewRandomVector(numClients, sampler)
-		if err != nil {
-			t.Fatalf("could not create random vector: %v", err)
-		}
-	*/
-	y := make([]*big.Int, numClients) // only for testing
-	y[0] = big.NewInt(1)
-	y[1] = big.NewInt(1)
-	y[2] = big.NewInt(1)
-
-	x := make([]*big.Int, numClients) // only for testing
-	x[0] = big.NewInt(3)
-	x[1] = big.NewInt(4)
-	x[2] = big.NewInt(5)
+	bound := big.NewInt(1000)
+	sampler1 := sample.NewUniform(bound)
+	y, err := data.NewRandomVector(numClients, sampler1)
+	if err != nil {
+		t.Fatalf("could not create random vector: %v", err)
+	}
+	x, err := data.NewRandomVector(numClients, sampler1)
+	if err != nil {
+		t.Fatalf("could not create random vector: %v", err)
+	}
 
 	xv := data.NewVector(x)
 	yv := data.NewVector(y)
@@ -109,20 +96,20 @@ func Test_DMFCE(t *testing.T) {
 		}
 		ciphertexts[i] = c
 
-		keyShare, err := clients[0].GenerateKeyShare(y)
+		keyShare, err := clients[i].GenerateKeyShare(y)
 		if err != nil {
 			t.Fatalf("could not generate key share: %v", err)
 		}
 		keyShares[i] = keyShare
 	}
 
-	dec := decentralized.NewDecryptor(y, label, ciphertexts, keyShares)
-	r := dec.Decrypt()
+	bound.Mul(bound, bound)
+	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
+	dec := decentralized.NewDecryptor(y, label, ciphertexts, keyShares, bound)
+	d, err := dec.Decrypt()
+	if err != nil {
+		t.Fatalf("error when decrypting: %v", err)
+	}
 
-	xyG := new(bn256.GT).ScalarBaseMult(xy)
-
-	t.Log("=============================================\n\n")
-	t.Log(r)
-	t.Log("\n\n")
-	t.Log(xyG)
+	assert.Equal(t, d, xy, "Decryption wrong")
 }

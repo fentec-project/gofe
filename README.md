@@ -43,26 +43,27 @@ You can choose from the following  set of schemes:
 #### Inner product schemes
 You will need to import packages from `ìnnerprod` directory.
 
-We organized implementations in two categories based on their security 
-assumptions:
+We organized implementations according to different (currently three) papers:
 * Scheme with **selective security under chosen-plaintext 
 attacks** (s-IND-CPA security) by _Abdalla et. al._ ([paper](https://eprint.iacr.org/2015/017.pdf)).
  The scheme is implemented in various flavors,
     you will find them in the `simple` package:
     * Instantiated from DDH: `DDH` (and its multi input version
      `DDHMulti`).
-    * Instanted from LWE: `LWE` and the more performant`RingLWE`.
+    * Instantiated from LWE: `LWE` and the more performant`RingLWE`.
 * Scheme with **adaptive security under chosen-plaintext attacks** (IND-CPA
 security) by _Agrawal, Libert and Stehlé_ ([paper](https://eprint.iacr.org/2015/608.pdf)).
 Again, there are
  different implementations of the scheme, you will find them in
   the `fullysec` (meaning "fully secure") package:
-    * Instanted from DDH: `Damgard` (and its multi input
+    * Instantiated from DDH: `Damgard` (and its multi input
      version `DamgardMulti`). This scheme is similar to `simple.DDH`
        scheme but uses one more group element to achieve full security,
        similar to how Damgård's encryption scheme is obtained from ElGamal
        scheme ([paper](https://link.springer.com/chapter/10.1007/3-540-46766-1_36)).
-    * Instanted from LWE: `LWE`.
+    * Instantiated from LWE: `LWE`.
+    * Instantiated from Paillier: `Paillier`.
+* Decentralized scheme with (adaptive security) by _Chotard, Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings.
 
 You can see that two scheme instances (`DDHMulti` and `DamgardMulti`) are
 implemented for multiple inputs as well as for single input. Both are
