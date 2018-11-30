@@ -54,7 +54,7 @@ attacks** (s-IND-CPA security):
 security) by 
     * Scheme based on paper by _Agrawal, Libert and Stehlé_ ([paper](https://eprint.iacr.org/2015/608.pdf)). It can be instantiated from Damgard DDH (similar to DDH, but uses one more group element to achieve full security, similar to how Damgård's encryption scheme is obtained from ElGamal scheme ([paper](https://link.springer.com/chapter/10.1007/3-540-46766-1_36)), LWE and Paillier primitives.
     * Multi-input scheme based on paper by _Abdalla et.al_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point.
-    * Decentralized scheme with (adaptive security) by _Chotard, Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings.
+    * Decentralized scheme with by _Chotard, Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings.
 
 #### Quadratic polynomial schemes
 You will need `SGP` scheme from package `quadratic`. 
