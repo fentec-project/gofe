@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package decentralized_test
+package fullysec_test
 
 import (
 	"math/big"
@@ -24,12 +24,12 @@ import (
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 	"github.com/cloudflare/bn256"
-	"github.com/fentec-project/gofe/innerprod/decentralized"
+	"github.com/fentec-project/gofe/innerprod/fullysec"
 )
 
 func Test_DMFCE(t *testing.T) {
 	numClients := 3
-	clients := make([]*decentralized.Client, numClients)
+	clients := make([]*fullysec.Client, numClients)
 	sumT, err := data.NewConstantMatrix(2, 2, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("error when initializing constant matrix: %v", err)
@@ -61,9 +61,9 @@ func Test_DMFCE(t *testing.T) {
 				t.Fatalf("error when subtracting matrices: %v", err)
 			}
 		}
-		c, err := decentralized.NewClient(i, T)
+		c, err := fullysec.NewClient(i, T)
 		if err != nil {
-			t.Fatalf("could not instantiate decentralized.Client: %v", err)
+			t.Fatalf("could not instantiate fullysec.Client: %v", err)
 		}
 		clients[i] = c
 	}
@@ -105,7 +105,7 @@ func Test_DMFCE(t *testing.T) {
 
 	bound.Mul(bound, bound)
 	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
-	dec := decentralized.NewDecryptor(y, label, ciphertexts, keyShares, bound)
+	dec := fullysec.NewDecryptor(y, label, ciphertexts, keyShares, bound)
 	d, err := dec.Decrypt()
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)

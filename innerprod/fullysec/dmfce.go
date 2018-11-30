@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package decentralized
+package fullysec
 
 import (
 	"fmt"
