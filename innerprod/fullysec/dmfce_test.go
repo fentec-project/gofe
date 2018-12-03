@@ -29,7 +29,7 @@ import (
 
 func Test_DMFCE(t *testing.T) {
 	numClients := 3
-	clients := make([]*fullysec.DMFCEClient, numClients)
+	clients := make([]*fullysec.DMCFEClient, numClients)
 	sumT := data.NewConstantMatrix(2, 2, big.NewInt(0))
 
 	// Generate one matrix per client - the sum of matrices needs to be 0 (modulo order of the group).
@@ -54,7 +54,7 @@ func Test_DMFCE(t *testing.T) {
 				t.Fatalf("error when subtracting matrices: %v", err)
 			}
 		}
-		c, err := fullysec.NewDMFCEClient(i, T)
+		c, err := fullysec.NewDMCFEClient(i, T)
 		if err != nil {
 			t.Fatalf("could not instantiate fullysec.Client: %v", err)
 		}
@@ -96,7 +96,7 @@ func Test_DMFCE(t *testing.T) {
 
 	bound.Mul(bound, bound)
 	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
-	dec := fullysec.NewDMFCEDecryptor(y, label, ciphers, keyShares, bound)
+	dec := fullysec.NewDMCFEDecryptor(y, label, ciphers, keyShares, bound)
 	d, err := dec.Decrypt()
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)
