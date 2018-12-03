@@ -30,18 +30,18 @@ import (
 	"crypto/sha512"
 )
 
+// DMFCEClient is to be instantiated by the party that wants to encrypt number x_i.
+// The decryptor will be able to compute inner product of x and y where x = (x_1,...,x_l) and
+// y is publicly known vector y = (y_1,...,y_l).
+// Value Idx presents index of the party and matrix t is part of the client secret key.
+// Matrix t needs to be generated interactively with other clients but nobody except the client
+// should know its value (by secure multi-party computation).
 type DMFCEClient struct {
 	Idx int
 	t   data.Matrix // TODO: make it small
 	s   data.Vector // TODO: make it small again, only for debugging
 }
 
-// NewDMFCEClient is to be instantiated by the party that wants to encrypt number x_i.
-// The decryptor will be able to compute inner product of x and y where x = (x_1,...,x_l) and
-// y is publicly known vector y = (y_1,...,y_l).
-// It accepts the index idx of the party and matrix t which is part of the client secret key.
-// Matrix t needs to be generated interactively with other clients but nobody except the client
-// should know its value (by secure multi-party computation).
 func NewDMFCEClient(idx int, t data.Matrix) (*DMFCEClient, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	s, err := data.NewRandomVector(2, sampler)
@@ -56,6 +56,7 @@ func NewDMFCEClient(idx int, t data.Matrix) (*DMFCEClient, error) {
 	}, nil
 }
 
+// Encrypt encrypts number x under some label.
 func (c *DMFCEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	u := hash([]byte(label))
 	ct, err := u.Dot(c.s)
@@ -68,6 +69,7 @@ func (c *DMFCEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	return new(bn256.G1).ScalarBaseMult(ct), nil
 }
 
+// GenerateKeyShare generates client's key share. Decryptor needs shares from all clients.
 func (c *DMFCEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	var yRepr []byte
 	for i := 0; i < len(y); i++ {
@@ -95,6 +97,10 @@ func (c *DMFCEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	return data.VectorG2{k1, k2}, nil
 }
 
+// DMFCEDecryptor is to be instantiated by a party that wants to decrypt a message - to compute inner product
+// of x and y. DMFCEDecryptor needs ciphertexts from all clients and key shares from all clients. The label is
+// a string under which vector x has been encrypted (each client encrypted x_i under this label). The value bound
+// specifies the bound of vector coordinates.
 type DMFCEDecryptor struct {
 	y        data.Vector
 	label    string
