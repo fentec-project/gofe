@@ -29,11 +29,8 @@ import (
 
 func Test_DMFCE(t *testing.T) {
 	numClients := 3
-	clients := make([]*fullysec.Client, numClients)
-	sumT, err := data.NewConstantMatrix(2, 2, big.NewInt(0))
-	if err != nil {
-		t.Fatalf("error when initializing constant matrix: %v", err)
-	}
+	clients := make([]*fullysec.DMFCEClient, numClients)
+	sumT := data.NewConstantMatrix(2, 2, big.NewInt(0))
 
 	// Generate one matrix per client - the sum of matrices needs to be 0 (modulo order of the group).
 	// In real world setting matrices should be generated using secure multi-party computation. However,
@@ -51,17 +48,13 @@ func Test_DMFCE(t *testing.T) {
 				t.Fatalf("error when adding matrices: %v", err)
 			}
 		} else {
-			m, err := data.NewConstantMatrix(2, 2, bn256.Order)
-			if err != nil {
-				t.Fatalf("error when initializing constant matrix: %v", err)
-			}
-
+			m := data.NewConstantMatrix(2, 2, bn256.Order)
 			T, err = m.Sub(sumT)
 			if err != nil {
 				t.Fatalf("error when subtracting matrices: %v", err)
 			}
 		}
-		c, err := fullysec.NewClient(i, T)
+		c, err := fullysec.NewDMFCEClient(i, T)
 		if err != nil {
 			t.Fatalf("could not instantiate fullysec.Client: %v", err)
 		}
@@ -80,21 +73,19 @@ func Test_DMFCE(t *testing.T) {
 		t.Fatalf("could not create random vector: %v", err)
 	}
 
-	xv := data.NewVector(x)
-	yv := data.NewVector(y)
-	xy, err := xv.Dot(yv)
+	xy, err := x.Dot(y)
 	if err != nil {
 		t.Fatalf("could not compute inner product: %v", err)
 	}
 
-	ciphertexts := make([]*bn256.G1, numClients)
+	ciphers := make([]*bn256.G1, numClients)
 	keyShares := make([]data.VectorG2, numClients)
 	for i := 0; i < numClients; i++ {
 		c, err := clients[i].Encrypt(x[i], label)
 		if err != nil {
 			t.Fatalf("could not encrypt: %v", err)
 		}
-		ciphertexts[i] = c
+		ciphers[i] = c
 
 		keyShare, err := clients[i].GenerateKeyShare(y)
 		if err != nil {
@@ -105,7 +96,7 @@ func Test_DMFCE(t *testing.T) {
 
 	bound.Mul(bound, bound)
 	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
-	dec := fullysec.NewDecryptor(y, label, ciphertexts, keyShares, bound)
+	dec := fullysec.NewDMFCEDecryptor(y, label, ciphers, keyShares, bound)
 	d, err := dec.Decrypt()
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)

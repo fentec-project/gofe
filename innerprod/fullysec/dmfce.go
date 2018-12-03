@@ -18,6 +18,7 @@ package fullysec
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/cloudflare/bn256"
@@ -29,31 +30,37 @@ import (
 	"crypto/sha512"
 )
 
-type Client struct {
-	Index int
-	t     data.Matrix // TODO: make it small
-	s     data.Vector // TODO: make it small again, only for debugging
+type DMFCEClient struct {
+	Idx int
+	t   data.Matrix // TODO: make it small
+	s   data.Vector // TODO: make it small again, only for debugging
 }
 
-func NewClient(index int, t data.Matrix) (*Client, error) {
+// NewDMFCEClient is to be instantiated by the party that wants to encrypt number x_i.
+// The decryptor will be able to compute inner product of x and y where x = (x_1,...,x_l) and
+// y is publicly known vector y = (y_1,...,y_l).
+// It accepts the index idx of the party and matrix t which is part of the client secret key.
+// Matrix t needs to be generated interactively with other clients but nobody except the client
+// should know its value (by secure multi-party computation).
+func NewDMFCEClient(idx int, t data.Matrix) (*DMFCEClient, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	s, err := data.NewRandomVector(2, sampler)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate random vector")
 	}
 
-	return &Client{
-		Index: index,
+	return &DMFCEClient{
+		Idx: idx,
 		t:     t,
 		s:     s,
 	}, nil
 }
 
-func (c *Client) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
+func (c *DMFCEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	u := hash([]byte(label))
 	ct, err := u.Dot(c.s)
 	if err != nil {
-		return nil, fmt.Errorf("error when computing inner product: %v", err)
+		return nil, errors.Wrap(err, "error computing inner product")
 	}
 	ct.Add(ct, x)
 	ct.Mod(ct, bn256.Order)
@@ -61,17 +68,23 @@ func (c *Client) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	return new(bn256.G1).ScalarBaseMult(ct), nil
 }
 
-func (c *Client) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
+func (c *DMFCEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	var yRepr []byte
 	for i := 0; i < len(y); i++ {
 		yRepr = append(yRepr, y[i].Bytes()...)
+		yiAbs := new(big.Int).Abs(y[i])
+		if yiAbs.Cmp(y[i]) == 0 {
+			yRepr = append(yRepr, 1)
+		} else {
+			yRepr = append(yRepr, 2)
+		}
 	}
 	v := hash(yRepr)
 
-	keyShare1 := c.s.MulScalar(y[c.Index])
+	keyShare1 := c.s.MulScalar(y[c.Idx])
 	keyShare2, err := c.t.MulVec(v)
 	if err != nil {
-		return nil, fmt.Errorf("error when multiplying matrix with vector: %v", err)
+		return nil, errors.Wrap(err, "error multiplying matrix with vector")
 	}
 
 	keyShare := keyShare1.Add(keyShare2)
@@ -82,31 +95,19 @@ func (c *Client) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	return data.VectorG2{k1, k2}, nil
 }
 
-func hash(bytes []byte) data.Vector {
-	h1 := sha256.Sum256(bytes)
-	h2 := sha512.Sum512(bytes)
-	u1 := new(big.Int).SetBytes(h1[:])
-	u2 := new(big.Int).SetBytes(h2[:])
-	u1.Mod(u1, bn256.Order)
-	u2.Mod(u2, bn256.Order)
-	u := data.NewVector([]*big.Int{u1, u2})
-
-	return u
+type DMFCEDecryptor struct {
+	y        data.Vector
+	label    string
+	ciphers  []*bn256.G1
+	key1     *bn256.G2
+	key2     *bn256.G2
+	bound    *big.Int
+	gCalc    *dlog.CalcBN256
+	gInvCalc *dlog.CalcBN256
 }
 
-type Decryptor struct {
-	y           data.Vector
-	label       string
-	ciphertexts []*bn256.G1
-	key1        *bn256.G2
-	key2        *bn256.G2
-	bound       *big.Int
-	gCalc       *dlog.CalcBN256
-	gInvCalc    *dlog.CalcBN256
-}
-
-func NewDecryptor(y data.Vector, label string, ciphertexts []*bn256.G1, keyShares []data.VectorG2,
-	bound *big.Int) *Decryptor {
+func NewDMFCEDecryptor(y data.Vector, label string, ciphers []*bn256.G1, keyShares []data.VectorG2,
+	bound *big.Int) *DMFCEDecryptor {
 	key1 := keyShares[0][0]
 	key2 := keyShares[0][1]
 	for i := 1; i < len(keyShares); i++ {
@@ -114,24 +115,24 @@ func NewDecryptor(y data.Vector, label string, ciphertexts []*bn256.G1, keyShare
 		key2.Add(key2, keyShares[i][1])
 	}
 
-	return &Decryptor{
+	return &DMFCEDecryptor{
 		y:           y,
 		label:       label,
-		ciphertexts: ciphertexts,
+		ciphers: ciphers,
 		key1:        key1,
 		key2:        key2,
 		bound: bound,
-		gCalc:       dlog.NewCalc().InBN256(), //.WithBound(b),
-		gInvCalc:    dlog.NewCalc().InBN256(), //.WithBound(b),
+		gCalc:       dlog.NewCalc().InBN256(),
+		gInvCalc:    dlog.NewCalc().InBN256(),
 	}
 }
 
-func (d *Decryptor) Decrypt() (*big.Int, error) {
+func (d *DMFCEDecryptor) Decrypt() (*big.Int, error) {
 	y0 := new(bn256.G2).ScalarBaseMult(d.y[0])
-	s := bn256.Pair(d.ciphertexts[0], y0)
-	for i := 1; i < len(d.ciphertexts); i++ {
+	s := bn256.Pair(d.ciphers[0], y0)
+	for i := 1; i < len(d.ciphers); i++ {
 		yi := new(bn256.G2).ScalarBaseMult(d.y[i])
-		p := bn256.Pair(d.ciphertexts[i], yi)
+		p := bn256.Pair(d.ciphers[i], yi)
 		s.Add(s, p)
 	}
 
@@ -160,4 +161,15 @@ func (d *Decryptor) Decrypt() (*big.Int, error) {
 	}
 
 	return dec, nil
+}
+
+func hash(bytes []byte) data.Vector {
+	h1 := sha256.Sum256(bytes)
+	h2 := sha512.Sum512(bytes)
+	u1 := new(big.Int).SetBytes(h1[:])
+	u2 := new(big.Int).SetBytes(h2[:])
+	u1.Mod(u1, bn256.Order)
+	u2.Mod(u2, bn256.Order)
+
+	return data.NewVector([]*big.Int{u1, u2})
 }
