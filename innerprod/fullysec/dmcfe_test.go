@@ -27,7 +27,7 @@ import (
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 )
 
-func Test_DMFCE(t *testing.T) {
+func Test_DMCFE(t *testing.T) {
 	numClients := 3
 	clients := make([]*fullysec.DMCFEClient, numClients)
 	sumT := data.NewConstantMatrix(2, 2, big.NewInt(0))

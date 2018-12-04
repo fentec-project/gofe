@@ -103,7 +103,7 @@ type DMCFEDecryptor struct {
 	gInvCalc *dlog.CalcBN256
 }
 
-// NewDMFCEDecryptor is to be called by a party that wants to decrypt a message - to compute inner product
+// NewDMCFEDecryptor is to be called by a party that wants to decrypt a message - to compute inner product
 // of x and y. It needs ciphertexts from all clients and key shares from all clients. The label is
 // a string under which vector x has been encrypted (each client encrypted x_i under this label). The value bound
 // specifies the bound of vector coordinates.
