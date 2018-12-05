@@ -110,6 +110,10 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
+	if len(sk) != a.Params.l {
+		return nil, fmt.Errorf("the secret key has wrong length")
+	}
+
 	u, err := getSum(sk[a.Params.l], a.Params.p, len(msp.mat[0]))
 	if err != nil {
 		return nil, err
@@ -117,6 +121,10 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 
 	key := make(data.VectorG1, len(msp.mat))
 	for i := 0; i < len(msp.mat); i++ {
+		if 0 > msp.rowToAttrib[i] || a.Params.l <= msp.rowToAttrib[i] {
+			return nil, fmt.Errorf("attributes of msp not in the universe of a")
+		}
+
 		tMapIInv := new(big.Int).ModInverse(sk[msp.rowToAttrib[i]], a.Params.p)
 		matTimesU, err := msp.mat[i].Dot(u)
 		if err != nil {
@@ -130,7 +138,7 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 }
 
 // getSum is a helping function that given integers y, p and d generates a
-// d dimesional vector over Z_p whose entries sum to y in Z_p.
+// random d dimesional vector over Z_p whose entries sum to y in Z_p.
 func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	ret := make(data.Vector, d)
 	sampler := sample.NewUniform(p)
@@ -160,8 +168,8 @@ type AbeKey struct {
 	rowToAttrib []int
 }
 
-// DelegateKeys given the set of all keys produced from the MSP struct msp joins
-// those that correspond to attributes listed in attrib and creates an AbeKey
+// DelegateKeys given the set of all keys produced from the Msp struct msp joins
+// those that correspond to attributes appearing in attrib and creates an AbeKey
 // for the decryption.
 func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
 	attribMap := make(map[int]bool)
@@ -189,15 +197,16 @@ func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
 // the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
 // is not possible, an error is returned.
 func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
+	// get a combination alpha of keys needed to decrypt
 	ones := make(data.Vector, len(key.mat[0]))
 	for i := 0; i < len(ones); i++ {
 		ones[i] = big.NewInt(1)
 	}
-
 	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("provided key is not sufficient for decryption")
 	}
+
 	ret := new(bn256.GT).Set(cipher.e0)
 	for i := 0; i < len(alpha); i++ {
 		pair := bn256.Pair(key.d[i], cipher.e[cipher.attribToI[key.rowToAttrib[i]]])
@@ -216,6 +225,9 @@ func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 // corresponding rows span a vector [1, 1,..., 1] in Z_p, and a vector whose i-th entry
 // indicates to which attribute the i-th row corresponds.
 func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
+	// by the Lewko-Waters Algorithm we obtain a Msp struct with the property
+	// that is the the boolean expression is satisfied iff the corresponding rows
+	// of the msp matrix span the vector [1, 0,..., 0] in Z_p
 	vec := make(data.Vector, 1)
 	vec[0] = big.NewInt(1)
 	msp, _, err := booleanToMspIterative(boolExp, vec, 1)
@@ -236,6 +248,8 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 
 		}
 	}
+	//change the msp matrix so that the boolean expression is satisfied
+	// iff the corresponding rows span the vector [1, 1,..., 1] in Z_p
 	msp.mat, err = msp.mat.Mul(perm)
 	msp.mat = msp.mat.Mod(p)
 	msp.p = p
@@ -244,7 +258,7 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 
 // booleanToMspIterative iteratively builds a msp structure by splitting the expression
 // into two parts separated by an AND or OR gate, generating a msp structure on each of
-// them, and joining both structures together. The structure is such the boolean expression
+// them, and joining both structures together. The structure is such the the boolean expression
 // assigning 1 to some attributes is satisfied iff the corresponding rows span a vector
 // [1, 0,..., 0]. The algorithm is known as Lewko-Waters algorithm, see Appendix G in
 // https://eprint.iacr.org/2010/351.pdf.
@@ -260,7 +274,8 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 	var err error
 	found := false
 
-	// find the main AND or OR gate
+	// find the main AND or OR gate and iteratively call the function on
+	// both the sub-expressions
 	for i, e := range boolExp {
 		if e == '(' {
 			numBrc++
@@ -303,7 +318,7 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 
 	// If the AND or OR gate is not found then there are two options,
 	// ether the whole expression is in brackets, or the the expression
-	// is only one attribute. It nether of both is is true, then
+	// is only one attribute. It nether of both is true, then
 	// an error is returned while converting the expression into an
 	// attribute
 	if found == false {
@@ -394,7 +409,7 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 	}
 	m, _ := data.NewMatrix(cpMat) // error is impossible to happen
 
-	// m and u are transformed to be in upper triangular form
+	// m and u are transformed to be in the upper triangular form
 	ret := make(data.Vector, len(mat[0]))
 	h, k := 0, 0
 	for h < len(m) && k < len(m[0]) {
