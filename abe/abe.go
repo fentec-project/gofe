@@ -110,7 +110,7 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
-	if len(sk) != a.Params.l {
+	if len(sk) != (a.Params.l + 1) {
 		return nil, fmt.Errorf("the secret key has wrong length")
 	}
 
