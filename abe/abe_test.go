@@ -16,7 +16,7 @@ func TestAbe(t *testing.T) {
 	l := 10
 	a := newAbe(l)
 
-	// generate a a pubic and secret key for the scheme
+	// generate a a pubic and a secret key for the scheme
 	pubKey, sk, err := a.GenerateMasterKeys()
 	if err != nil {
 		t.Fatalf("Failed to genrate master keys: %v", err)
@@ -32,7 +32,7 @@ func TestAbe(t *testing.T) {
 	msg := new(bn256.GT).ScalarBaseMult(exponent)
 
 	// define a set of attributes (a subset of the universe of attributes)
-	// that are needed for the encrypted message
+	// that will later be used in the decryption policy of the message
 	gamma := []int{0, 1, 2, 4}
 
 	// encrypt the message
@@ -41,15 +41,18 @@ func TestAbe(t *testing.T) {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
 
-	// create a msp struct representing a policy of which attributes are needed
-	// to decrypt the ciphertext
+	// create a msp struct out of a boolean expression  representing the
+	// policy specifying which attributes are needed to decrypt the ciphertext
 	msp, err := BooleanToMsp("(1 OR 4) AND (2 OR (0 AND 1))", a.Params.p)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
 
-	// generate keys for decryption, i.e. a vector of keys, for each row in
-	// the msp matrix one key
+	// generate keys for decryption that correspond to provided msp struct,
+	// i.e. a vector of keys, for each row in the msp matrix one key, having
+	// the property that a subset of keys can decrypt a message iff the
+	// corresponding rows span the vector of ones (which is equivalent to
+	// corresponding attributes satisfy the boolean expression)
 	keys, err := a.KeyGen(msp, sk)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
@@ -91,7 +94,7 @@ func TestBooleanToMsp(t *testing.T) {
 	}
 
 	// check if having attributes 1, 7 and 9 satisfies the expression, i.e. entries 0, 2, 4
-	// of a msp matrix span vector [1, 0,..., 0]
+	// of a msp matrix span vector [1, 1,..., 1], using Gaussian elimination
 	v := make(data.Vector, len(msp.mat[0]))
 	for i := 0; i < len(v); i++ {
 		v[i] = big.NewInt(1)
