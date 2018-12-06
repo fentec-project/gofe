@@ -19,7 +19,7 @@ type abeParams struct {
 }
 
 // Abe represents an ABE scheme.
-type Abe struct {
+type ABE struct {
 	Params *abeParams
 }
 
@@ -27,8 +27,8 @@ type Abe struct {
 // It accepts l the number of attributes possibly used in
 // the scheme. Attributes' names will be considered as
 // elements of a set {0, 1,..., l-1}.
-func newAbe(l int) *Abe {
-	return &Abe{Params: &abeParams{
+func NewAbe(l int) *ABE {
+	return &ABE{Params: &abeParams{
 		l: l, // number of attributes in the whole universe
 		p: bn256.Order,
 	}}
@@ -43,7 +43,7 @@ type AbePubKey struct {
 // GenerateMasterKeys generates a new set of public keys, needed
 // for encrypting data, and secret keys needed for generating keys
 // for decryption.
-func (a Abe) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
+func (a *ABE) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 	// todo: should we put public key into Abe struct?
 	sampler := sample.NewUniform(a.Params.p)
 	sk, err := data.NewRandomVector(a.Params.l+1, sampler)
@@ -66,9 +66,9 @@ type AbeCipher struct {
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
 // curve, gamma a set of attributes that can be latter used to in the decryption policy
-// and a public key pk. It returns an encryption of msk. An case of a failed procedure
+// and a public key pk. It returns an encryption of msk. In case of a failed procedure
 // an error is returned.
-func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
+func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
 	sampler := sample.NewUniform(a.Params.p)
 	s, err := sampler.Sample()
 	if err != nil {
@@ -89,24 +89,24 @@ func (a Abe) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, err
 		e:         e}, nil
 }
 
-// Msp represents a monotone span program (MSP) describing a policy which
+// MSP represents a monotone span program (MSP) describing a policy defining which
 // attributes are needed to decrypt the ciphertext. It includes a matrix
 // mat and a mapping from the rows of the mat to attributes. A MSP policy
-// allows decryption of an entity with a set of attributes A iff all the
+// allows decryption of an entity with a set of attributes A if an only if all the
 // rows of the matrix mapped to an element of A span the vector [1, 1,..., 1]
 // in Z_p.
-type Msp struct {
+type MSP struct {
 	p           *big.Int
 	mat         data.Matrix
 	rowToAttrib []int
 }
 
-// KeyGen given a monotone span program (MSP) msp and the vector of secret
+// GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
 // keys produces a vector of keys needed for the decryption. In particular,
 // for each row of the MSP matrix msp.mat it creates a corresponding key. Since
 // each row of msp.mat has a corresponding key, this keys can be latter delegated
 // to entities with corresponding attributes.
-func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
+func (a *ABE) GeneratePolicyKeys(msp *MSP, sk data.Vector) (data.VectorG1, error) {
 	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -140,15 +140,13 @@ func (a Abe) KeyGen(msp *Msp, sk data.Vector) (data.VectorG1, error) {
 // getSum is a helping function that given integers y, p and d generates a
 // random d dimesional vector over Z_p whose entries sum to y in Z_p.
 func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
-	ret := make(data.Vector, d)
 	sampler := sample.NewUniform(p)
-	var err error
+	ret, err := data.NewRandomVector(d, sampler)
+	if err != nil {
+		return nil, err
+	}
 	sum := big.NewInt(0)
 	for i := 0; i < d-1; i++ {
-		ret[i], err = sampler.Sample()
-		if err != nil {
-			return nil, err
-		}
 		sum.Add(sum, ret[i])
 		sum.Mod(sum, p)
 	}
@@ -168,10 +166,10 @@ type AbeKey struct {
 	rowToAttrib []int
 }
 
-// DelegateKeys given the set of all keys produced from the Msp struct msp joins
+// DelegateKeys given the set of all keys produced from the MSP struct msp joins
 // those that correspond to attributes appearing in attrib and creates an AbeKey
 // for the decryption.
-func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
+func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *AbeKey {
 	attribMap := make(map[int]bool)
 	for _, e := range attrib {
 		attribMap[e] = true
@@ -196,9 +194,9 @@ func (a Abe) DelagateKeys(keys data.VectorG1, msp *Msp, attrib []int) *AbeKey {
 // the cipher. If the AbeKey is properly generated, this is possible iff
 // the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
 // is not possible, an error is returned.
-func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
+func (a *ABE) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	// get a combination alpha of keys needed to decrypt
-	ones := make(data.Vector, len(key.mat[0]))
+	ones := data.NewConstantVector(len(key.mat[0]), big.NewInt(1))
 	for i := 0; i < len(ones); i++ {
 		ones[i] = big.NewInt(1)
 	}
@@ -218,19 +216,19 @@ func (a Abe) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	return ret, nil
 }
 
-// BooleanToMsp takes as an input a boolean expression (without a NOT gate) and
+// BooleanToMSP takes as an input a boolean expression (without a NOT gate) and
 // outputs a msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
 // boolean expression assigning 1 to some attributes is satisfied iff the
 // corresponding rows span a vector [1, 1,..., 1] in Z_p, and a vector whose i-th entry
 // indicates to which attribute the i-th row corresponds.
-func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
-	// by the Lewko-Waters Algorithm we obtain a Msp struct with the property
+func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
+	// by the Lewko-Waters Algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied iff the corresponding rows
 	// of the msp matrix span the vector [1, 0,..., 0] in Z_p
 	vec := make(data.Vector, 1)
 	vec[0] = big.NewInt(1)
-	msp, _, err := booleanToMspIterative(boolExp, vec, 1)
+	msp, _, err := booleanToMSPIterative(boolExp, vec, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -262,15 +260,15 @@ func BooleanToMsp(boolExp string, p *big.Int) (*Msp, error) {
 // assigning 1 to some attributes is satisfied iff the corresponding rows span a vector
 // [1, 0,..., 0]. The algorithm is known as Lewko-Waters algorithm, see Appendix G in
 // https://eprint.iacr.org/2010/351.pdf.
-func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, error) {
+func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, error) {
 	boolExp = strings.TrimSpace(boolExp)
 	numBrc := 0
 	var boolExp1 string
 	var boolExp2 string
 	var c1 int
 	var cOut int
-	var msp1 *Msp
-	var msp2 *Msp
+	var msp1 *MSP
+	var msp2 *MSP
 	var err error
 	found := false
 
@@ -289,11 +287,11 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+3:]
 			vec1, vec2 := makeAndVecs(vec, c)
-			msp1, c1, err = booleanToMspIterative(boolExp1, vec1, c+1)
+			msp1, c1, err = booleanToMSPIterative(boolExp1, vec1, c+1)
 			if err != nil {
 				return nil, 0, err
 			}
-			msp2, cOut, err = booleanToMspIterative(boolExp2, vec2, c1)
+			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec2, c1)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -303,11 +301,11 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 		if numBrc == 0 && i < len(boolExp)-2 && boolExp[i:i+2] == "OR" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+2:]
-			msp1, c1, err = booleanToMspIterative(boolExp1, vec, c)
+			msp1, c1, err = booleanToMSPIterative(boolExp1, vec, c)
 			if err != nil {
 				return nil, 0, err
 			}
-			msp2, cOut, err = booleanToMspIterative(boolExp2, vec, c1)
+			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec, c1)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -324,7 +322,7 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 	if found == false {
 		if boolExp[0] == '(' && boolExp[len(boolExp)-1] == ')' {
 			boolExp = boolExp[1:(len(boolExp) - 1)]
-			return booleanToMspIterative(boolExp, vec, c)
+			return booleanToMSPIterative(boolExp, vec, c)
 		}
 
 		attrib, err := strconv.Atoi(boolExp)
@@ -343,7 +341,7 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 
 		rowToAttrib := make([]int, 1)
 		rowToAttrib[0] = attrib
-		return &Msp{mat: mat, rowToAttrib: rowToAttrib}, c, nil
+		return &MSP{mat: mat, rowToAttrib: rowToAttrib}, c, nil
 	} else {
 		// otherwise we join the two msp structures into one
 		mat := make(data.Matrix, len(msp1.mat)+len(msp2.mat))
@@ -361,7 +359,7 @@ func booleanToMspIterative(boolExp string, vec data.Vector, c int) (*Msp, int, e
 		}
 		rowToAttrib := append(msp1.rowToAttrib, msp2.rowToAttrib...)
 
-		return &Msp{mat: mat, rowToAttrib: rowToAttrib}, cOut, nil
+		return &MSP{mat: mat, rowToAttrib: rowToAttrib}, cOut, nil
 	}
 }
 
