@@ -14,8 +14,8 @@ import (
 
 // abeParams represents configuration parameters for the ABE scheme instance.
 type abeParams struct {
-	l int      // number of attributes
-	p *big.Int // order of the elliptic curve
+	L int      // number of attributes
+	P *big.Int // order of the elliptic curve
 }
 
 // Abe represents an ABE scheme.
@@ -29,8 +29,8 @@ type ABE struct {
 // elements of a set {0, 1,..., l-1}.
 func NewAbe(l int) *ABE {
 	return &ABE{Params: &abeParams{
-		l: l, // number of attributes in the whole universe
-		p: bn256.Order,
+		L: l, // number of attributes in the whole universe
+		P: bn256.Order,
 	}}
 }
 
@@ -44,14 +44,13 @@ type AbePubKey struct {
 // for encrypting data, and secret keys needed for generating keys
 // for decryption.
 func (a *ABE) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
-	// todo: should we put public key into Abe struct?
-	sampler := sample.NewUniform(a.Params.p)
-	sk, err := data.NewRandomVector(a.Params.l+1, sampler)
+	sampler := sample.NewUniform(a.Params.P)
+	sk, err := data.NewRandomVector(a.Params.L+1, sampler)
 	if err != nil {
 		return nil, nil, err
 	}
-	t := sk[:a.Params.l].MulG2()
-	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.l])
+	t := sk[:a.Params.L].MulG2()
+	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.L])
 
 	return &AbePubKey{t: t, y: y}, sk, nil
 }
@@ -69,7 +68,7 @@ type AbeCipher struct {
 // and a public key pk. It returns an encryption of msk. In case of a failed procedure
 // an error is returned.
 func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
-	sampler := sample.NewUniform(a.Params.p)
+	sampler := sample.NewUniform(a.Params.P)
 	s, err := sampler.Sample()
 	if err != nil {
 		return nil, err
@@ -96,9 +95,9 @@ func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, er
 // rows of the matrix mapped to an element of A span the vector [1, 1,..., 1]
 // in Z_p.
 type MSP struct {
-	p           *big.Int
-	mat         data.Matrix
-	rowToAttrib []int
+	P           *big.Int
+	Mat         data.Matrix
+	RowToAttrib []int
 }
 
 // GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
@@ -107,26 +106,26 @@ type MSP struct {
 // each row of msp.mat has a corresponding key, this keys can be latter delegated
 // to entities with corresponding attributes.
 func (a *ABE) GeneratePolicyKeys(msp *MSP, sk data.Vector) (data.VectorG1, error) {
-	if len(msp.mat) == 0 || len(msp.mat[0]) == 0 {
+	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
-	if len(sk) != (a.Params.l + 1) {
+	if len(sk) != (a.Params.L + 1) {
 		return nil, fmt.Errorf("the secret key has wrong length")
 	}
 
-	u, err := getSum(sk[a.Params.l], a.Params.p, len(msp.mat[0]))
+	u, err := getSum(sk[a.Params.L], a.Params.P, len(msp.Mat[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	key := make(data.VectorG1, len(msp.mat))
-	for i := 0; i < len(msp.mat); i++ {
-		if 0 > msp.rowToAttrib[i] || a.Params.l <= msp.rowToAttrib[i] {
+	key := make(data.VectorG1, len(msp.Mat))
+	for i := 0; i < len(msp.Mat); i++ {
+		if 0 > msp.RowToAttrib[i] || a.Params.L <= msp.RowToAttrib[i] {
 			return nil, fmt.Errorf("attributes of msp not in the universe of a")
 		}
 
-		tMapIInv := new(big.Int).ModInverse(sk[msp.rowToAttrib[i]], a.Params.p)
-		matTimesU, err := msp.mat[i].Dot(u)
+		tMapIInv := new(big.Int).ModInverse(sk[msp.RowToAttrib[i]], a.Params.P)
+		matTimesU, err := msp.Mat[i].Dot(u)
 		if err != nil {
 			return nil, err
 		}
@@ -177,11 +176,11 @@ func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *AbeKey {
 	mat := make([]data.Vector, 0)
 	d := make(data.VectorG1, 0)
 	rowToAttrib := make([]int, 0)
-	for i := 0; i < len(msp.mat); i++ {
-		if attribMap[msp.rowToAttrib[i]] {
-			mat = append(mat, msp.mat[i])
+	for i := 0; i < len(msp.Mat); i++ {
+		if attribMap[msp.RowToAttrib[i]] {
+			mat = append(mat, msp.Mat[i])
 			d = append(d, keys[i])
-			rowToAttrib = append(rowToAttrib, msp.rowToAttrib[i])
+			rowToAttrib = append(rowToAttrib, msp.RowToAttrib[i])
 		}
 	}
 
@@ -191,16 +190,13 @@ func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *AbeKey {
 }
 
 // Decrypt takes as an input a cipher and an AbeKey key and tries to decrypt
-// the cipher. If the AbeKey is properly generated, this is possible iff
-// the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
+// the cipher. If the AbeKey is properly generated, this is possible if and only
+// if the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
 // is not possible, an error is returned.
 func (a *ABE) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 	// get a combination alpha of keys needed to decrypt
 	ones := data.NewConstantVector(len(key.mat[0]), big.NewInt(1))
-	for i := 0; i < len(ones); i++ {
-		ones[i] = big.NewInt(1)
-	}
-	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.p)
+	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.P)
 	if err != nil {
 		return nil, fmt.Errorf("provided key is not sufficient for decryption")
 	}
@@ -223,9 +219,9 @@ func (a *ABE) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
 // corresponding rows span a vector [1, 1,..., 1] in Z_p, and a vector whose i-th entry
 // indicates to which attribute the i-th row corresponds.
 func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
-	// by the Lewko-Waters Algorithm we obtain a MSP struct with the property
-	// that is the the boolean expression is satisfied iff the corresponding rows
-	// of the msp matrix span the vector [1, 0,..., 0] in Z_p
+	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
+	// that is the the boolean expression is satisfied if and only if the corresponding
+	// rows of the msp matrix span the vector [1, 0,..., 0] in Z_p
 	vec := make(data.Vector, 1)
 	vec[0] = big.NewInt(1)
 	msp, _, err := booleanToMSPIterative(boolExp, vec, 1)
@@ -234,10 +230,10 @@ func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
 	}
 
 	// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
-	perm := make(data.Matrix, len(msp.mat[0]))
-	for i := 0; i < len(msp.mat[0]); i++ {
-		perm[i] = make(data.Vector, len(msp.mat[0]))
-		for j := 0; j < len(msp.mat[0]); j++ {
+	perm := make(data.Matrix, len(msp.Mat[0]))
+	for i := 0; i < len(msp.Mat[0]); i++ {
+		perm[i] = make(data.Vector, len(msp.Mat[0]))
+		for j := 0; j < len(msp.Mat[0]); j++ {
 			if i == 0 || j == i {
 				perm[i][j] = big.NewInt(1)
 			} else {
@@ -248,10 +244,14 @@ func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
 	}
 	//change the msp matrix so that the boolean expression is satisfied
 	// iff the corresponding rows span the vector [1, 1,..., 1] in Z_p
-	msp.mat, err = msp.mat.Mul(perm)
-	msp.mat = msp.mat.Mod(p)
-	msp.p = p
-	return msp, err
+	msp.Mat, err = msp.Mat.Mul(perm)
+	if err != nil {
+		return nil, err
+	}
+	msp.Mat = msp.Mat.Mod(p)
+	msp.P = p
+
+	return msp, nil
 }
 
 // booleanToMspIterative iteratively builds a msp structure by splitting the expression
@@ -315,8 +315,8 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 	}
 
 	// If the AND or OR gate is not found then there are two options,
-	// ether the whole expression is in brackets, or the the expression
-	// is only one attribute. It nether of both is true, then
+	// either the whole expression is in brackets, or the the expression
+	// is only one attribute. It neither of both is true, then
 	// an error is returned while converting the expression into an
 	// attribute
 	if found == false {
@@ -341,25 +341,25 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 
 		rowToAttrib := make([]int, 1)
 		rowToAttrib[0] = attrib
-		return &MSP{mat: mat, rowToAttrib: rowToAttrib}, c, nil
+		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, c, nil
 	} else {
 		// otherwise we join the two msp structures into one
-		mat := make(data.Matrix, len(msp1.mat)+len(msp2.mat))
-		for i := 0; i < len(msp1.mat); i++ {
+		mat := make(data.Matrix, len(msp1.Mat)+len(msp2.Mat))
+		for i := 0; i < len(msp1.Mat); i++ {
 			mat[i] = make(data.Vector, cOut)
-			for j := 0; j < len(msp1.mat[0]); j++ {
-				mat[i][j] = msp1.mat[i][j]
+			for j := 0; j < len(msp1.Mat[0]); j++ {
+				mat[i][j] = msp1.Mat[i][j]
 			}
-			for j := len(msp1.mat[0]); j < cOut; j++ {
+			for j := len(msp1.Mat[0]); j < cOut; j++ {
 				mat[i][j] = big.NewInt(0)
 			}
 		}
-		for i := 0; i < len(msp2.mat); i++ {
-			mat[i+len(msp1.mat)] = msp2.mat[i]
+		for i := 0; i < len(msp2.Mat); i++ {
+			mat[i+len(msp1.Mat)] = msp2.Mat[i]
 		}
-		rowToAttrib := append(msp1.rowToAttrib, msp2.rowToAttrib...)
+		rowToAttrib := append(msp1.RowToAttrib, msp2.RowToAttrib...)
 
-		return &MSP{mat: mat, rowToAttrib: rowToAttrib}, cOut, nil
+		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, cOut, nil
 	}
 }
 
@@ -367,15 +367,10 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 // creates two new vectors used whenever an AND gate is found in a iterative
 // step of BooleanToMsp
 func makeAndVecs(vec data.Vector, c int) (data.Vector, data.Vector) {
-	vec1 := make(data.Vector, c+1)
-	vec2 := make(data.Vector, c+1)
-	for i := 0; i < c; i++ {
-		vec1[i] = big.NewInt(0)
-		if i < len(vec) {
-			vec2[i] = new(big.Int).Set(vec[i])
-		} else {
-			vec2[i] = big.NewInt(0)
-		}
+	vec1 := data.NewConstantVector(c+1, big.NewInt(0))
+	vec2 := data.NewConstantVector(c+1, big.NewInt(0))
+	for i := 0; i < len(vec); i++ {
+		vec2[i].Set(vec[i])
 	}
 	vec1[c] = big.NewInt(-1)
 	vec2[c] = big.NewInt(1)
@@ -392,7 +387,8 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		return nil, fmt.Errorf("the matrix should not be empty")
 	}
 	if len(mat) != len(v) {
-		return nil, fmt.Errorf("dimensions should match")
+		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: " +
+			"rows of the matrix %d, length of the vector %d", len(mat), len(v)))
 	}
 
 	// we copy matrix mat into m and v into u
@@ -451,16 +447,14 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 	}
 
 	// use the upper triangular form to obtain the solution
-	for h > 0 {
-		h--
-		for k > 0 {
-			k--
-			if ret[k] == nil {
-				tmpSum, _ := m[h][k+1:].Dot(ret[k+1:])
-				ret[k] = new(big.Int).Sub(u[h], tmpSum)
-				mHKInv := new(big.Int).ModInverse(m[h][k], p)
-				ret[k].Mul(ret[k], mHKInv)
-				ret[k].Mod(ret[k], p)
+	for i := h - 1; i >= 0; i-- {
+		for j := k - 1; j >= 0; j-- {
+			if ret[j] == nil {
+				tmpSum, _ := m[i][j+1:].Dot(ret[j+1:])
+				ret[j] = new(big.Int).Sub(u[i], tmpSum)
+				mHKInv := new(big.Int).ModInverse(m[i][j], p)
+				ret[j].Mul(ret[j], mHKInv)
+				ret[j].Mod(ret[j], p)
 				break
 			}
 		}
