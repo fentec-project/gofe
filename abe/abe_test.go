@@ -4,17 +4,17 @@ import (
 	"testing"
 
 	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
-	"github.com/fentec-project/gofe/abe"
 )
 
-func TestAbe(t *testing.T) {
+func TestABE(t *testing.T) {
 	// create a new ABE struct with the universe of l possible
 	// attributes (attributes are denoted by the integers in [0, l)
 	l := 10
-	a := abe.NewAbe(l)
+	a := abe.NewABE(l)
 
 	// generate a public key and a secret key for the scheme
 	pubKey, sk, err := a.GenerateMasterKeys()

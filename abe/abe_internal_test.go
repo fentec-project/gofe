@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestBooleanToMsp(t *testing.T) {
 	// create as msp struct out of a boolean expression
 	p := big.NewInt(7)

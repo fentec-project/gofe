@@ -12,30 +12,30 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// abeParams represents configuration parameters for the ABE scheme instance.
-type abeParams struct {
+// ABEParams represents configuration parameters for the ABE scheme instance.
+type ABEParams struct {
 	L int      // number of attributes
 	P *big.Int // order of the elliptic curve
 }
 
-// Abe represents an ABE scheme.
+// ABE represents an ABE scheme.
 type ABE struct {
-	Params *abeParams
+	Params *ABEParams
 }
 
-// NewAbe configures a new instance of the scheme.
+// NewABE configures a new instance of the scheme.
 // It accepts l the number of attributes possibly used in
 // the scheme. Attributes' names will be considered as
 // elements of a set {0, 1,..., l-1}.
-func NewAbe(l int) *ABE {
-	return &ABE{Params: &abeParams{
+func NewABE(l int) *ABE {
+	return &ABE{Params: &ABEParams{
 		L: l, // number of attributes in the whole universe
 		P: bn256.Order,
 	}}
 }
 
-// AbePubKey represents a public key of an ABE scheme.
-type AbePubKey struct {
+// ABEPubKey represents a public key of an ABE scheme.
+type ABEPubKey struct {
 	t data.VectorG2
 	y *bn256.GT
 }
@@ -43,7 +43,7 @@ type AbePubKey struct {
 // GenerateMasterKeys generates a new set of public keys, needed
 // for encrypting data, and secret keys needed for generating keys
 // for decryption.
-func (a *ABE) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
+func (a *ABE) GenerateMasterKeys() (*ABEPubKey, data.Vector, error) {
 	sampler := sample.NewUniform(a.Params.P)
 	sk, err := data.NewRandomVector(a.Params.L+1, sampler)
 	if err != nil {
@@ -52,11 +52,11 @@ func (a *ABE) GenerateMasterKeys() (*AbePubKey, data.Vector, error) {
 	t := sk[:a.Params.L].MulG2()
 	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.L])
 
-	return &AbePubKey{t: t, y: y}, sk, nil
+	return &ABEPubKey{t: t, y: y}, sk, nil
 }
 
-// AbeCipher represents a ciphertext of an ABE scheme.
-type AbeCipher struct {
+// ABECipher represents a ciphertext of an ABE scheme.
+type ABECipher struct {
 	gamma     []int         // the set of attributes that can be used for policy of decryption
 	attribToI map[int]int   // a map that connects the attributes in gamma with elements of e
 	e0        *bn256.GT     // the first part of the encryption
@@ -67,7 +67,7 @@ type AbeCipher struct {
 // curve, gamma a set of attributes that can be latter used to in the decryption policy
 // and a public key pk. It returns an encryption of msk. In case of a failed procedure
 // an error is returned.
-func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, error) {
+func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *ABEPubKey) (*ABECipher, error) {
 	sampler := sample.NewUniform(a.Params.P)
 	s, err := sampler.Sample()
 	if err != nil {
@@ -82,7 +82,7 @@ func (a *ABE) Encrypt(msg *bn256.GT, gamma []int, pk *AbePubKey) (*AbeCipher, er
 		attribToI[el] = i
 	}
 
-	return &AbeCipher{gamma: gamma,
+	return &ABECipher{gamma: gamma,
 		attribToI: attribToI,
 		e0:        e0,
 		e:         e}, nil
@@ -155,20 +155,20 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	return ret, nil
 }
 
-// AbeKey represents a key structure for decrypting a ciphertext. It includes
+// ABEKey represents a key structure for decrypting a ciphertext. It includes
 // mat a matrix, d a set of vectors and rowToAttib a mapping from rows of mat
 // (or entries of d) to corresponding attributes. Vector d is a set of keys
 // that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
-type AbeKey struct {
+type ABEKey struct {
 	mat         data.Matrix
 	d           data.VectorG1
 	rowToAttrib []int
 }
 
 // DelegateKeys given the set of all keys produced from the MSP struct msp joins
-// those that correspond to attributes appearing in attrib and creates an AbeKey
+// those that correspond to attributes appearing in attrib and creates an ABEKey
 // for the decryption.
-func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *AbeKey {
+func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *ABEKey {
 	attribMap := make(map[int]bool)
 	for _, e := range attrib {
 		attribMap[e] = true
@@ -184,16 +184,16 @@ func (a *ABE) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *AbeKey {
 		}
 	}
 
-	return &AbeKey{mat: mat,
+	return &ABEKey{mat: mat,
 		d:           d,
 		rowToAttrib: rowToAttrib}
 }
 
-// Decrypt takes as an input a cipher and an AbeKey key and tries to decrypt
-// the cipher. If the AbeKey is properly generated, this is possible if and only
+// Decrypt takes as an input a cipher and an ABEKey key and tries to decrypt
+// the cipher. If the ABEKey is properly generated, this is possible if and only
 // if the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
 // is not possible, an error is returned.
-func (a *ABE) Decrypt(cipher *AbeCipher, key *AbeKey) (*bn256.GT, error) {
+func (a *ABE) Decrypt(cipher *ABECipher, key *ABEKey) (*bn256.GT, error) {
 	// get a combination alpha of keys needed to decrypt
 	ones := data.NewConstantVector(len(key.mat[0]), big.NewInt(1))
 	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.P)
@@ -387,7 +387,7 @@ func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vecto
 		return nil, fmt.Errorf("the matrix should not be empty")
 	}
 	if len(mat) != len(v) {
-		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: " +
+		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: "+
 			"rows of the matrix %d, length of the vector %d", len(mat), len(v)))
 	}
 

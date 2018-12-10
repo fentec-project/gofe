@@ -20,11 +20,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
-	"github.com/cloudflare/bn256"
-	"github.com/fentec-project/gofe/innerprod/fullysec"
 )
 
 func Test_DMCFE(t *testing.T) {
