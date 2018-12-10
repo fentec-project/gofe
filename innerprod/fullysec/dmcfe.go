@@ -18,8 +18,9 @@ package fullysec
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/data"
@@ -52,8 +53,8 @@ func NewDMCFEClient(idx int, t data.Matrix) (*DMCFEClient, error) {
 
 	return &DMCFEClient{
 		Idx: idx,
-		t:     t,
-		s:     s,
+		t:   t,
+		s:   s,
 	}, nil
 }
 
@@ -123,14 +124,14 @@ func NewDMCFEDecryptor(y data.Vector, label string, ciphers []*bn256.G1, keyShar
 	}
 
 	return &DMCFEDecryptor{
-		y:           y,
-		label:       label,
-		ciphers: ciphers,
-		key1:        key1,
-		key2:        key2,
-		bound: bound,
-		gCalc:       dlog.NewCalc().InBN256(),
-		gInvCalc:    dlog.NewCalc().InBN256(),
+		y:        y,
+		label:    label,
+		ciphers:  ciphers,
+		key1:     key1,
+		key2:     key2,
+		bound:    bound,
+		gCalc:    dlog.NewCalc().InBN256(),
+		gInvCalc: dlog.NewCalc().InBN256(),
 	}
 }
 
