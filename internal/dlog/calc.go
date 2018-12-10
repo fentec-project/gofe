@@ -183,37 +183,43 @@ func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errC
 // smaller the solution is, the faster algorithm finishes.
 func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
 	one := big.NewInt(1)
+	two := big.NewInt(2)
 
 	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
-	T1 := make(map[string]*big.Int)
-	T2 := make(map[string]*big.Int)
+	T := make(map[string]*big.Int)
 	x := big.NewInt(1)
-
-	// g^-m
-	z := new(big.Int).ModInverse(g, c.p)
-	z.Exp(z, c.m, c.p)
 	y := new(big.Int).Set(h)
 
-	// remainders (r)
-	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
-		// important: insert a copy of i into the map as i is mutated each loop
+	z := new(big.Int).ModInverse(g, c.p)
+	z.Exp(z, two, c.p)
 
-		if e, ok := T1[string(y.Bytes())]; ok {
-			retChan <- new(big.Int).Add(new(big.Int).Mul(i, c.m), e)
-			errChan <- nil
-			return
+	bits := int64(c.m.BitLen())
+
+	T[string(x.Bytes())] = big.NewInt(0)
+	x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
+	j := big.NewInt(0)
+	for i := int64(0); i < bits; i++ {
+		giantStep := new(big.Int).Exp(two, big.NewInt(i+1), nil)
+		if giantStep.Cmp(c.m) > 0 {
+			giantStep.Set(c.m)
+			z = new(big.Int).ModInverse(g, c.p)
+			z.Exp(z, c.m, c.p)
 		}
-		T2[string(y.Bytes())] = new(big.Int).Set(i)
-
-		if e, ok := T2[string(x.Bytes())]; ok {
-			retChan <- new(big.Int).Add(new(big.Int).Mul(e, c.m), i)
-			errChan <- nil
-			return
+		for j := new(big.Int).Exp(two, big.NewInt(i), nil); j.Cmp(giantStep) < 0; j.Add(j, one) {
+			T[string(x.Bytes())] = new(big.Int).Set(j)
+			x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
 		}
-		T1[string(x.Bytes())] = new(big.Int).Set(i)
-
-		x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
-		y = new(big.Int).Mod(new(big.Int).Mul(y, z), c.p)
+		bound := new(big.Int).Exp(two, big.NewInt(2*(i+1)), nil)
+		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
+			if e, ok := T[string(y.Bytes())]; ok {
+				retChan <- new(big.Int).Add(j, e)
+				errChan <- nil
+				return
+			}
+			y.Mod(y.Mul(y, z), c.p)
+		}
+		z.Mul(z, z)
+		z.Mod(z, c.p)
 	}
 
 	retChan <- nil
