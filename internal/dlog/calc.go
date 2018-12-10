@@ -109,10 +109,10 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 	// result if c.neg is set to true
 	retChan := make(chan *big.Int)
 	errChan := make(chan error)
-	go c.runBabyStepGiantStep(h, g, retChan, errChan)
+	go c.runBabyStepGiantStepIterative(h, g, retChan, errChan)
 	if c.neg {
 		gInv := new(big.Int).ModInverse(g, c.p)
-		go c.runBabyStepGiantStep(h, gInv, retChan, errChan)
+		go c.runBabyStepGiantStepIterative(h, gInv, retChan, errChan)
 	}
 
 	// catch a value when the first routine finishes
@@ -169,6 +169,53 @@ func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errC
 		}
 		x = new(big.Int).Mod(new(big.Int).Mul(x, z), c.p)
 	}
+	retChan <- nil
+	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound")
+}
+
+// runBabyStepGiantStepIterative implements the baby-step giant-step method to
+// compute the discrete logarithm in the Zp group. It is meant to be run
+// as a goroutine.
+//
+// The function searches for x, where h = g^x mod p. If the solution was not found
+// within the provided bound, it returns an error. In contrast to the usual
+// implementation of the method, this one proceeds iteratively, meaning that
+// smaller the solution is, the faster algorithm finishes.
+func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
+	one := big.NewInt(1)
+
+	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
+	T1 := make(map[string]*big.Int)
+	T2 := make(map[string]*big.Int)
+	x := big.NewInt(1)
+
+	// g^-m
+	z := new(big.Int).ModInverse(g, c.p)
+	z.Exp(z, c.m, c.p)
+	y := new(big.Int).Set(h)
+
+	// remainders (r)
+	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
+		// important: insert a copy of i into the map as i is mutated each loop
+
+		if e, ok := T1[string(y.Bytes())]; ok {
+			retChan <- new(big.Int).Add(new(big.Int).Mul(i, c.m), e)
+			errChan <- nil
+			return
+		}
+		T2[string(y.Bytes())] = new(big.Int).Set(i)
+
+		if e, ok := T2[string(x.Bytes())]; ok {
+			retChan <- new(big.Int).Add(new(big.Int).Mul(e, c.m), i)
+			errChan <- nil
+			return
+		}
+		T1[string(x.Bytes())] = new(big.Int).Set(i)
+
+		x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
+		y = new(big.Int).Mod(new(big.Int).Mul(y, z), c.p)
+	}
+
 	retChan <- nil
 	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound")
 }
