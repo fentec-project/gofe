@@ -83,7 +83,7 @@ func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 			q.ModInverse(r, nDivD)
 			q.Mod(q.Mul(q, t), nDivD)
 
-			for i := big.NewInt(0); i.Cmp(d) == -1; i.Add(i, one) {
+			for j := big.NewInt(0); j.Cmp(d) == -1; j.Add(j, one) {
 				if h.Cmp(new(big.Int).Exp(g, q, p)) == 0 {
 					return q, nil
 				}
@@ -189,7 +189,7 @@ func pollardRhoParallel(h, g, p, order *big.Int) (*big.Int, error) {
 			q.ModInverse(r, nDivD)
 			q.Mod(q.Mul(q, t), nDivD)
 			one := big.NewInt(1)
-			for i := big.NewInt(0); i.Cmp(d) == -1; i.Add(i, one) {
+			for j := big.NewInt(0); j.Cmp(d) == -1; j.Add(j, one) {
 				if h.Cmp(new(big.Int).Exp(g, q, p)) == 0 {
 					return q, nil
 				}

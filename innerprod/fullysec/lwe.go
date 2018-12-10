@@ -36,17 +36,18 @@ type lweParams struct {
 	n int // Main security parameters of the scheme
 	m int // Number of samples
 
-	// Message space size
-	boundX *big.Int
-	// Inner product vector space size
-	boundY *big.Int
+	boundX *big.Int // Message space size
+	boundY *big.Int // Inner product vector space size
+
 	// Modulus for the resulting inner product.
 	// K depends on the parameters l, P and V and is computed by the scheme.
 	K *big.Int
+
 	// Modulus for ciphertext and keys.
 	// Must be significantly larger than K.
 	// TODO check appropriateness of this parameter in constructor!
 	q *big.Int
+
 	// standard deviation for the noise terms in the encryption process
 	sigmaQ *big.Float
 	// standard deviation for first half of the matrix for sampling private key
@@ -54,8 +55,7 @@ type lweParams struct {
 	// standard deviation for second half of the matrix for sampling private key
 	sigma2 *big.Float
 
-	// Matrix A of dimensions m*n is a public parameter
-	// of the scheme
+	// Matrix A of dimensions m*n is a public parameter of the scheme
 	A data.Matrix
 }
 
@@ -65,8 +65,8 @@ type LWE struct {
 }
 
 // NewLWE configures a new instance of the scheme.
-// It accepts the length of input vectors l, the main security parameters
-// n and m, message space size boundX, inner product vector space size
+// It accepts the length of input vectors l, the main security parameter
+// n, the message space size boundX, and the inner product vector space size
 // boundY.
 //
 // It returns an error in case public parameters of the scheme could
@@ -76,6 +76,8 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// K = 2 * l * boundX * boundY
 	K := new(big.Int).Mul(boundX, boundY)
 	K.Mul(K, big.NewInt(int64(l*2)))
+	kF := new(big.Float).SetInt(K)
+	kSquaredF := new(big.Float).Mul(kF, kF)
 
 	nF := float64(n)
 
@@ -90,8 +92,6 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		// tmp values
 		log2M := math.Log2(boundMF)
 		sqrtNLogM := math.Sqrt(nF * log2M)
-		kF := new(big.Float).SetInt(K)
-		kSquaredF := new(big.Float).Mul(kF, kF)
 
 		max := new(big.Float)
 		if kSquaredF.Cmp(big.NewFloat(boundMF)) == 1 {

@@ -46,8 +46,7 @@ type lweParams struct {
 
 	sigmaQ *big.Float
 
-	// Matrix A of dimensions m*n is a public parameter
-	// of the scheme
+	// Matrix A of dimensions m*n is a public parameter of the scheme
 	A data.Matrix
 }
 
@@ -68,11 +67,14 @@ type LWE struct {
 // It returns an error in case public parameters of the scheme could
 // not be generated.
 func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
-
 	// generate parameters
 	// p > boundX * boundY * l * 2
 	nBitsP := boundX.BitLen() + boundY.BitLen() + bits.Len(uint(l)) + 2
 	p, err := rand.Prime(rand.Reader, nBitsP)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot generate public parameters")
+	}
+
 	pF := new(big.Float).SetInt(p)
 	boundXF := new(big.Float).SetInt(boundX)
 	boundYF := new(big.Float).SetInt(boundY)
@@ -87,6 +89,9 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	xI, _ := x.Int(nil)
 	nBitsQ := xI.BitLen() + 1
 	q, err := rand.Prime(rand.Reader, nBitsQ)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot generate public parameters")
+	}
 
 	m := (n+l+1)*nBitsQ + 2*n + 1
 
@@ -147,7 +152,6 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 	}
 
 	// Initialize and fill noise matrix E with m*l samples
-
 	sampler, err := sample.NewNormalDouble(s.params.sigmaQ, uint(s.params.n), big.NewFloat(1))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating public key")
@@ -181,7 +185,7 @@ func (s *LWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
 	if !SK.CheckDims(s.params.n, s.params.l) {
 		return nil, gofe.MalformedSecKey
 	}
-	//Secret key is a linear combination of input vector y
+	// Secret key is a linear combination of input vector y
 	// and master secret key SK.
 	skY, err := SK.MulVec(y)
 	if err != nil {
