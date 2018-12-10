@@ -94,16 +94,16 @@ func BenchmarkDLog(b *testing.B) {
 
 		calc, _ := NewCalc().InZp(key.P, nil)
 		tm = time.Now()
-		calc.WithBound(nil).BabyStepGiantStep(h, key.G)
+		_, _ = calc.WithBound(nil).BabyStepGiantStep(h, key.G)
 		t1 += time.Since(tm).Seconds()
 
 		calc, _ = NewCalc().InZp(key.P, order)
 		tm = time.Now()
-		calc.WithBound(nil).BabyStepGiantStep(h, key.G)
+		_, _ = calc.WithBound(nil).BabyStepGiantStep(h, key.G)
 		t2 += time.Since(tm).Seconds()
 
 		tm = time.Now()
-		pollardRhoParallel(h, key.G, key.P, order)
+		_, _ = pollardRhoParallel(h, key.G, key.P, order)
 		t3 += time.Since(tm).Seconds()
 
 		//if i%10 == 0 {
