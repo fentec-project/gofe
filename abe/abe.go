@@ -13,14 +13,14 @@ import (
 )
 
 // ABEParams represents configuration parameters for the ABE scheme instance.
-type ABEParams struct {
+type abeParams struct {
 	L int      // number of attributes
 	P *big.Int // order of the elliptic curve
 }
 
 // ABE represents an ABE scheme.
 type ABE struct {
-	Params *ABEParams
+	Params *abeParams
 }
 
 // NewABE configures a new instance of the scheme.
@@ -28,7 +28,7 @@ type ABE struct {
 // the scheme. Attributes' names will be considered as
 // elements of a set {0, 1,..., l-1}.
 func NewABE(l int) *ABE {
-	return &ABE{Params: &ABEParams{
+	return &ABE{Params: &abeParams{
 		L: l, // number of attributes in the whole universe
 		P: bn256.Order,
 	}}
