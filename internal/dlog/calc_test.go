@@ -21,14 +21,14 @@ import (
 	"testing"
 
 	"github.com/cloudflare/bn256"
-	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/internal"
 )
 
 func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
-	modulusLength := 44
+	modulusLength := 128
 
 	key, err := keygen.NewElGamal(modulusLength)
 	if err != nil {
@@ -36,7 +36,7 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	}
 
 	//order := new(big.Int).Sub(key.P, big.NewInt(1))
-	bound := new(big.Int).Sqrt(key.P)
+	bound := big.NewInt(1000000000)
 
 	// first test when x is positive
 	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), bound)
