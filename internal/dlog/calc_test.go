@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
-	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/fentec-project/gofe/internal"
+	"github.com/fentec-project/gofe/sample"
 )
 
 func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
@@ -36,10 +36,11 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	}
 
 	//order := new(big.Int).Sub(key.P, big.NewInt(1))
-	bound := big.NewInt(1000000000)
+	bound := big.NewInt(100000000)
 
 	// first test when x is positive
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), bound)
+	sampler := sample.NewUniformRange(big.NewInt(2), bound)
+	xCheck, err := sampler.Sample()
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
@@ -59,7 +60,8 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 	assert.Equal(t, xCheck, x, "BabyStepGiantStep result is wrong")
 
 	// second test when the answer can also be negative
-	xCheck, err = emmy.GetRandomIntFromRange(new(big.Int).Neg(bound), bound)
+	sampler = sample.NewUniformRange(new(big.Int).Neg(bound), bound)
+	xCheck, err = sampler.Sample()
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
@@ -76,8 +78,15 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
-	xCheck := big.NewInt(99999999)
+
 	bound := big.NewInt(100000000)
+	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
+
+	xCheck, err := sampler.Sample()
+	if err != nil {
+		t.Fatalf("error when generating random number: %v", err)
+	}
+
 	g1gen := new(bn256.G1).ScalarBaseMult(big.NewInt(1))
 	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	g := bn256.Pair(g1gen, g2gen)

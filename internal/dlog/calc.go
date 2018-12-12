@@ -187,9 +187,9 @@ func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.
 
 	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
 	T := make(map[string]*big.Int)
+	// prepare values for the loop
 	x := big.NewInt(1)
 	y := new(big.Int).Set(h)
-
 	z := new(big.Int).ModInverse(g, c.p)
 	z.Exp(z, two, c.p)
 
@@ -201,16 +201,19 @@ func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.
 	giantStep := new(big.Int)
 	bound := new(big.Int)
 	for i := int64(0); i < bits; i++ {
+		// iteratively increasing giant step up to maximal value c.m
 		giantStep.Exp(two, big.NewInt(i+1), nil)
 		if giantStep.Cmp(c.m) > 0 {
 			giantStep.Set(c.m)
 			z.ModInverse(g, c.p)
 			z.Exp(z, c.m, c.p)
 		}
-		for j := new(big.Int).Exp(two, big.NewInt(i), nil); j.Cmp(giantStep) < 0; j.Add(j, one) {
-			T[string(x.Bytes())] = new(big.Int).Set(j)
+		// for the selected giant step, add all the needed small steps
+		for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
+			T[string(x.Bytes())] = new(big.Int).Set(k)
 			x = x.Mod(x.Mul(x, g), c.p)
 		}
+		// make giant steps and search for the solution
 		bound.Exp(two, big.NewInt(2*(i+1)), nil)
 		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
 			if e, ok := T[string(y.Bytes())]; ok {
@@ -264,10 +267,10 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 
 func (c *CalcBN256) WithNeg() *CalcBN256 {
 	return &CalcBN256{
-		bound: c.bound,
-		m:     c.m,
+		bound:   c.bound,
+		m:       c.m,
 		Precomp: c.Precomp,
-		neg:   true,
+		neg:     true,
 	}
 }
 
@@ -287,13 +290,14 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 	c.Precomp = T
 }
 
-// BabyStepGiantStepBN256 implements the baby-step giant-step method to
+// BabyStepGiantStepStand implements the baby-step giant-step method to
 // compute the discrete logarithm in the BN256.GT group.
 //
 // It searches for a solution <= bound. If bound argument is nil,
-// the bound is automatically set to p-1.
+// the bound is automatically set to the hard coded MaxBound.
 //
-// The function returns x, where h = g^x mod p. If the solution was not found
+// The function returns x, where h = g^x in BN256.GT group where operations
+// are written as multiplications. If the solution was not found
 // within the provided bound, it returns an error.
 func (c *CalcBN256) BabyStepGiantStepStand(h, g *bn256.GT) (*big.Int, error) {
 	one := big.NewInt(1)
@@ -323,7 +327,7 @@ func (c *CalcBN256) BabyStepGiantStepStand(h, g *bn256.GT) (*big.Int, error) {
 }
 
 // BabyStepGiantStep uses the baby-step giant-step method to
-// compute the discrete logarithm in the Zp group. If c.neg is
+// compute the discrete logarithm in the BN256.GT group. If c.neg is
 // set to true it searches for the answer within [-bound, bound].
 // It does so by running two goroutines, one for negative
 // answers and one for positive. If c.neg is set to false
@@ -364,22 +368,23 @@ func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 }
 
 // runBabyStepGiantStepIterative implements the baby-step giant-step method to
-// compute the discrete logarithm in the Zp group. It is meant to be run
+// compute the discrete logarithm in the BN256.GT group. It is meant to be run
 // as a goroutine.
 //
-// The function searches for x, where h = g^x mod p. If the solution was not found
+// The function searches for x, where h = g^x in BN256.GT group where operations
+// are written as multiplications. If the solution was not found
 // within the provided bound, it returns an error. In contrast to the usual
 // implementation of the method, this one proceeds iteratively, meaning that
-// smaller the solution is, the faster algorithm finishes.
+// smaller the solution is, faster the algorithm finishes.
 func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *big.Int, errChan chan error) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
 
 	// bn256.GT cannot be a key, thus we use a stringified bytes representation of the integer
 	T := make(map[string]*big.Int)
+	// prepare values for the loop
 	x := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 	y := new(bn256.GT).Set(h)
-
 	z := new(bn256.GT).Neg(g)
 	z.ScalarMult(z, two)
 
@@ -391,16 +396,19 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 	giantStep := new(big.Int)
 	bound := new(big.Int)
 	for i := int64(0); i < bits; i++ {
+		// iteratively increasing giant step up to maximal value c.m
 		giantStep.Exp(two, big.NewInt(i+1), nil)
 		if giantStep.Cmp(c.m) > 0 {
 			giantStep.Set(c.m)
 			z.Neg(g)
 			z.ScalarMult(z, c.m)
 		}
+		// for the selected giant step, add all the needed small steps
 		for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
 			T[x.String()] = new(big.Int).Set(k)
 			x.Add(x, g)
 		}
+		// make giant steps and search for the solution
 		bound.Exp(two, big.NewInt(2*(i+1)), nil)
 		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
 			if e, ok := T[y.String()]; ok {
