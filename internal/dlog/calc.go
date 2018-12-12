@@ -419,7 +419,6 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 			y.Add(y, z)
 		}
 		z.Add(z, z)
-
 	}
 
 	retChan <- nil

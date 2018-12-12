@@ -35,7 +35,6 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 		t.Fatalf("Error in ElGamal key generation: %v", err)
 	}
 
-	//order := new(big.Int).Sub(key.P, big.NewInt(1))
 	bound := big.NewInt(100000000)
 
 	// first test when x is positive
