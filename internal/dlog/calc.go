@@ -180,7 +180,7 @@ func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errC
 // The function searches for x, where h = g^x mod p. If the solution was not found
 // within the provided bound, it returns an error. In contrast to the usual
 // implementation of the method, this one proceeds iteratively, meaning that
-// smaller the solution is, the faster algorithm finishes.
+// smaller the solution is, faster the algorithm finishes.
 func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
@@ -196,20 +196,22 @@ func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.
 	bits := int64(c.m.BitLen())
 
 	T[string(x.Bytes())] = big.NewInt(0)
-	x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
+	x.Mod(x.Mul(x, g), c.p)
 	j := big.NewInt(0)
+	giantStep := new(big.Int)
+	bound := new(big.Int)
 	for i := int64(0); i < bits; i++ {
-		giantStep := new(big.Int).Exp(two, big.NewInt(i+1), nil)
+		giantStep.Exp(two, big.NewInt(i+1), nil)
 		if giantStep.Cmp(c.m) > 0 {
 			giantStep.Set(c.m)
-			z = new(big.Int).ModInverse(g, c.p)
+			z.ModInverse(g, c.p)
 			z.Exp(z, c.m, c.p)
 		}
 		for j := new(big.Int).Exp(two, big.NewInt(i), nil); j.Cmp(giantStep) < 0; j.Add(j, one) {
 			T[string(x.Bytes())] = new(big.Int).Set(j)
-			x = new(big.Int).Mod(new(big.Int).Mul(x, g), c.p)
+			x = x.Mod(x.Mul(x, g), c.p)
 		}
-		bound := new(big.Int).Exp(two, big.NewInt(2*(i+1)), nil)
+		bound.Exp(two, big.NewInt(2*(i+1)), nil)
 		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
 			if e, ok := T[string(y.Bytes())]; ok {
 				retChan <- new(big.Int).Add(j, e)
@@ -241,7 +243,7 @@ func (*Calc) InBN256() *CalcBN256 {
 	return &CalcBN256{
 		bound: MaxBound, // TODO bn256.Order, MaxBound
 		m:     m,
-		neg:   true,
+		neg:   false,
 	}
 }
 
@@ -258,6 +260,15 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 		}
 	}
 	return c
+}
+
+func (c *CalcBN256) WithNeg() *CalcBN256 {
+	return &CalcBN256{
+		bound: c.bound,
+		m:     c.m,
+		Precomp: c.Precomp,
+		neg:   true,
+	}
 }
 
 // precomputes candidates for discrete logarithm
@@ -375,20 +386,22 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 	bits := int64(c.m.BitLen())
 
 	T[x.String()] = big.NewInt(0)
-	x = new(bn256.GT).Add(x, g)
+	x.Add(x, g)
 	j := big.NewInt(0)
+	giantStep := new(big.Int)
+	bound := new(big.Int)
 	for i := int64(0); i < bits; i++ {
-		giantStep := new(big.Int).Exp(two, big.NewInt(i+1), nil)
+		giantStep.Exp(two, big.NewInt(i+1), nil)
 		if giantStep.Cmp(c.m) > 0 {
 			giantStep.Set(c.m)
-			z = new(bn256.GT).Neg(g)
+			z.Neg(g)
 			z.ScalarMult(z, c.m)
 		}
 		for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
 			T[x.String()] = new(big.Int).Set(k)
-			x = new(bn256.GT).Add(x, g)
+			x.Add(x, g)
 		}
-		bound := new(big.Int).Exp(two, big.NewInt(2*(i+1)), nil)
+		bound.Exp(two, big.NewInt(2*(i+1)), nil)
 		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
 			if e, ok := T[y.String()]; ok {
 				retChan <- new(big.Int).Add(j, e)
