@@ -76,12 +76,19 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
-	xCheck := big.NewInt(10000000)
-	bound := big.NewInt(10000000)
+	xCheck := big.NewInt(99999999)
+	bound := big.NewInt(100000000)
 	g1gen := new(bn256.G1).ScalarBaseMult(big.NewInt(1))
 	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	g := bn256.Pair(g1gen, g2gen)
-	h := new(bn256.GT).ScalarMult(g, xCheck)
+	var h *bn256.GT
+	if xCheck.Sign() == 1 {
+		h = new(bn256.GT).ScalarMult(g, xCheck)
+	} else {
+		xCheckNeg := new(big.Int).Neg(xCheck)
+		h = new(bn256.GT).ScalarMult(g, xCheckNeg)
+		h.Neg(h)
+	}
 
 	calc := NewCalc().InBN256().WithBound(bound)
 	x, err := calc.BabyStepGiantStep(h, g)
