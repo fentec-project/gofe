@@ -86,15 +86,13 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 		t.Fatalf("error when generating random number: %v", err)
 	}
 
-	g1gen := new(bn256.G1).ScalarBaseMult(big.NewInt(1))
-	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	g := bn256.Pair(g1gen, g2gen)
-	var h *bn256.GT
+	g := new(bn256.GT).ScalarBaseMult(big.NewInt(1))
+	h := new(bn256.GT)
 	if xCheck.Sign() == 1 {
-		h = new(bn256.GT).ScalarMult(g, xCheck)
+		h.ScalarMult(g, xCheck)
 	} else {
 		xCheckNeg := new(big.Int).Neg(xCheck)
-		h = new(bn256.GT).ScalarMult(g, xCheckNeg)
+		h.ScalarMult(g, xCheckNeg)
 		h.Neg(h)
 	}
 

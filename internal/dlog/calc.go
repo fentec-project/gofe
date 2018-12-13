@@ -134,7 +134,7 @@ func (c *CalcZp) BabyStepGiantStep(h, g *big.Int) (*big.Int, error) {
 		ret.Neg(ret)
 	}
 
-	return ret, err
+	return ret, nil
 }
 
 // runBabyStepGiantStep implements the baby-step giant-step method to
@@ -290,7 +290,7 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 	c.Precomp = T
 }
 
-// BabyStepGiantStepStand implements the baby-step giant-step method to
+// BabyStepGiantStepStd implements the baby-step giant-step method to
 // compute the discrete logarithm in the BN256.GT group.
 //
 // It searches for a solution <= bound. If bound argument is nil,
@@ -299,7 +299,7 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 // The function returns x, where h = g^x in BN256.GT group where operations
 // are written as multiplications. If the solution was not found
 // within the provided bound, it returns an error.
-func (c *CalcBN256) BabyStepGiantStepStand(h, g *bn256.GT) (*big.Int, error) {
+func (c *CalcBN256) BabyStepGiantStepStd(h, g *bn256.GT) (*big.Int, error) {
 	one := big.NewInt(1)
 
 	if c.Precomp == nil {
@@ -364,7 +364,7 @@ func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 		ret.Neg(ret)
 	}
 
-	return ret, err
+	return ret, nil
 }
 
 // runBabyStepGiantStepIterative implements the baby-step giant-step method to
@@ -380,7 +380,7 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 	one := big.NewInt(1)
 	two := big.NewInt(2)
 
-	// bn256.GT cannot be a key, thus we use a stringified bytes representation of the integer
+	// bn256.GT cannot be a key, thus we use a stringified representation of the struct
 	T := make(map[string]*big.Int)
 	// prepare values for the loop
 	x := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
