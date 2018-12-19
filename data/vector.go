@@ -54,7 +54,7 @@ func NewRandomVector(len int, sampler sample.Sampler) (Vector, error) {
 func NewConstantVector(len int, c *big.Int) Vector {
 	vec := make([]*big.Int, len)
 	for i := 0; i < len; i++ {
-		vec[i] = c
+		vec[i] = new(big.Int).Set(c)
 	}
 
 	return vec

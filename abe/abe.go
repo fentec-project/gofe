@@ -216,9 +216,11 @@ func (a *ABE) Decrypt(cipher *ABECipher, key *ABEKey) (*bn256.GT, error) {
 // outputs a msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
 // boolean expression assigning 1 to some attributes is satisfied iff the
-// corresponding rows span a vector [1, 1,..., 1] in Z_p, and a vector whose i-th entry
-// indicates to which attribute the i-th row corresponds.
-func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
+// corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0] in Z_p
+// depending if parameter convertToOnes is set to true or false. Additionally a
+// vector is produced whose i-th entry indicates to which attribute the i-th row
+// corresponds.
+func BooleanToMSP(boolExp string, p *big.Int, convertToOnes bool) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
 	// rows of the msp matrix span the vector [1, 0,..., 0] in Z_p
@@ -228,28 +230,32 @@ func BooleanToMSP(boolExp string, p *big.Int) (*MSP, error) {
 	if err != nil {
 		return nil, err
 	}
+	msp.P = p
 
-	// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
-	perm := make(data.Matrix, len(msp.Mat[0]))
-	for i := 0; i < len(msp.Mat[0]); i++ {
-		perm[i] = make(data.Vector, len(msp.Mat[0]))
-		for j := 0; j < len(msp.Mat[0]); j++ {
-			if i == 0 || j == i {
-				perm[i][j] = big.NewInt(1)
-			} else {
-				perm[i][j] = big.NewInt(0)
+	// if convertToOnes is set to true convert the matrix to such a MSP
+	// struct so that the boolean expression is satisfied iff the
+	// corresponding rows span the vector [1, 1,..., 1] in Z_p
+	if convertToOnes {
+		// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
+		perm := make(data.Matrix, len(msp.Mat[0]))
+		for i := 0; i < len(msp.Mat[0]); i++ {
+			perm[i] = make(data.Vector, len(msp.Mat[0]))
+			for j := 0; j < len(msp.Mat[0]); j++ {
+				if i == 0 || j == i {
+					perm[i][j] = big.NewInt(1)
+				} else {
+					perm[i][j] = big.NewInt(0)
+				}
+
 			}
-
+		}
+		//change the msp matrix by multiplying with it the permutation matrix
+		msp.Mat, err = msp.Mat.Mul(perm)
+		if err != nil {
+			return nil, err
 		}
 	}
-	//change the msp matrix so that the boolean expression is satisfied
-	// iff the corresponding rows span the vector [1, 1,..., 1] in Z_p
-	msp.Mat, err = msp.Mat.Mul(perm)
-	if err != nil {
-		return nil, err
-	}
 	msp.Mat = msp.Mat.Mod(p)
-	msp.P = p
 
 	return msp, nil
 }
