@@ -12,7 +12,7 @@ import (
 func TestBooleanToMsp(t *testing.T) {
 	// create as msp struct out of a boolean expression
 	p := big.NewInt(7)
-	msp, err := BooleanToMSP("1 AND (((6 OR 7) AND (8 OR 9)) OR ((2 AND 3) OR (4 AND 5)))", p)
+	msp, err := BooleanToMSP("1 AND (((6 OR 7) AND (8 OR 9)) OR ((2 AND 3) OR (4 AND 5)))", p, true)
 	if err != nil {
 		t.Fatalf("Error while processing a boolean expression: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestBooleanToMsp(t *testing.T) {
 	assert.NotNil(t, x)
 
 	// check if an error is generated if the boolean expression is not in a correct form
-	_, err = BooleanToMSP("1 AND ((6 OR 7) AND (8 OR 9)) OR ((2 AND 3) OR (4 AND 5)))", p)
+	_, err = BooleanToMSP("1 AND ((6 OR 7) AND (8 OR 9)) OR ((2 AND 3) OR (4 AND 5)))", p, true)
 	assert.Error(t, err)
 
 }

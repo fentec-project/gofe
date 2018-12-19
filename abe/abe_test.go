@@ -43,7 +43,7 @@ func TestABE(t *testing.T) {
 
 	// create a msp struct out of a boolean expression  representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext
-	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", a.Params.P)
+	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", a.Params.P, true)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
