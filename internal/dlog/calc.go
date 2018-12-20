@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 )
 
 // MaxBound limits the interval of values that are checked when
@@ -280,7 +280,8 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 
 	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
 	T := make(map[string]*big.Int)
-	x := new(bn256.GT).ScalarBaseMult(new(big.Int).SetInt64(0))
+	x := bn256.GetGTOne()
+
 	// remainders (r)
 	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
 		T[x.String()] = new(big.Int).Set(i)
@@ -383,7 +384,7 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 	// bn256.GT cannot be a key, thus we use a stringified representation of the struct
 	T := make(map[string]*big.Int)
 	// prepare values for the loop
-	x := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
+	x := bn256.GetGTOne()
 	y := new(bn256.GT).Set(h)
 	z := new(bn256.GT).Neg(g)
 	z.ScalarMult(z, two)

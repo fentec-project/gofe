@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/sample"
 )
 

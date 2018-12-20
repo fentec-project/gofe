@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
