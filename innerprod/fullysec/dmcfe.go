@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/pkg/errors"
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/pkg/errors"
 
 	"crypto/sha256"
 	"crypto/sha512"
