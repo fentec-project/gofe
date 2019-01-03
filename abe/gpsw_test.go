@@ -89,7 +89,7 @@ func TestGSPW(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
-	assert.Equal(t, msg.Marshal(), msgCheck.Marshal())
+	assert.Equal(t, msg, msgCheck)
 
 	// produce a set of keys that are given to an entity with a set
 	// of insufficient attributes in ownedAttribInsuff

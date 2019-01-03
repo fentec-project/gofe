@@ -75,7 +75,7 @@ func TestFAME(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
-	assert.Equal(t, msg.Marshal(), msgCheck.Marshal())
+	assert.Equal(t, msg, msgCheck)
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
