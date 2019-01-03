@@ -3,12 +3,12 @@ package abe
 import (
 	"math/big"
 
-	"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
 	"hash/fnv"
 	"strconv"
 	"fmt"
+	"github.com/fentec-project/bn256"
 )
 
 // FAME represents a FAME scheme.
@@ -85,18 +85,37 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 	ct := make([][3]*bn256.G1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
 		for l := 0; l < 3; l++ {
-			hs1 := HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 0")
+			hs1, err := bn256.HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 0")
+			if err != nil {
+				return nil, err
+			}
 			hs1.ScalarMult(hs1, s[0])
-			hs2 := HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 1")
+			hs2, err := bn256.HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 1")
+			if err != nil {
+				return nil, err
+			}
 			hs2.ScalarMult(hs2, s[1])
 			ct[i][l] = new(bn256.G1).Add(hs1, hs2)
 			for j := 0; j < len(msp.Mat[0]); j++ {
-				hs1 = HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 0")
+				hs1, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 0")
+				if err != nil {
+					return nil, err
+				}
 				hs1.ScalarMult(hs1, s[0])
-				hs2 = HashG1("0 " + strconv.Itoa(j) +  " " + strconv.Itoa(l) + " 1")
+				hs2, err = bn256.HashG1("0 " + strconv.Itoa(j) +  " " + strconv.Itoa(l) + " 1")
+				if err != nil {
+					return nil, err
+				}
 				hs2.ScalarMult(hs2, s[1])
 				hsToM := new(bn256.G1).Add(hs1, hs2)
-				hsToM.ScalarMult(hsToM, msp.Mat[i][j])
+				pow := new(big.Int).Set(msp.Mat[i][j])
+				if pow.Sign() == -1 {
+					pow.Neg(pow)
+					hsToM.ScalarMult(hsToM, pow)
+					hsToM.Neg(hsToM)
+				} else {
+					hsToM.ScalarMult(hsToM, pow)
+				}
 				ct[i][l].Add(ct[i][l], hsToM)
 			}
 		}
@@ -154,11 +173,20 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		k[i] = [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
 		gSigma := new(bn256.G1).ScalarBaseMult(sigma[i])
 		for t:=0; t<2; t++ {
-			hs0 := HashG1(strconv.Itoa(y) + " 0 " + strconv.Itoa(t))
+			hs0, err := bn256.HashG1(strconv.Itoa(y) + " 0 " + strconv.Itoa(t))
+			if err != nil {
+				return nil, err
+			}
 			hs0.ScalarMult(hs0, pow0)
-			hs1 := HashG1(strconv.Itoa(y) + " 1 " + strconv.Itoa(t))
+			hs1, err := bn256.HashG1(strconv.Itoa(y) + " 1 " + strconv.Itoa(t))
+			if err != nil {
+				return nil, err
+			}
 			hs1.ScalarMult(hs1, pow1)
-			hs2 := HashG1(strconv.Itoa(y) + " 2 " + strconv.Itoa(t))
+			hs2, err := bn256.HashG1(strconv.Itoa(y) + " 2 " + strconv.Itoa(t))
+			if err != nil {
+				return nil, err
+			}
 			hs2.ScalarMult(hs2, pow2)
 
 			k[i][t].Add(hs0, hs1)
@@ -181,11 +209,20 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 
 	kPrime := [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
 	for t:=0; t<2; t++ {
-		hs0 := HashG1("0 0 0 " + strconv.Itoa(t))
+		hs0, err := bn256.HashG1("0 0 0 " + strconv.Itoa(t))
+		if err != nil {
+			return nil, err
+		}
 		hs0.ScalarMult(hs0, pow0)
-		hs1 := HashG1("0 0 1 " + strconv.Itoa(t))
+		hs1, err := bn256.HashG1("0 0 1 " + strconv.Itoa(t))
+		if err != nil {
+			return nil, err
+		}
 		hs1.ScalarMult(hs1, pow1)
-		hs2 := HashG1("0 0 2 " + strconv.Itoa(t))
+		hs2, err := bn256.HashG1("0 0 2 " + strconv.Itoa(t))
+		if err != nil {
+			return nil, err
+		}
 		hs2.ScalarMult(hs2, pow2)
 
 		kPrime[t].Add(hs0, hs1)

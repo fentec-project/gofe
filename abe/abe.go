@@ -130,6 +130,7 @@ func (a *ABE) GeneratePolicyKeys(msp *MSP, sk data.Vector) (data.VectorG1, error
 			return nil, err
 		}
 		pow := new(big.Int).Mul(tMapIInv, matTimesU)
+		pow.Mod(pow, a.Params.P)
 		key[i] = new(bn256.G1).ScalarBaseMult(pow)
 	}
 
@@ -197,6 +198,7 @@ func (a *ABE) Decrypt(cipher *ABECipher, key *ABEKey) (*bn256.GT, error) {
 	// get a combination alpha of keys needed to decrypt
 	ones := data.NewConstantVector(len(key.mat[0]), big.NewInt(1))
 	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.P)
+	fmt.Println(alpha)
 	if err != nil {
 		return nil, fmt.Errorf("provided key is not sufficient for decryption")
 	}
@@ -216,21 +218,20 @@ func (a *ABE) Decrypt(cipher *ABECipher, key *ABEKey) (*bn256.GT, error) {
 // outputs a msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
 // boolean expression assigning 1 to some attributes is satisfied iff the
-// corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0] in Z_p
+// corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0]
 // depending if parameter convertToOnes is set to true or false. Additionally a
 // vector is produced whose i-th entry indicates to which attribute the i-th row
 // corresponds.
-func BooleanToMSP(boolExp string, p *big.Int, convertToOnes bool) (*MSP, error) {
+func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
-	// rows of the msp matrix span the vector [1, 0,..., 0] in Z_p
+	// rows of the msp matrix span the vector [1, 0,..., 0]
 	vec := make(data.Vector, 1)
 	vec[0] = big.NewInt(1)
 	msp, _, err := booleanToMSPIterative(boolExp, vec, 1)
 	if err != nil {
 		return nil, err
 	}
-	msp.P = p
 
 	// if convertToOnes is set to true convert the matrix to such a MSP
 	// struct so that the boolean expression is satisfied iff the
@@ -255,7 +256,6 @@ func BooleanToMSP(boolExp string, p *big.Int, convertToOnes bool) (*MSP, error) 
 			return nil, err
 		}
 	}
-	msp.Mat = msp.Mat.Mod(p)
 
 	return msp, nil
 }
