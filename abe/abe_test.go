@@ -3,7 +3,7 @@ package abe_test
 import (
 	"testing"
 
-	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
@@ -23,7 +23,7 @@ func TestABE(t *testing.T) {
 	}
 
 	// create a random message to be encrypted, for now
-	// this is an element of an elliptic curve
+	// this is an element of a pairing group G_T
 	sampler := sample.NewUniform(a.Params.P)
 	exponent, err := sampler.Sample()
 	if err != nil {

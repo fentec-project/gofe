@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/pkg/errors"
-
-	"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/pkg/errors"
 
 	"crypto/sha256"
 	"crypto/sha512"
@@ -34,8 +33,8 @@ import (
 // DMCFEClient is to be instantiated by the encryptor. Idx presents index of the encryptor entity.
 type DMCFEClient struct {
 	Idx int
-	t   data.Matrix // TODO: make it small
-	s   data.Vector // TODO: make it small again, only for debugging
+	t   data.Matrix
+	s   data.Vector
 }
 
 // NewDMCFEClient is to be called by the party that wants to encrypt number x_i.
