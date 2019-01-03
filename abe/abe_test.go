@@ -3,11 +3,12 @@ package abe_test
 import (
 	"testing"
 
-	"github.com/cloudflare/bn256"
+	//"github.com/cloudflare/bn256"
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
+	"github.com/fentec-project/bn256"
 )
 
 func TestABE(t *testing.T) {
@@ -43,7 +44,7 @@ func TestABE(t *testing.T) {
 
 	// create a msp struct out of a boolean expression  representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext
-	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", a.Params.P, true)
+	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", true)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestABE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
-	assert.Equal(t, msg, msgCheck)
+	assert.Equal(t, msg.Marshal(), msgCheck.Marshal())
 
 	// produce a set of keys that are given to an entity with a set
 	// of insufficient attributes in ownedAttribInsuff

@@ -17,7 +17,8 @@
 package data
 
 import (
-	"github.com/cloudflare/bn256"
+	//"github.com/cloudflare/bn256"
+	"github.com/fentec-project/bn256"
 )
 
 // VectorG1 wraps a slice of elements from elliptic curve BN256.G1 group.
