@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 XLAB d.o.o
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package abe_test
 
 import (
@@ -7,20 +23,17 @@ import (
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
-	"fmt"
 )
 
 func TestFAME(t *testing.T) {
 	// create a new ABE struct with the universe of attributes
 	// denoted by integer
 	a := abe.NewFAME()
-	fmt.Println("here")
 	// generate a public key and a secret key for the scheme
 	pubKey, sk, err := a.GenerateMasterKeys()
 	if err != nil {
 		t.Fatalf("Failed to generate master keys: %v", err)
 	}
-	fmt.Println("here2")
 
 	// create a random message to be encrypted, for now
 	// this is an element of an elliptic curve
@@ -30,7 +43,6 @@ func TestFAME(t *testing.T) {
 		t.Fatalf("Failed to generate random values: %v", err)
 	}
 	msg := new(bn256.GT).ScalarBaseMult(exponent)
-	fmt.Println("here3")
 
 	// create a msp struct out of a boolean expression  representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext
@@ -38,7 +50,6 @@ func TestFAME(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
-	fmt.Println("here4")
 
 	// encrypt the message msg with the decryption policy specified by the
 	// msp structure
@@ -46,7 +57,6 @@ func TestFAME(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
-	fmt.Println("here5")
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
@@ -58,7 +68,6 @@ func TestFAME(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
 	}
-	fmt.Println("here6")
 
 	// decrypt the ciphertext with the keys of an entity
 	// that has sufficient attributes
@@ -67,7 +76,6 @@ func TestFAME(t *testing.T) {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
 	assert.Equal(t, msg.Marshal(), msgCheck.Marshal())
-	fmt.Println("here7")
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
@@ -84,28 +92,4 @@ func TestFAME(t *testing.T) {
 	// that has insufficient attributes
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
-}
-
-func TestHash(t *testing.T) {
-	g1 := abe.HashG1("foo")
-	g2 := abe.HashG1("bar")
-	g3 := abe.HashG1("foo")
-	assert.Equal(t, g1, g3)
-	assert.NotEqual(t, g1, g2)
-
-	h1, err := bn256.HashG1("foo")
-	if err != nil {
-		t.Fatalf("Failed to hash: %v", err)
-	}
-	h2, err := bn256.HashG1("bar")
-	if err != nil {
-		t.Fatalf("Failed to hash: %v", err)
-	}
-	h3, err := bn256.HashG1("foo")
-	if err != nil {
-		t.Fatalf("Failed to hash: %v", err)
-	}
-	assert.Equal(t, h1, h3)
-	assert.NotEqual(t, h1, h2)
-
 }
