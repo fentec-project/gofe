@@ -1,14 +1,30 @@
+/*
+ * Copyright (c) 2018 XLAB d.o.o
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package abe
 
 import (
 	"math/big"
 
+	"fmt"
+	"strconv"
+
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	"hash/fnv"
-	"strconv"
-	"fmt"
-	"github.com/fentec-project/bn256"
 )
 
 // FAME represents a FAME scheme.
@@ -18,13 +34,13 @@ type FAME struct {
 
 // NewFAME configures a new instance of the scheme.
 func NewFAME() *FAME {
-	return &FAME{P: bn256.Order,}
+	return &FAME{P: bn256.Order}
 }
 
 // FAMESecKey represents a master secret key of a FAME scheme.
 type FAMESecKey struct {
 	partInt [4]*big.Int
-	partG1 [3]*bn256.G1
+	partG1  [3]*bn256.G1
 }
 
 // FAMEPubKey represents a public key of a FAME scheme.
@@ -44,25 +60,25 @@ func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
 	}
 	partInt := [4]*big.Int{val[0], val[1], val[2], val[3]}
 	partG1 := [3]*bn256.G1{new(bn256.G1).ScalarBaseMult(val[4]),
-	                       new(bn256.G1).ScalarBaseMult(val[5]),
-	                       new(bn256.G1).ScalarBaseMult(val[6])}
+		new(bn256.G1).ScalarBaseMult(val[5]),
+		new(bn256.G1).ScalarBaseMult(val[6])}
 	partG2 := [2]*bn256.G2{new(bn256.G2).ScalarBaseMult(val[0]),
-	                       new(bn256.G2).ScalarBaseMult(val[1])}
+		new(bn256.G2).ScalarBaseMult(val[1])}
 	tmp1 := new(big.Int).Mod(new(big.Int).Add(new(big.Int).Mul(val[0], val[4]), val[6]), a.P)
 	tmp2 := new(big.Int).Mod(new(big.Int).Add(new(big.Int).Mul(val[1], val[5]), val[6]), a.P)
 	partGT := [2]*bn256.GT{new(bn256.GT).ScalarBaseMult(tmp1),
-	                       new(bn256.GT).ScalarBaseMult(tmp2)}
+		new(bn256.GT).ScalarBaseMult(tmp2)}
 
 	return &FAMEPubKey{partG2: partG2, partGT: partGT},
-	       &FAMESecKey{partInt: partInt, partG1: partG1}, nil
+		&FAMESecKey{partInt: partInt, partG1: partG1}, nil
 }
 
 // FAMECipher represents a ciphertext of a FAME scheme.
 type FAMECipher struct {
-	ct0 	  [3]*bn256.G2
-	ct 		  [][3]*bn256.G1
-	ctPrime   *bn256.GT
-	msp       *MSP
+	ct0     [3]*bn256.G2
+	ct      [][3]*bn256.G1
+	ctPrime *bn256.GT
+	msp     *MSP
 }
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
@@ -79,8 +95,8 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 		return nil, err
 	}
 	ct0 := [3]*bn256.G2{new(bn256.G2).ScalarMult(pk.partG2[0], s[0]),
-	                    new(bn256.G2).ScalarMult(pk.partG2[1], s[1]),
-						new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
+		new(bn256.G2).ScalarMult(pk.partG2[1], s[1]),
+		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
 
 	ct := make([][3]*bn256.G1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
@@ -102,7 +118,7 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 					return nil, err
 				}
 				hs1.ScalarMult(hs1, s[0])
-				hs2, err = bn256.HashG1("0 " + strconv.Itoa(j) +  " " + strconv.Itoa(l) + " 1")
+				hs2, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 1")
 				if err != nil {
 					return nil, err
 				}
@@ -131,12 +147,11 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 // FAMEAttribKeys represents keys corresponding to attributes possessed by
 // an entity and used for decrypting in a FAME scheme.
 type FAMEAttribKeys struct {
-	k0 	       [3]*bn256.G2
-	k 		   [][3]*bn256.G1
-	kPrime     [3]*bn256.G1
-	attribToI  map[int]int
+	k0        [3]*bn256.G2
+	k         [][3]*bn256.G1
+	kPrime    [3]*bn256.G1
+	attribToI map[int]int
 }
-
 
 // GenerateAttribKeys given a set of attributes gamma and the master secret key
 // generates keys that can be used for the decryption of any ciphertext encoded
@@ -160,8 +175,8 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 	pow2.Mod(pow2, a.P)
 
 	k0 := [3]*bn256.G2{new(bn256.G2).ScalarBaseMult(pow0),
-	                   new(bn256.G2).ScalarBaseMult(pow1),
-	                   new(bn256.G2).ScalarBaseMult(pow2)}
+		new(bn256.G2).ScalarBaseMult(pow1),
+		new(bn256.G2).ScalarBaseMult(pow2)}
 
 	a0Inv := new(big.Int).ModInverse(sk.partInt[0], a.P)
 	a1Inv := new(big.Int).ModInverse(sk.partInt[1], a.P)
@@ -172,7 +187,7 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 	for i, y := range gamma {
 		k[i] = [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
 		gSigma := new(bn256.G1).ScalarBaseMult(sigma[i])
-		for t:=0; t<2; t++ {
+		for t := 0; t < 2; t++ {
 			hs0, err := bn256.HashG1(strconv.Itoa(y) + " 0 " + strconv.Itoa(t))
 			if err != nil {
 				return nil, err
@@ -208,7 +223,7 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 	gSigmaPrime := new(bn256.G1).ScalarBaseMult(sigmaPrime)
 
 	kPrime := [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
-	for t:=0; t<2; t++ {
+	for t := 0; t < 2; t++ {
 		hs0, err := bn256.HashG1("0 0 0 " + strconv.Itoa(t))
 		if err != nil {
 			return nil, err
@@ -294,15 +309,4 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	}
 
 	return ret, nil
-}
-
-// hashG1 hashes an arbitrary string into bn256.G1 group.
-// This is a (non-secure) temporary version needed
-// to test other algorithms before the proper hashing is
-// implemented.
-func HashG1(s string) (*bn256.G1)  {
-	h := fnv.New64a()
-	h.Write([]byte(s))
-	i := int64(h.Sum64())
-	return new(bn256.G1).ScalarBaseMult(big.NewInt(i))
 }
