@@ -76,8 +76,8 @@ type GSPWCipher struct {
 	e         data.VectorG2 // the second part of the encryption
 }
 
-// Encrypt takes as an input a message msg represented as an element of an elliptic
-// curve, gamma a set of attributes that can be latter used to in the decryption policy
+// Encrypt takes as an input a message msg represented as an element of pairing
+// group G_T, gamma a set of attributes that can be latter used to in the decryption policy
 // and a public key pk. It returns an encryption of msk. In case of a failed procedure
 // an error is returned.
 func (a *GSPW) Encrypt(msg *bn256.GT, gamma []int, pk *GSPWPubKey) (*GSPWCipher, error) {

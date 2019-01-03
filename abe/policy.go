@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 
-
 	"github.com/fentec-project/gofe/data"
 )
 
