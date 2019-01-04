@@ -45,8 +45,13 @@ func TestFAME(t *testing.T) {
 	}
 	msg := new(bn256.GT).ScalarBaseMult(exponent)
 
-	// create a msp struct out of a boolean expression  representing the
-	// policy specifying which attributes are needed to decrypt the ciphertext
+	// create a msp struct out of a boolean expression representing the
+	// policy specifying which attributes are needed to decrypt the ciphertext;
+	// note that safety of the encryption is only proved if the mapping
+	// msp.RowToAttrib from the rows of msp.Mat to attributes is injective, i.e.
+	// only boolean expressions in which each attribute appears at most once
+	// are allowed - if expressions with multiple appearances of an attribute
+	// are needed, then this attribute can be split into more sub-attributes
 	msp, err := abe.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)

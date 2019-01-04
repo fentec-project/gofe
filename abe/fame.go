@@ -98,10 +98,21 @@ type FAMECipher struct {
 // Encrypt takes as an input a message msg represented as an element of an elliptic
 // curve, a MSP struct representing the decryption policy, and a public key pk. It
 // returns an encryption of the message. In case of a failed procedure an error
-// is returned.
+// is returned. Note that safety of the encryption is only proved if the mapping
+// msp.RowToAttrib from the rows of msp.Mat to attributes is injective.
 func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
+	}
+
+	attrib := make(map[int]bool)
+	for _, i := range msp.RowToAttrib {
+		if attrib[i] {
+			return nil, fmt.Errorf("some attributes correspond to" +
+				"multiple rows of the MSP struct, the scheme is not secure")
+		} else {
+			attrib[i] = true
+		}
 	}
 
 	sampler := sample.NewUniform(a.P)
