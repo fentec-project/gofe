@@ -26,9 +26,10 @@ import (
 )
 
 func TestFAME(t *testing.T) {
-	// create a new ABE struct with the universe of attributes
+	// create a new FAME struct with the universe of attributes
 	// denoted by integer
 	a := abe.NewFAME()
+
 	// generate a public key and a secret key for the scheme
 	pubKey, sk, err := a.GenerateMasterKeys()
 	if err != nil {
@@ -36,7 +37,7 @@ func TestFAME(t *testing.T) {
 	}
 
 	// create a random message to be encrypted, for now
-	// this is an element of an elliptic curve
+	// this is an element a pairing group G_T
 	sampler := sample.NewUniform(a.P)
 	exponent, err := sampler.Sample()
 	if err != nil {

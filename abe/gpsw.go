@@ -25,6 +25,21 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
+// This is a key policy (KP) attribute based (ABE) scheme based on
+// Goyal, Pandey, Sahai, Waters:
+// "Attribute-Based Encryption for Fine-Grained Access Control of
+// Encrypted Data"
+//
+// We abbreviated it GPSW scheme to honor the authors. This scheme
+// enables distribution of keys based on a boolean expression
+// determining which attributes are needed for an entity to be able
+// to decrypt. Each key is connected to some attribute, such that
+// only a set of keys whose attributes are sufficient can decrypt
+// the massage.
+// This scheme is a PUBLIC-KEY scheme - no master secret key is needed
+// to encrypt the messages.
+//
+
 // GSPWParams represents configuration parameters for the GSPW ABE-scheme instance.
 type GSPWParams struct {
 	L int      // number of attributes
@@ -43,7 +58,7 @@ type GSPW struct {
 func NewGSPW(l int) *GSPW {
 	return &GSPW{Params: &GSPWParams{
 		L: l, // number of attributes in the whole universe
-		P: bn256.Order,
+		P: bn256.Order,  // the order of the pairing groups
 	}}
 }
 

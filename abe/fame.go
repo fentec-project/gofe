@@ -27,6 +27,19 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
+// This is a ciphertext policy (CP) attribute based (ABE) scheme based
+// on Shashank Agrawal, Melissa Chase:
+// "FAME: Fast Attribute-based Message Encryption"
+//
+// This scheme enables encryption based on a boolean expression
+// determining which attributes are needed for an entity to be able
+// to decrypt. Moreover, secret keys are generated, where each key
+// is connected to some attribute, such that only a set of keys whose
+// attributes are sufficient can decrypt the massage.
+// This scheme is a PUBLIC-KEY scheme - no master secret key is needed
+// to encrypt the messages.
+//
+
 // FAME represents a FAME scheme.
 type FAME struct {
 	P *big.Int // order of the elliptic curve
@@ -58,6 +71,7 @@ func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
 	partInt := [4]*big.Int{val[0], val[1], val[2], val[3]}
 	partG1 := [3]*bn256.G1{new(bn256.G1).ScalarBaseMult(val[4]),
 		new(bn256.G1).ScalarBaseMult(val[5]),
@@ -82,13 +96,14 @@ type FAMECipher struct {
 }
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
-// curve, a MSP struct representing the decryption policy and a public key pk. It
+// curve, a MSP struct representing the decryption policy, and a public key pk. It
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned.
 func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
+
 	sampler := sample.NewUniform(a.P)
 	s, err := data.NewRandomVector(2, sampler)
 	if err != nil {
@@ -106,11 +121,13 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 				return nil, err
 			}
 			hs1.ScalarMult(hs1, s[0])
+
 			hs2, err := bn256.HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 1")
 			if err != nil {
 				return nil, err
 			}
 			hs2.ScalarMult(hs2, s[1])
+
 			ct[i][l] = new(bn256.G1).Add(hs1, hs2)
 			for j := 0; j < len(msp.Mat[0]); j++ {
 				hs1, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 0")
@@ -118,11 +135,13 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 					return nil, err
 				}
 				hs1.ScalarMult(hs1, s[0])
+
 				hs2, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 1")
 				if err != nil {
 					return nil, err
 				}
 				hs2.ScalarMult(hs2, s[1])
+
 				hsToM := new(bn256.G1).Add(hs1, hs2)
 				pow := new(big.Int).Set(msp.Mat[i][j])
 				if pow.Sign() == -1 {
@@ -265,6 +284,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		attribMap[k] = true
 	}
 
+	// create a matrix of needed keys
 	preMatForKey := make([]data.Vector, 0)
 	ctForKey := make([][3]*bn256.G1, 0)
 	rowToAttrib := make([]int, 0)

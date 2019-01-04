@@ -27,7 +27,7 @@ import (
 )
 
 func TestGSPW(t *testing.T) {
-	// create a new ABE struct with the universe of l possible
+	// create a new GSPW struct with the universe of l possible
 	// attributes (attributes are denoted by the integers in [0, l)
 	l := 10
 	a := abe.NewGSPW(l)

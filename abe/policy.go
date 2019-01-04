@@ -29,8 +29,8 @@ import (
 // attributes are needed to decrypt the ciphertext. It includes a matrix
 // mat and a mapping from the rows of the mat to attributes. A MSP policy
 // allows decryption of an entity with a set of attributes A if an only if all the
-// rows of the matrix mapped to an element of A span the vector [1, 1,..., 1]
-// in Z_p.
+// rows of the matrix mapped to an element of A span the vector [1, 0,..., 0] (or
+// vector [1, 1,..., 1] depending on the use case).
 type MSP struct {
 	P           *big.Int
 	Mat         data.Matrix
