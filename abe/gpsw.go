@@ -57,8 +57,8 @@ type GSPW struct {
 // elements of a set {0, 1,..., l-1}.
 func NewGSPW(l int) *GSPW {
 	return &GSPW{Params: &GSPWParams{
-		L: l, // number of attributes in the whole universe
-		P: bn256.Order,  // the order of the pairing groups
+		L: l,           // number of attributes in the whole universe
+		P: bn256.Order, // the order of the pairing groups
 	}}
 }
 
