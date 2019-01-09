@@ -19,33 +19,25 @@ package abe_test
 import (
 	"testing"
 
-	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGSPW(t *testing.T) {
-	// create a new GSPW struct with the universe of l possible
+func TestGPSW(t *testing.T) {
+	// create a new GPSW struct with the universe of l possible
 	// attributes (attributes are denoted by the integers in [0, l)
 	l := 10
-	a := abe.NewGSPW(l)
+	a := abe.NewGPSW(l)
 
 	// generate a public key and a secret key for the scheme
-	pubKey, sk, err := a.GenerateMasterKeys()
+	pubKey, secKey, err := a.GenerateMasterKeys()
 	if err != nil {
 		t.Fatalf("Failed to generate master keys: %v", err)
 	}
 
-	// create a random message to be encrypted, for now
-	// this is an element of a pairing group G_T
-	sampler := sample.NewUniform(a.Params.P)
-	exponent, err := sampler.Sample()
-	if err != nil {
-		t.Fatalf("Failed to generate random values: %v", err)
-	}
-	msg := new(bn256.GT).ScalarBaseMult(exponent)
+	// create a message to be encrypted
+	msg := "Attack at dawn!"
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that will later be used in the decryption policy of the message
@@ -69,14 +61,14 @@ func TestGSPW(t *testing.T) {
 	// the property that a subset of keys can decrypt a message iff the
 	// corresponding rows span the vector of ones (which is equivalent to
 	// corresponding attributes satisfy the boolean expression)
-	keys, err := a.GeneratePolicyKeys(msp, sk)
+	keys, err := a.GeneratePolicyKeys(msp, secKey)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
 	}
 
 	// test if error is returned when a bad Msp struct is given
 	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttrib: make([]int, 0)}
-	_, err = a.GeneratePolicyKeys(emptyMsp, sk)
+	_, err = a.GeneratePolicyKeys(emptyMsp, secKey)
 	assert.Error(t, err)
 
 	// produce a set of keys that are given to an entity with a set

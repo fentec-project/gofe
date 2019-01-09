@@ -100,7 +100,12 @@ type FAMECipher struct {
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned. Note that safety of the encryption is only proved if the mapping
 // msp.RowToAttrib from the rows of msp.Mat to attributes is injective.
-func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
+func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
+	msgInGt, err := bn256.MapStringToGT(msg)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -110,9 +115,9 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 		if attrib[i] {
 			return nil, fmt.Errorf("some attributes correspond to" +
 				"multiple rows of the MSP struct, the scheme is not secure")
-		} else {
-			attrib[i] = true
 		}
+		attrib[i] = true
+
 	}
 
 	sampler := sample.NewUniform(a.P)
@@ -169,7 +174,7 @@ func (a *FAME) Encrypt(msg *bn256.GT, msp *MSP, pk *FAMEPubKey) (*FAMECipher, er
 
 	ctPrime := new(bn256.GT).ScalarMult(pk.partGT[0], s[0])
 	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.partGT[1], s[1]))
-	ctPrime.Add(ctPrime, msg)
+	ctPrime.Add(ctPrime, msgInGt)
 
 	return &FAMECipher{ct0: ct0, ct: ct, ctPrime: ctPrime, msp: msp}, nil
 }
@@ -288,8 +293,8 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 // the cipher. This is possible only if the set of possessed attributes (and
 // corresponding keys FAMEAttribKeys) suffices the encryption policy of the
 // cipher. If this is not possible, an error is returned.
-func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (*bn256.GT, error) {
-	// find out which attributes are possessed
+func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (string, error) {
+	// find out which attributes are owned
 	attribMap := make(map[int]bool)
 	for k := range key.attribToI {
 		attribMap[k] = true
@@ -309,7 +314,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 
 	matForKey, err := data.NewMatrix(preMatForKey)
 	if err != nil {
-		return nil, fmt.Errorf("the provided cipher is faulty")
+		return "", fmt.Errorf("the provided cipher is faulty")
 	}
 
 	// get a combination alpha of keys needed to decrypt
@@ -317,10 +322,10 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	oneVec[0].SetInt64(1)
 	alpha, err := gaussianElimination(matForKey.Transpose(), oneVec, a.P)
 	if err != nil {
-		return nil, fmt.Errorf("provided key is not sufficient for decryption")
+		return "", fmt.Errorf("provided key is not sufficient for decryption")
 	}
 
-	ret := new(bn256.GT).Set(cipher.ctPrime)
+	msgInGt := new(bn256.GT).Set(cipher.ctPrime)
 
 	ctProd := new([3]*bn256.G1)
 	keyProd := new([3]*bn256.G1)
@@ -335,9 +340,9 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		ctPairing := bn256.Pair(ctProd[j], key.k0[j])
 		keyPairing := bn256.Pair(keyProd[j], cipher.ct0[j])
 		keyPairing.Neg(keyPairing)
-		ret.Add(ret, ctPairing)
-		ret.Add(ret, keyPairing)
+		msgInGt.Add(msgInGt, ctPairing)
+		msgInGt.Add(msgInGt, keyPairing)
 	}
 
-	return ret, nil
+	return bn256.MapGTToString(msgInGt), nil
 }

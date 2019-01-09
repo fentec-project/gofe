@@ -19,9 +19,7 @@ package abe_test
 import (
 	"testing"
 
-	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/abe"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,19 +29,13 @@ func TestFAME(t *testing.T) {
 	a := abe.NewFAME()
 
 	// generate a public key and a secret key for the scheme
-	pubKey, sk, err := a.GenerateMasterKeys()
+	pubKey, secKey, err := a.GenerateMasterKeys()
 	if err != nil {
 		t.Fatalf("Failed to generate master keys: %v", err)
 	}
 
-	// create a random message to be encrypted, for now
-	// this is an element a pairing group G_T
-	sampler := sample.NewUniform(a.P)
-	exponent, err := sampler.Sample()
-	if err != nil {
-		t.Fatalf("Failed to generate random values: %v", err)
-	}
-	msg := new(bn256.GT).ScalarBaseMult(exponent)
+	// create a message to be encrypted
+	msg := "Attack at dawn!"
 
 	// create a msp struct out of a boolean expression representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext;
@@ -70,7 +62,7 @@ func TestFAME(t *testing.T) {
 
 	// generate keys for decryption for an entity with
 	// attributes gamma
-	keys, err := a.GenerateAttribKeys(gamma, sk)
+	keys, err := a.GenerateAttribKeys(gamma, secKey)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
 	}
@@ -89,7 +81,7 @@ func TestFAME(t *testing.T) {
 
 	// generate keys for decryption for an entity with
 	// attributes gammaInsuff
-	keysInsuff, err := a.GenerateAttribKeys(gammaInsuff, sk)
+	keysInsuff, err := a.GenerateAttribKeys(gammaInsuff, secKey)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
 	}

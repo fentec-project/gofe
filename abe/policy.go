@@ -58,23 +58,23 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 
 	// if convertToOnes is set to true convert the matrix to such a MSP
 	// struct so that the boolean expression is satisfied iff the
-	// corresponding rows span the vector [1, 1,..., 1] in Z_p
+	// corresponding rows span the vector [1, 1,..., 1]
 	if convertToOnes {
 		// create an invertible matrix that maps [1, 0,..., 0] to [1,1,...,1]
-		perm := make(data.Matrix, len(msp.Mat[0]))
+		invMat := make(data.Matrix, len(msp.Mat[0]))
 		for i := 0; i < len(msp.Mat[0]); i++ {
-			perm[i] = make(data.Vector, len(msp.Mat[0]))
+			invMat[i] = make(data.Vector, len(msp.Mat[0]))
 			for j := 0; j < len(msp.Mat[0]); j++ {
 				if i == 0 || j == i {
-					perm[i][j] = big.NewInt(1)
+					invMat[i][j] = big.NewInt(1)
 				} else {
-					perm[i][j] = big.NewInt(0)
+					invMat[i][j] = big.NewInt(0)
 				}
 
 			}
 		}
-		//change the msp matrix by multiplying with it the permutation matrix
-		msp.Mat, err = msp.Mat.Mul(perm)
+		//change the msp matrix by multiplying with it the matrix invMat
+		msp.Mat, err = msp.Mat.Mul(invMat)
 		if err != nil {
 			return nil, err
 		}
