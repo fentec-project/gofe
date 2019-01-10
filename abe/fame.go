@@ -300,15 +300,24 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		attribMap[k] = true
 	}
 
-	// create a matrix of needed keys
-	preMatForKey := make([]data.Vector, 0)
-	ctForKey := make([][3]*bn256.G1, 0)
-	rowToAttrib := make([]int, 0)
+	countAttrib := 0
 	for i := 0; i < len(cipher.msp.Mat); i++ {
 		if attribMap[cipher.msp.RowToAttrib[i]] {
-			preMatForKey = append(preMatForKey, cipher.msp.Mat[i])
-			ctForKey = append(ctForKey, cipher.ct[i])
-			rowToAttrib = append(rowToAttrib, cipher.msp.RowToAttrib[i])
+			countAttrib += 1
+		}
+	}
+
+	// create a matrix of needed keys
+	preMatForKey := make([]data.Vector, countAttrib)
+	ctForKey := make([][3]*bn256.G1, countAttrib)
+	rowToAttrib := make([]int, countAttrib)
+	countAttrib = 0
+	for i := 0; i < len(cipher.msp.Mat); i++ {
+		if attribMap[cipher.msp.RowToAttrib[i]] {
+			preMatForKey[countAttrib] = cipher.msp.Mat[i]
+			ctForKey[countAttrib] = cipher.ct[i]
+			rowToAttrib[countAttrib] = cipher.msp.RowToAttrib[i]
+			countAttrib += 1
 		}
 	}
 
