@@ -59,12 +59,21 @@ security) by
 #### Quadratic polynomial schemes
 You will need `SGP` scheme from package `quadratic`. 
 
-It contains 
-implementation of efficient FE scheme for **quadratic multi-variate
+It contains an
+implementation of an efficient FE scheme for **quadratic multi-variate
 polynomials** by _Sans, Gay_ and _Pointcheval_ 
 ([paper](https://eprint.iacr.org/2018/206.pdf)) which is based on
 bilinear pairings, and offers adaptive security under chosen-plaintext
 attacks (IND-CPA security).
+
+#### Schemes with attribute based encryption (ABE)
+Schemes are organized under `abe` package.
+
+It contains two ABE schemes:
+* A ciphertext policy (CP) ABE scheme named FAME by Agrawal, Chase ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
+message based on a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.fame`.
+* A key policy (KP) ABE scheme by Goyal, Pandey, Sahai, Waters ([paper](https://eprint.iacr.org/2006/309.pdf)) allowing a distribution of
+keys following a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.gpsw`.
 
 ### Configure selected scheme
 All GoFE schemes are implemented as Go structs with (at least logically)
@@ -259,4 +268,22 @@ msk, _ := sgp.GenerateMasterKey()     // Create master secret key
 cipher, _ := sgp.Encrypt(x, y, msk)   // Encrypt input vectors x, y with secret key
 key, _ := sgp.DeriveKey(msk, F)       // Derive FE key for decryption
 dec, _ := sgp.Decrypt(cipher, key, F) // Decrypt the result to obtain x^T * F * y
+```
+
+##### Using ABE schemes
+Let's say we selected `abe.FAME` scheme. In the example below, we omit instantiation of different entities
+(encryptor and decryptor). Say we want to encrypt the following message `msg` so that only those
+who own the attributes satisfying a boolean expression 'policy' can decrypt.
+````go
+msg := "Attack at dawn!"
+policy := "((0 AND 1) OR (2 AND 3)) AND 5"
+
+gamma := []int{0, 2, 3, 5} // owned attributes
+
+a := abe.NewFAME() // Create the scheme instance
+pubKey, secKey, _ := a.GenerateMasterKeys() // Create a public key and a master secret key
+msp, _ := abe.BooleanToMSP(policy, false) // The MSP structure defining the policy
+cipher, _ := a.Encrypt(msg, msp, pubKey) // Encrypt msg with policy msp under public key pubKey
+keys, _ := a.GenerateAttribKeys(gamma, secKey) // Generate keys for the entity with attributes gamma
+dec, _ := a.Decrypt(cipher, keys, pubKey) // Decrypt the message
 ```
