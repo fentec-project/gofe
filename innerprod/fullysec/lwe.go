@@ -59,7 +59,6 @@ type lweParams struct {
 	A data.Matrix
 }
 
-
 // LWE represents a scheme instantiated from the LWE problem.
 // Based on the LWE variant of:
 // Agrawal, Shweta, Libert, and Stehle:

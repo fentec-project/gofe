@@ -25,8 +25,8 @@ import (
 )
 
 // DamgardMulti represents a multi input variant of the
-// underlying Damgard scheme based on:
-// Abdalla, Catalano, Fiore, Gay, Ursu:
+// underlying Damgard scheme based on
+// Abdalla, Catalano, Fiore, Gay, and Ursu:
 // "Multi-Input Functional Encryption for Inner Products:
 // Function-Hiding Realizations and Constructions without Pairings".
 type DamgardMulti struct {

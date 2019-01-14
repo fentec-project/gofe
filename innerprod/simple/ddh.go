@@ -42,7 +42,7 @@ type ddhParams struct {
 }
 
 // DDH represents a scheme instantiated from the DDH assumption,
-// based on the DDH variant of:
+// based on the DDH variant by
 // Abdalla, Bourse, De Caro, and Pointchev:
 // "Simple Functional Encryption Schemes for Inner Products".
 type DDH struct {
