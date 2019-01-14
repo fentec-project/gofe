@@ -41,7 +41,10 @@ type paillerParams struct {
 	g       *big.Int   // generator of the 2n-th residues subgroup of Z_n^2*
 }
 
-// Paillier represents a scheme based on the Paillier encryption.
+// Paillier represents a scheme based on the Paillier variant by
+// Agrawal, Shweta, Libert, and Stehle":
+// "Fully secure functional encryption for inner products,
+// from standard assumptions".
 type Paillier struct {
 	Params *paillerParams
 }

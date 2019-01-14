@@ -50,7 +50,10 @@ type lweParams struct {
 	A data.Matrix
 }
 
-// LWE represents a scheme instantiated from the LWE problem.
+// LWE represents a scheme instantiated from the LWE assumption,
+// based on the LWE variant by
+// Abdalla, Bourse, De Caro, and Pointchev:
+// "Simple Functional Encryption Schemes for Inner Products".
 type LWE struct {
 	params *lweParams
 }

@@ -25,7 +25,10 @@ import (
 )
 
 // DDHMulti represents a multi input variant of the
-// underlying DDH scheme.
+// underlying DDH scheme based on
+// Abdalla, Catalano, Fiore, Gay, and Ursu:
+// "Multi-Input Functional Encryption for Inner Products:
+// Function-Hiding Realizations and Constructions without Pairings".
 type DDHMulti struct {
 	// number of encryptors
 	slots int

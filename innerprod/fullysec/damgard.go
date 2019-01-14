@@ -42,27 +42,11 @@ type damgardParams struct {
 	q     *big.Int
 }
 
-// Based on DDH variant of:
-// Agrawal, Shweta, Benoit Libert, and Damien Stehle.
+// Damgard represents a scheme instantiated from the DDH assumption
+// based on DDH variant of:
+// Agrawal, Shweta, Libert, and Stehle:
 // "Fully secure functional encryption for inner products,
-// from standard assumptions."
-//
-// This scheme enables encryption of vector x = [x_1, ..., x_l]; derivation of a
-// key for function x -> <x,y>; and decryption which reveals
-// only <x,y> and nothing else.
-//
-// This scheme is PUBLIC-KEY - no master secret key is needed to Encrypt the
-// messages.
-//
-// Args:
-//     l (int): The length of vectors to be encrypted.
-//     bound (int): The value by which coordinates of vectors x and y are bounded.
-//         That means that <x,y> < l * bound^2. Note that l * bound^2 needs to smaller
-//         than group order. This makes the scheme applicable only for short
-//         integer vectors.
-//     modulus_length (int): Bit length of modulus p.
-
-// Damgard represents a scheme instantiated from the DDH assumption.
+// from standard assumptions".
 type Damgard struct {
 	Params *damgardParams
 }
