@@ -26,12 +26,13 @@ import (
 )
 
 // SGP implements efficient FE scheme for quadratic multi-variate polynomials
-// by Sans, Gay and Pointcheval (see paper: https://eprint.iacr.org/2018/206.pdf) which is based on bilinear pairings.
+// based on  Sans, Gay and Pointcheval:
+// "Reading in the Dark: Classifying Encrypted Digits with
+// Functional Encryption".
+// See paper: https://eprint.iacr.org/2018/206.pdf which is based on bilinear pairings.
 // It offers adaptive security under chosen-plaintext attacks (IND-CPA security).
-//
 // This is a secret key scheme, meaning that we need a master secret key to
 // encrypt the messages.
-//
 // Assuming input vectors x and y, the SGP scheme allows the decryptor to
 // calculate x^T * F * y, where F is matrix that represents the function,
 // and vectors x, y are only known to the encryptor, but not to decryptor.

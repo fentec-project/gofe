@@ -41,7 +41,10 @@ type ddhParams struct {
 	q *big.Int
 }
 
-// DDH represents a scheme instantiated from the DDH assumption.
+// DDH represents a scheme instantiated from the DDH assumption,
+// based on the DDH variant of:
+// Abdalla, Bourse, De Caro, and Pointchev:
+// "Simple Functional Encryption Schemes for Inner Products".
 type DDH struct {
 	Params *ddhParams
 }

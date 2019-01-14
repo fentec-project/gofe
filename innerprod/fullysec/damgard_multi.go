@@ -25,8 +25,10 @@ import (
 )
 
 // DamgardMulti represents a multi input variant of the
-// underlying Damgard scheme.
-// TODO: check proofs and modfy code so that the input x, y can also be negative
+// underlying Damgard scheme based on:
+// Abdalla, Catalano, Fiore, Gay, Ursu:
+// "Multi-Input Functional Encryption for Inner Products:
+// Function-Hiding Realizations and Constructions without Pairings".
 type DamgardMulti struct {
 	// number of encryptors
 	slots int
