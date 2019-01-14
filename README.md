@@ -67,7 +67,7 @@ bilinear pairings, and offers adaptive security under chosen-plaintext
 attacks (IND-CPA security).
 
 #### Schemes with attribute based encryption (ABE)
-Schemes are organized under `abe` package.
+Schemes are organized under package `abe`.
 
 It contains two ABE schemes:
 * A ciphertext policy (CP) ABE scheme named FAME by Agrawal, Chase ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
