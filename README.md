@@ -274,7 +274,7 @@ dec, _ := sgp.Decrypt(cipher, key, F) // Decrypt the result to obtain x^T * F * 
 Let's say we selected `abe.FAME` scheme. In the example below, we omit instantiation of different entities
 (encryptor and decryptor). Say we want to encrypt the following message `msg` so that only those
 who own the attributes satisfying a boolean expression 'policy' can decrypt.
-````go
+```go
 msg := "Attack at dawn!"
 policy := "((0 AND 1) OR (2 AND 3)) AND 5"
 
