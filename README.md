@@ -1,4 +1,4 @@
-# GoFE - Functional Encryption library [![Build Status](https://travis-ci.org/fentec-project/gofe.svg?branch=master)](https://travis-ci.org/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe)
+# GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe)
 
 GoFE is a cryptographic library offering different state-of-the-art
 implementations of functional encryption schemes, specifically FE
