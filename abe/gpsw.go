@@ -195,14 +195,24 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 	for _, e := range attrib {
 		attribMap[e] = true
 	}
-	mat := make([]data.Vector, 0)
-	d := make(data.VectorG1, 0)
-	rowToAttrib := make([]int, 0)
+
+	countAttrib := 0
 	for i := 0; i < len(msp.Mat); i++ {
 		if attribMap[msp.RowToAttrib[i]] {
-			mat = append(mat, msp.Mat[i])
-			d = append(d, keys[i])
-			rowToAttrib = append(rowToAttrib, msp.RowToAttrib[i])
+			countAttrib += 1
+		}
+	}
+
+	mat := make([]data.Vector, countAttrib)
+	d := make(data.VectorG1, countAttrib)
+	rowToAttrib := make([]int, countAttrib)
+	countAttrib = 0
+	for i := 0; i < len(msp.Mat); i++ {
+		if attribMap[msp.RowToAttrib[i]] {
+			mat[countAttrib] = msp.Mat[i]
+			d[countAttrib] = keys[i]
+			rowToAttrib[countAttrib] = msp.RowToAttrib[i]
+			countAttrib++
 		}
 	}
 

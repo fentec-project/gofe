@@ -63,9 +63,9 @@ func NewConstantVector(len int, c *big.Int) Vector {
 // MulScalar multiplies vector v by a given scalar x.
 // The result is returned in a new Vector.
 func (v Vector) MulScalar(x *big.Int) Vector {
-	res := Vector{}
-	for _, vi := range v {
-		res = append(res, new(big.Int).Mul(x, vi))
+	res := make(Vector, len(v))
+	for i, vi := range v {
+		res[i] = new(big.Int).Mul(x, vi)
 	}
 
 	return res
@@ -101,10 +101,10 @@ func (v Vector) CheckBound(bound *big.Int) error {
 // Apply applies an element-wise function f to vector v.
 // The result is returned in a new Vector.
 func (v Vector) Apply(f func(*big.Int) *big.Int) Vector {
-	res := Vector{}
+	res := make(Vector, len(v))
 
-	for _, vi := range v {
-		res = append(res, f(vi))
+	for i, vi := range v {
+		res[i] = f(vi)
 	}
 
 	return res
