@@ -122,9 +122,9 @@ func (m Matrix) Transpose() Matrix {
 		transposed[i], _ = m.GetCol(i)
 	}
 
-	m_t, _ := NewMatrix(transposed)
+	mT, _ := NewMatrix(transposed)
 
-	return m_t
+	return mT
 }
 
 // CheckBound checks whether all matrix elements are strictly
@@ -146,7 +146,7 @@ func (m Matrix) CheckDims(rows, cols int) bool {
 	return m.Rows() == rows && m.Cols() == cols
 }
 
-// mod applies the element-wise modulo operation on matrix m.
+// Mod applies the element-wise modulo operation on matrix m.
 // The result is returned in a new Matrix.
 func (m Matrix) Mod(modulo *big.Int) Matrix {
 	vectors := make([]Vector, m.Rows())
@@ -242,8 +242,8 @@ func (m Matrix) Mul(other Matrix) (Matrix, error) {
 	for i := 0; i < m.Rows(); i++ {  // po vrsticah od m
 		prod[i] = make([]*big.Int, other.Cols())
 		for j := 0; j < other.Cols(); j++ {
-			other_col, _ := other.GetCol(j)
-			prod[i][j], _ = m[i].Dot(other_col)
+			otherCol, _ := other.GetCol(j)
+			prod[i][j], _ = m[i].Dot(otherCol)
 		}
 	}
 

@@ -303,7 +303,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	countAttrib := 0
 	for i := 0; i < len(cipher.msp.Mat); i++ {
 		if attribMap[cipher.msp.RowToAttrib[i]] {
-			countAttrib += 1
+			countAttrib++
 		}
 	}
 
@@ -317,7 +317,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 			preMatForKey[countAttrib] = cipher.msp.Mat[i]
 			ctForKey[countAttrib] = cipher.ct[i]
 			rowToAttrib[countAttrib] = cipher.msp.RowToAttrib[i]
-			countAttrib += 1
+			countAttrib++
 		}
 	}
 

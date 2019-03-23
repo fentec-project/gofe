@@ -199,7 +199,7 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 	countAttrib := 0
 	for i := 0; i < len(msp.Mat); i++ {
 		if attribMap[msp.RowToAttrib[i]] {
-			countAttrib += 1
+			countAttrib++
 		}
 	}
 

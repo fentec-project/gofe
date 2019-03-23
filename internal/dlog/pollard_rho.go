@@ -237,7 +237,7 @@ func pollardRhoFactorization(n, B *big.Int) (map[string]int, error) {
 
 			stringified := string(i.Bytes())
 			if _, ok := factors[stringified]; ok {
-				factors[stringified] += 1
+				factors[stringified]++
 			} else {
 				factors[stringified] = 1
 			}
@@ -292,7 +292,7 @@ func runCycle(n, x *big.Int) *big.Int {
 			x.Mod(new(big.Int).Add(new(big.Int).Mul(x, x), one), n)
 			absDiff := new(big.Int).Abs(new(big.Int).Sub(x, xFixed))
 			factor.GCD(nil, nil, absDiff, n)
-			count += 1
+			count++
 		}
 
 		cycleSize *= 2

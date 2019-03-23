@@ -17,14 +17,13 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 )
 
 var malformedStr = "is not of the proper form"
 
-var MalformedPubKey = errors.New(fmt.Sprintf("public key %s", malformedStr))
-var MalformedSecKey = errors.New(fmt.Sprintf("secret key %s", malformedStr))
-var MalformedDecKey = errors.New(fmt.Sprintf("decryption key %s", malformedStr))
-var MalformedCipher = errors.New(fmt.Sprintf("ciphertext %s", malformedStr))
-var MalformedInput = errors.New(fmt.Sprintf("input data %s", malformedStr))
+var MalformedPubKey = fmt.Errorf("public key %s", malformedStr)
+var MalformedSecKey = fmt.Errorf("secret key %s", malformedStr)
+var MalformedDecKey = fmt.Errorf("decryption key %s", malformedStr)
+var MalformedCipher = fmt.Errorf("ciphertext %s", malformedStr)
+var MalformedInput = fmt.Errorf("input data %s", malformedStr)
