@@ -153,8 +153,8 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		a[i] = ai
 
 		// v = (y_i, -t_i)
-		t_iNeg := new(big.Int).Sub(q.mod, msk.T[i])
-		bi, err := W.MulVec(data.NewVector([]*big.Int{y[i], t_iNeg}))
+		tiNeg := new(big.Int).Sub(q.mod, msk.T[i])
+		bi, err := W.MulVec(data.NewVector([]*big.Int{y[i], tiNeg}))
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +162,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 	}
 	aMulG1 := make([]data.VectorG1, q.N)
 	bMulG2 := make([]data.VectorG2, q.N)
-	for i, _ := range a {
+	for i := range a {
 		aMulG1[i] = a[i].MulG1()
 		bMulG2[i] = b[i].MulG2()
 	}

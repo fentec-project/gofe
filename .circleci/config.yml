@@ -11,7 +11,7 @@ jobs:
 
       - run:
           name: Get dependencies
-          command: go get -u -t -v ./...
+          command: go get -t -v ./...
 
       - run:
           name: Run tests

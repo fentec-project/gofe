@@ -35,17 +35,16 @@ type Matrix []Vector
 // It returns error if not all the vectors have the same number of elements.
 func NewMatrix(vectors []Vector) (Matrix, error) {
 	l := -1
-	newVectors := make([]Vector, 0)
+	newVectors := make([]Vector, len(vectors))
 
 	if len(vectors) > 0 {
 		l = len(vectors[0])
 	}
-	for _, v := range vectors {
+	for i, v := range vectors {
 		if len(v) != l {
 			return nil, fmt.Errorf("all vectors should be of the same length")
 		}
-		vector := NewVector(v)
-		newVectors = append(newVectors, vector)
+		newVectors[i] = NewVector(v)
 	}
 
 	return Matrix(newVectors), nil
@@ -123,9 +122,9 @@ func (m Matrix) Transpose() Matrix {
 		transposed[i], _ = m.GetCol(i)
 	}
 
-	m_t, _ := NewMatrix(transposed)
+	mT, _ := NewMatrix(transposed)
 
-	return m_t
+	return mT
 }
 
 // CheckBound checks whether all matrix elements are strictly
@@ -147,7 +146,7 @@ func (m Matrix) CheckDims(rows, cols int) bool {
 	return m.Rows() == rows && m.Cols() == cols
 }
 
-// mod applies the element-wise modulo operation on matrix m.
+// Mod applies the element-wise modulo operation on matrix m.
 // The result is returned in a new Matrix.
 func (m Matrix) Mod(modulo *big.Int) Matrix {
 	vectors := make([]Vector, m.Rows())
@@ -164,10 +163,10 @@ func (m Matrix) Mod(modulo *big.Int) Matrix {
 // Apply applies an element-wise function f to matrix m.
 // The result is returned in a new Matrix.
 func (m Matrix) Apply(f func(*big.Int) *big.Int) Matrix {
-	res := Matrix{}
+	res := make(Matrix, len(m))
 
-	for _, vi := range m {
-		res = append(res, vi.Apply(f))
+	for i, vi := range m {
+		res[i] = vi.Apply(f)
 	}
 
 	return res
@@ -243,8 +242,8 @@ func (m Matrix) Mul(other Matrix) (Matrix, error) {
 	for i := 0; i < m.Rows(); i++ {  // po vrsticah od m
 		prod[i] = make([]*big.Int, other.Cols())
 		for j := 0; j < other.Cols(); j++ {
-			other_col, _ := other.GetCol(j)
-			prod[i][j], _ = m[i].Dot(other_col)
+			otherCol, _ := other.GetCol(j)
+			prod[i][j], _ = m[i].Dot(otherCol)
 		}
 	}
 
@@ -303,7 +302,7 @@ func (m Matrix) Minor(i int, j int) (Matrix, error) {
 		if k == i {
 			continue
 		}
-		vec := make(Vector, 0)
+		vec := make(Vector, 0, len(m[0])-1)
 		vec = append(vec, m[k][:j]...)
 		vec = append(vec, m[k][j+1:]...)
 		if k < i {
@@ -357,7 +356,7 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 	if det.Cmp(big.NewInt(0)) == 0 {
 		return nil, fmt.Errorf("matrix non-invertable")
 	}
-	inv_det := new(big.Int).ModInverse(det, p)
+	invDet := new(big.Int).ModInverse(det, p)
 	sign := new(big.Int)
 	minusOne := big.NewInt(-1)
 	for i := 0; i < m.Rows(); i++ {
@@ -374,7 +373,7 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 			value.Mod(value, p)
 			sign.Exp(minusOne, big.NewInt(int64(i+j)), nil)
 			value.Mul(value, sign)
-			value.Mul(value, inv_det)
+			value.Mul(value, invDet)
 			value.Mod(value, p)
 			row[j] = value
 		}

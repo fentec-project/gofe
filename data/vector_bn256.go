@@ -29,7 +29,7 @@ type VectorG1 []*bn256.G1
 // It returns the result in a new VectorG1 instance.
 func (v VectorG1) Add(other VectorG1) VectorG1 {
 	sum := make(VectorG1, len(v))
-	for i, _ := range sum {
+	for i := range sum {
 		sum[i] = new(bn256.G1).Add(v[i], other[i])
 	}
 
@@ -45,7 +45,7 @@ type VectorG2 []*bn256.G2
 // It returns the result in a new VectorG2 instance.
 func (v VectorG2) Add(other VectorG2) VectorG2 {
 	sum := make(VectorG2, len(v))
-	for i, _ := range sum {
+	for i := range sum {
 		sum[i] = new(bn256.G2).Add(v[i], other[i])
 	}
 

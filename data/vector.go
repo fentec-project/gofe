@@ -63,15 +63,15 @@ func NewConstantVector(len int, c *big.Int) Vector {
 // MulScalar multiplies vector v by a given scalar x.
 // The result is returned in a new Vector.
 func (v Vector) MulScalar(x *big.Int) Vector {
-	res := Vector{}
-	for _, vi := range v {
-		res = append(res, new(big.Int).Mul(x, vi))
+	res := make(Vector, len(v))
+	for i, vi := range v {
+		res[i] = new(big.Int).Mul(x, vi)
 	}
 
 	return res
 }
 
-// mod performs modulo operation on vector's elements.
+// Mod performs modulo operation on vector's elements.
 // The result is returned in a new Vector.
 func (v Vector) Mod(modulo *big.Int) Vector {
 	newCoords := make([]*big.Int, len(v))
@@ -101,10 +101,10 @@ func (v Vector) CheckBound(bound *big.Int) error {
 // Apply applies an element-wise function f to vector v.
 // The result is returned in a new Vector.
 func (v Vector) Apply(f func(*big.Int) *big.Int) Vector {
-	res := Vector{}
+	res := make(Vector, len(v))
 
-	for _, vi := range v {
-		res = append(res, f(vi))
+	for i, vi := range v {
+		res[i] = f(vi)
 	}
 
 	return res
@@ -190,7 +190,7 @@ func (v Vector) MulAsPolyInRing(other Vector) (Vector, error) {
 // VectorG1 instance.
 func (v Vector) MulG1() VectorG1 {
 	prod := make(VectorG1, len(v))
-	for i, _ := range prod {
+	for i := range prod {
 		prod[i] = new(bn256.G1).ScalarBaseMult(v[i])
 	}
 
@@ -204,7 +204,7 @@ func (v Vector) MulVecG1(g1 VectorG1) VectorG1 {
 	zero := big.NewInt(0)
 
 	prod := make(VectorG1, len(v))
-	for i, _ := range prod {
+	for i := range prod {
 		vi := new(big.Int).Set(v[i])
 		g1i := new(bn256.G1).Set(g1[i])
 		if vi.Cmp(zero) == -1 {
@@ -222,7 +222,7 @@ func (v Vector) MulVecG1(g1 VectorG1) VectorG1 {
 // VectorG2 instance.
 func (v Vector) MulG2() VectorG2 {
 	prod := make(VectorG2, len(v))
-	for i, _ := range prod {
+	for i := range prod {
 		prod[i] = new(bn256.G2).ScalarBaseMult(v[i])
 	}
 
@@ -236,7 +236,7 @@ func (v Vector) MulVecG2(g2 VectorG2) VectorG2 {
 	zero := big.NewInt(0)
 
 	prod := make(VectorG2, len(v))
-	for i, _ := range prod {
+	for i := range prod {
 		vi := new(big.Int).Set(v[i])
 		g2i := new(bn256.G2).Set(g2[i])
 		if vi.Cmp(zero) == -1 {
