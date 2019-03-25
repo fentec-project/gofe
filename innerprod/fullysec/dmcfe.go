@@ -72,7 +72,13 @@ func (c *DMCFEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 
 // GenerateKeyShare generates client's key share. Decryptor needs shares from all clients.
 func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
-	yRepr := make([]byte, 0, len(y))
+	yReprCap := 0
+	for _, yi := range y {
+		yReprCap += len(yi.Bytes())
+	}
+	yReprCap += len(y)
+
+	yRepr := make([]byte, 0, yReprCap)
 	for _, yi := range y {
 		yRepr = append(yRepr, yi.Bytes()...)
 		if yi.Sign() == 1 {
