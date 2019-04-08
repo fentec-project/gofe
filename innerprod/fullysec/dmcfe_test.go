@@ -28,7 +28,7 @@ import (
 )
 
 func Test_DMCFE(t *testing.T) {
-	numClients := 3
+	numClients := 1000
 	clients := make([]*fullysec.DMCFEClient, numClients)
 	sumT := data.NewConstantMatrix(2, 2, big.NewInt(0))
 
@@ -62,7 +62,7 @@ func Test_DMCFE(t *testing.T) {
 	}
 
 	label := "some label"
-	bound := big.NewInt(1000)
+	bound := big.NewInt(2)
 	sampler1 := sample.NewUniform(bound)
 	y, err := data.NewRandomVector(numClients, sampler1)
 	if err != nil {
