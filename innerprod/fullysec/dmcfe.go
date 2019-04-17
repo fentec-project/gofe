@@ -32,29 +32,76 @@ import (
 
 // DMCFEClient is to be instantiated by the encryptor. Idx presents index of the encryptor entity.
 type DMCFEClient struct {
-	Idx int
-	t   data.Matrix
-	s   data.Vector
+	Idx  int
+	tSec data.Matrix
+	TPub data.Matrix
+	t    data.Matrix
+	s    data.Vector
 }
 
 // NewDMCFEClient is to be called by the party that wants to encrypt number x_i.
 // The decryptor will be able to compute inner product of x and y where x = (x_1,...,x_l) and
-// y is publicly known vector y = (y_1,...,y_l).
-// Value idx presents index of the party and matrix t is part of the client secret key.
-// Matrix t needs to be generated interactively with other clients but nobody except the client
-// should know its value (by secure multi-party computation).
-func NewDMCFEClient(idx int, t data.Matrix) (*DMCFEClient, error) {
+// y is publicly known vector y = (y_1,...,y_l). Value idx presents index of the party, where
+// it is assumed that if there are n clients, its indexes are in [0, n-1]
+func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	s, err := data.NewRandomVector(2, sampler)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate random vector")
 	}
+	tSec, err := data.NewRandomMatrix(2, 2, sampler)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate random vector")
+	}
+	tPub := data.NewConstantMatrix(2, 2, big.NewInt(0))
+	for i := 0; i < 2; i++ {
+		for j := 0; j < 2; j++ {
+			// public keys are created based on DDH assumption in Z_p^* for p being
+			// order the order of bn256 and the generator being 3
+			tPub[i][j] = new(big.Int).Exp(big.NewInt(3), tSec[i][j], bn256.Order)
+		}
+	}
 
 	return &DMCFEClient{
-		Idx: idx,
-		t:   t,
-		s:   s,
+		Idx:  idx,
+		tSec: tSec,
+		TPub: tPub,
+		s:    s,
 	}, nil
+}
+
+// SetT sets a secret key for client c, based on the public keys of all the
+// clients involved in the scheme. It assumes that Idx of a client indicates
+// which is the corresponding public key in pubT.
+func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
+	t := data.NewConstantMatrix(2, 2, big.NewInt(0))
+	add := data.NewConstantMatrix(2, 2, big.NewInt(0))
+	var err error
+	for k := 0; k < len(pubT); k++ {
+		if k == c.Idx {
+			continue
+		}
+		for i := 0; i < 2; i++ {
+			for j := 0; j < 2; j++ {
+				add[i][j] = new(big.Int).Exp(pubT[k][i][j], c.tSec[i][j], bn256.Order)
+			}
+		}
+		if k < c.Idx {
+			t, err = t.Add(add)
+			if err != nil {
+				return err
+			}
+		} else {
+			t, err = t.Sub(add)
+			if err != nil {
+				return err
+			}
+		}
+		t = t.Mod(bn256.Order)
+	}
+	c.t = t
+
+	return nil
 }
 
 // Encrypt encrypts number x under some label.
@@ -120,9 +167,9 @@ type DMCFEDecryptor struct {
 // specifies the bound of vector coordinates.
 func NewDMCFEDecryptor(y data.Vector, label string, ciphers []*bn256.G1, keyShares []data.VectorG2,
 	bound *big.Int) *DMCFEDecryptor {
-	key1 := keyShares[0][0]
-	key2 := keyShares[0][1]
-	for i := 1; i < len(keyShares); i++ {
+	key1 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+	key2 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+	for i := 0; i < len(keyShares); i++ {
 		key1.Add(key1, keyShares[i][0])
 		key2.Add(key2, keyShares[i][1])
 	}
@@ -140,14 +187,14 @@ func NewDMCFEDecryptor(y data.Vector, label string, ciphers []*bn256.G1, keyShar
 }
 
 func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
-	y0 := new(bn256.G2).ScalarBaseMult(d.y[0])
-	s := bn256.Pair(d.ciphers[0], y0)
-	for i := 1; i < len(d.ciphers); i++ {
-		yi := new(bn256.G2).ScalarBaseMult(d.y[i])
-		p := bn256.Pair(d.ciphers[i], yi)
-		s.Add(s, p)
+	gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
+	cSum := new(bn256.G1).ScalarBaseMult(big.NewInt(0))
+	cAdd := new(bn256.G1)
+	for i := 0; i < len(d.ciphers); i++ {
+		cAdd.ScalarMult(d.ciphers[i], d.y[i])
+		cSum.Add(cSum, cAdd)
 	}
-
+	s := bn256.Pair(cSum, gen)
 	u := hash([]byte(d.label))
 	u0 := new(bn256.G1).ScalarBaseMult(u[0])
 	u1 := new(bn256.G1).ScalarBaseMult(u[1])
@@ -162,10 +209,10 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	g := bn256.Pair(g1gen, g2gen)
 
 	var dec *big.Int // dec is decryption
-	dec, err := d.gCalc.WithBound(d.bound).BabyStepGiantStep(s, g)
+	dec, err := d.gCalc.WithBound(d.bound).BabyStepGiantStepStd(s, g)
 	if err != nil {
 		gInv := new(bn256.GT).Neg(g)
-		dec, err = d.gInvCalc.WithBound(d.bound).BabyStepGiantStep(s, gInv)
+		dec, err = d.gInvCalc.WithBound(d.bound).BabyStepGiantStepStd(s, gInv)
 		if err != nil {
 			return nil, err
 		}

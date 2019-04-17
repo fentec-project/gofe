@@ -24,43 +24,36 @@ import (
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_DMCFE(t *testing.T) {
-	numClients := 3
+	numClients := 100
 	clients := make([]*fullysec.DMCFEClient, numClients)
-	sumT := data.NewConstantMatrix(2, 2, big.NewInt(0))
 
-	// Generate one matrix per client - the sum of matrices needs to be 0 (modulo order of the group).
-	// In real world setting matrices should be generated using secure multi-party computation. However,
-	// a new scheme is coming which won't require multi-party computation.
-	lim := new(big.Int).Div(bn256.Order, big.NewInt(int64(numClients)))
-	sampler := sample.NewUniform(lim)
+	pubT := make([]data.Matrix, numClients)
+	// create clients and make a slice of their public values
 	for i := 0; i < numClients; i++ {
-		T, err := data.NewRandomMatrix(2, 2, sampler)
-		if err != nil {
-			t.Fatalf("error when creating random matrix: %v", err)
-		}
-		if i < numClients-1 {
-			sumT, err = sumT.Add(T)
-			if err != nil {
-				t.Fatalf("error when adding matrices: %v", err)
-			}
-		} else {
-			m := data.NewConstantMatrix(2, 2, bn256.Order)
-			T, err = m.Sub(sumT)
-			if err != nil {
-				t.Fatalf("error when subtracting matrices: %v", err)
-			}
-		}
-		c, err := fullysec.NewDMCFEClient(i, T)
+		c, err := fullysec.NewDMCFEClient(i)
 		if err != nil {
 			t.Fatalf("could not instantiate fullysec.Client: %v", err)
 		}
 		clients[i] = c
+		pubT[i] = c.TPub
 	}
 
+	// based on public values of each client create private matrices T_i summing to 0
+	for i := 0; i < numClients; i++ {
+		err := clients[i].SetT(pubT)
+		if err != nil {
+			panic(errors.Wrap(err, "could not create private values"))
+		}
+	}
+
+	// now that the clients have agreed on secret keys they can encrypt a vector in
+	// a decentralized way and create partial keys such that only with all of them
+	// the decryption of the inner product is possible
 	label := "some label"
 	bound := big.NewInt(1000)
 	sampler1 := sample.NewUniform(bound)
