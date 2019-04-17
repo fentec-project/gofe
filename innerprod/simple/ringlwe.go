@@ -25,7 +25,6 @@ import (
 	gofe "github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/pkg/errors"
-	"math"
 )
 
 // ringLWEParams represents parameters for the ring LWE scheme.
@@ -69,38 +68,6 @@ type RingLWE struct {
 // for the scheme cannot be generated for some other reason,
 // an error is returned.
 func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, error) {
-
-	//q, err := rand.Prime(rand.Reader, bitsForQ)
-
-	boundI := int(bound.Int64())
-	p2 := 2 * l * boundI * boundI
-	println("p2", p2)
-
-	sigmaQI := math.Sqrt(math.Log2(float64(n))) * math.Sqrt(math.Sqrt(float64(n * l) / math.Log2(float64(n *l))))
-	println(sigmaQI)
-
-	tmp := float64(l * boundI * n) * sigmaQI * (4 * math.Sqrt(float64(l)) * sigmaQI * float64(boundI)  + 4 * float64(l * boundI) * sigmaQI  + math.Sqrt(2))
-	tmp *= 2 * float64(p2)
-	//tmpI := int64(tmp)
-
-	println(tmp)
-
-	//tmpBig := new(big.Int).SetInt64(tmpI)
-	//bitsForQ = tmp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	// Ensure that p >= 2 * l * B² holds
 	bSquared := new(big.Int).Mul(bound, bound)
 	lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)

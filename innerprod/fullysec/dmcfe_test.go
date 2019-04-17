@@ -56,7 +56,7 @@ func Test_DMCFE(t *testing.T) {
 	// a decentralized way and create partial keys such that only with all of them
 	// the decryption of the inner product is possible
 	label := "some label"
-	bound := big.NewInt(2)
+	bound := big.NewInt(1000)
 	sampler1 := sample.NewUniform(bound)
 	y, err := data.NewRandomVector(numClients, sampler1)
 	if err != nil {

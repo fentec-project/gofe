@@ -56,8 +56,8 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 	tPub := data.NewConstantMatrix(2, 2, big.NewInt(0))
 	for i := 0; i < 2; i++ {
 		for j := 0; j < 2; j++ {
-			// public keys are created based on DDH assumption in Z_p^* for order
-			// bn256 and generator 3
+			// public keys are created based on DDH assumption in Z_p^* for p being
+			// order the order of bn256 and the generator being 3
 			tPub[i][j] = new(big.Int).Exp(big.NewInt(3), tSec[i][j], bn256.Order)
 		}
 	}
