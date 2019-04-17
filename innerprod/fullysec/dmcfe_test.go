@@ -24,8 +24,8 @@ import (
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
-	"github.com/stretchr/testify/assert"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_DMCFE(t *testing.T) {
@@ -33,7 +33,6 @@ func Test_DMCFE(t *testing.T) {
 	clients := make([]*fullysec.DMCFEClient, numClients)
 
 	pubT := make([]data.Matrix, numClients)
-	var err error
 	// create clients and make a slice of their public values
 	for i := 0; i < numClients; i++ {
 		c, err := fullysec.NewDMCFEClient(i)
@@ -46,7 +45,7 @@ func Test_DMCFE(t *testing.T) {
 
 	// based on public values of each client create private matrices T_i summing to 0
 	for i := 0; i < numClients; i++ {
-		err = clients[i].SetT(pubT)
+		err := clients[i].SetT(pubT)
 		if err != nil {
 			panic(errors.Wrap(err, "could not create private values"))
 		}

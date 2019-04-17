@@ -32,7 +32,7 @@ import (
 
 // DMCFEClient is to be instantiated by the encryptor. Idx presents index of the encryptor entity.
 type DMCFEClient struct {
-	Idx int
+	Idx  int
 	tSec data.Matrix
 	TPub data.Matrix
 	t    data.Matrix
@@ -63,13 +63,14 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 	}
 
 	return &DMCFEClient{
-		Idx: idx,
+		Idx:  idx,
 		tSec: tSec,
 		TPub: tPub,
-		s:   s,
+		s:    s,
 	}, nil
 }
-// SeT sets a secret key for client c, based on the public keys of all the
+
+// SetT sets a secret key for client c, based on the public keys of all the
 // clients involved in the scheme. It assumes that Idx of a client indicates
 // which is the corresponding public key in pubT.
 func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
