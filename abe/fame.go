@@ -52,14 +52,14 @@ func NewFAME() *FAME {
 
 // FAMESecKey represents a master secret key of a FAME scheme.
 type FAMESecKey struct {
-	partInt [4]*big.Int
-	partG1  [3]*bn256.G1
+	PartInt [4]*big.Int
+	PartG1  [3]*bn256.G1
 }
 
 // FAMEPubKey represents a public key of a FAME scheme.
 type FAMEPubKey struct {
-	partG2 [2]*bn256.G2
-	partGT [2]*bn256.GT
+	PartG2 [2]*bn256.G2
+	PartGT [2]*bn256.GT
 }
 
 // GenerateMasterKeys generates a new set of public keys, needed
@@ -83,16 +83,16 @@ func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
 	partGT := [2]*bn256.GT{new(bn256.GT).ScalarBaseMult(tmp1),
 		new(bn256.GT).ScalarBaseMult(tmp2)}
 
-	return &FAMEPubKey{partG2: partG2, partGT: partGT},
-		&FAMESecKey{partInt: partInt, partG1: partG1}, nil
+	return &FAMEPubKey{PartG2: partG2, PartGT: partGT},
+		&FAMESecKey{PartInt: partInt, PartG1: partG1}, nil
 }
 
 // FAMECipher represents a ciphertext of a FAME scheme.
 type FAMECipher struct {
-	ct0     [3]*bn256.G2
-	ct      [][3]*bn256.G1
-	ctPrime *bn256.GT
-	msp     *MSP
+	Ct0     [3]*bn256.G2
+	Ct      [][3]*bn256.G1
+	CtPrime *bn256.GT
+	Msp     *MSP
 }
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
@@ -125,8 +125,8 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	if err != nil {
 		return nil, err
 	}
-	ct0 := [3]*bn256.G2{new(bn256.G2).ScalarMult(pk.partG2[0], s[0]),
-		new(bn256.G2).ScalarMult(pk.partG2[1], s[1]),
+	ct0 := [3]*bn256.G2{new(bn256.G2).ScalarMult(pk.PartG2[0], s[0]),
+		new(bn256.G2).ScalarMult(pk.PartG2[1], s[1]),
 		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
 
 	ct := make([][3]*bn256.G1, len(msp.Mat))
@@ -172,20 +172,20 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 		}
 	}
 
-	ctPrime := new(bn256.GT).ScalarMult(pk.partGT[0], s[0])
-	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.partGT[1], s[1]))
+	ctPrime := new(bn256.GT).ScalarMult(pk.PartGT[0], s[0])
+	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.PartGT[1], s[1]))
 	ctPrime.Add(ctPrime, msgInGt)
 
-	return &FAMECipher{ct0: ct0, ct: ct, ctPrime: ctPrime, msp: msp}, nil
+	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp}, nil
 }
 
 // FAMEAttribKeys represents keys corresponding to attributes possessed by
 // an entity and used for decrypting in a FAME scheme.
 type FAMEAttribKeys struct {
-	k0        [3]*bn256.G2
-	k         [][3]*bn256.G1
-	kPrime    [3]*bn256.G1
-	attribToI map[int]int
+	K0        [3]*bn256.G2
+	K         [][3]*bn256.G1
+	KPrime    [3]*bn256.G1
+	AttribToI map[int]int
 }
 
 // GenerateAttribKeys given a set of attributes gamma and the master secret key
@@ -202,9 +202,9 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		return nil, err
 	}
 
-	pow0 := new(big.Int).Mul(sk.partInt[2], r[0])
+	pow0 := new(big.Int).Mul(sk.PartInt[2], r[0])
 	pow0.Mod(pow0, a.P)
-	pow1 := new(big.Int).Mul(sk.partInt[3], r[1])
+	pow1 := new(big.Int).Mul(sk.PartInt[3], r[1])
 	pow1.Mod(pow1, a.P)
 	pow2 := new(big.Int).Add(r[0], r[1])
 	pow2.Mod(pow2, a.P)
@@ -213,8 +213,8 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		new(bn256.G2).ScalarBaseMult(pow1),
 		new(bn256.G2).ScalarBaseMult(pow2)}
 
-	a0Inv := new(big.Int).ModInverse(sk.partInt[0], a.P)
-	a1Inv := new(big.Int).ModInverse(sk.partInt[1], a.P)
+	a0Inv := new(big.Int).ModInverse(sk.PartInt[0], a.P)
+	a1Inv := new(big.Int).ModInverse(sk.PartInt[1], a.P)
 	aInv := [2]*big.Int{a0Inv, a1Inv}
 
 	k := make([][3]*bn256.G1, len(gamma))
@@ -279,14 +279,14 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		kPrime[t].Add(kPrime[t], hs2)
 		kPrime[t].Add(kPrime[t], gSigmaPrime)
 		kPrime[t].ScalarMult(kPrime[t], aInv[t])
-		kPrime[t].Add(kPrime[t], sk.partG1[t])
+		kPrime[t].Add(kPrime[t], sk.PartG1[t])
 
 	}
 	kPrime[2].ScalarBaseMult(sigmaPrime)
 	kPrime[2].Neg(kPrime[2])
-	kPrime[2].Add(kPrime[2], sk.partG1[2])
+	kPrime[2].Add(kPrime[2], sk.PartG1[2])
 
-	return &FAMEAttribKeys{k0: k0, k: k, kPrime: kPrime, attribToI: attribToI}, nil
+	return &FAMEAttribKeys{K0: k0, K: k, KPrime: kPrime, AttribToI: attribToI}, nil
 }
 
 // Decrypt takes as an input a cipher and an FAMEAttribKeys and tries to decrypt
@@ -296,13 +296,13 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (string, error) {
 	// find out which attributes are owned
 	attribMap := make(map[int]bool)
-	for k := range key.attribToI {
+	for k := range key.AttribToI {
 		attribMap[k] = true
 	}
 
 	countAttrib := 0
-	for i := 0; i < len(cipher.msp.Mat); i++ {
-		if attribMap[cipher.msp.RowToAttrib[i]] {
+	for i := 0; i < len(cipher.Msp.Mat); i++ {
+		if attribMap[cipher.Msp.RowToAttrib[i]] {
 			countAttrib++
 		}
 	}
@@ -312,11 +312,11 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	ctForKey := make([][3]*bn256.G1, countAttrib)
 	rowToAttrib := make([]int, countAttrib)
 	countAttrib = 0
-	for i := 0; i < len(cipher.msp.Mat); i++ {
-		if attribMap[cipher.msp.RowToAttrib[i]] {
-			preMatForKey[countAttrib] = cipher.msp.Mat[i]
-			ctForKey[countAttrib] = cipher.ct[i]
-			rowToAttrib[countAttrib] = cipher.msp.RowToAttrib[i]
+	for i := 0; i < len(cipher.Msp.Mat); i++ {
+		if attribMap[cipher.Msp.RowToAttrib[i]] {
+			preMatForKey[countAttrib] = cipher.Msp.Mat[i]
+			ctForKey[countAttrib] = cipher.Ct[i]
+			rowToAttrib[countAttrib] = cipher.Msp.RowToAttrib[i]
 			countAttrib++
 		}
 	}
@@ -334,7 +334,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		return "", fmt.Errorf("provided key is not sufficient for decryption")
 	}
 
-	msgInGt := new(bn256.GT).Set(cipher.ctPrime)
+	msgInGt := new(bn256.GT).Set(cipher.CtPrime)
 
 	ctProd := new([3]*bn256.G1)
 	keyProd := new([3]*bn256.G1)
@@ -343,11 +343,11 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		keyProd[j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 		for i, e := range rowToAttrib {
 			ctProd[j].Add(ctProd[j], new(bn256.G1).ScalarMult(ctForKey[i][j], alpha[i]))
-			keyProd[j].Add(keyProd[j], new(bn256.G1).ScalarMult(key.k[key.attribToI[e]][j], alpha[i]))
+			keyProd[j].Add(keyProd[j], new(bn256.G1).ScalarMult(key.K[key.AttribToI[e]][j], alpha[i]))
 		}
-		keyProd[j].Add(keyProd[j], key.kPrime[j])
-		ctPairing := bn256.Pair(ctProd[j], key.k0[j])
-		keyPairing := bn256.Pair(keyProd[j], cipher.ct0[j])
+		keyProd[j].Add(keyProd[j], key.KPrime[j])
+		ctPairing := bn256.Pair(ctProd[j], key.K0[j])
+		keyPairing := bn256.Pair(keyProd[j], cipher.Ct0[j])
 		keyPairing.Neg(keyPairing)
 		msgInGt.Add(msgInGt, ctPairing)
 		msgInGt.Add(msgInGt, keyPairing)

@@ -27,32 +27,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ringLWEParams represents parameters for the ring LWE scheme.
-type ringLWEParams struct {
-	l int // Length of data vectors for inner product
+// RingLWEParams represents parameters for the ring LWE scheme.
+type RingLWEParams struct {
+	L     int        // Length of data vectors for inner product
 
-	// Main security parameters of the scheme
-	n int
+			 // Main security parameters of the scheme
+	N     int
 
-	// Settings for discrete gaussian sampler
-	sigma *big.Float // standard deviation
+			 // Settings for discrete gaussian sampler
+	Sigma *big.Float // standard deviation
 
-	bound *big.Int // upper bound for coordinates of input vectors
+	Bound *big.Int   // upper bound for coordinates of input vectors
 
-	p *big.Int // modulus for the resulting inner product
-	q *big.Int // modulus for ciphertext and keys
+	P     *big.Int   // modulus for the resulting inner product
+	Q     *big.Int   // modulus for ciphertext and keys
 
-	// a is a vector with n coordinates.
-	// It represents a random polynomial for the scheme.
-	a data.Vector
+			 // A is a vector with N coordinates.
+			 // It represents a random polynomial for the scheme.
+	A     data.Vector
 }
 
 // RingLWE represents a scheme instantiated from the LWE problem,
 // that is much more efficient than the LWE scheme. It operates in the
 // ring of polynomials R = Z[x]/((x^n)+1).
 type RingLWE struct {
-	params  *ringLWEParams
-	sampler *sample.NormalCumulative
+	Params  *RingLWEParams
+	Sampler *sample.NormalCumulative
 }
 
 // NewRingLWE configures a new instance of the scheme.
@@ -85,16 +85,16 @@ func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, err
 	}
 
 	return &RingLWE{
-		params: &ringLWEParams{
-			l:     l,
-			n:     n,
-			bound: bound,
-			p:     p,
-			q:     q,
-			sigma: sigma,
-			a:     randVec,
+		Params: &RingLWEParams{
+			L:     l,
+			N:     n,
+			Bound: bound,
+			P:     p,
+			Q:     q,
+			Sigma: sigma,
+			A:     randVec,
 		},
-		sampler: sample.NewNormalCumulative(sigma, uint(n), true),
+		Sampler: sample.NewNormalCumulative(sigma, uint(n), true),
 	}, nil
 }
 
@@ -102,9 +102,9 @@ func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, err
 func (s *RingLWE) center(X data.Matrix) data.Matrix {
 	return X.Apply(func(x *big.Int) *big.Int {
 		t := new(big.Int)
-		t.Mul(x, s.params.q)
-		t.Div(t, s.params.p)
-		t.Mod(t, s.params.q)
+		t.Mul(x, s.Params.Q)
+		t.Div(t, s.Params.P)
+		t.Mod(t, s.Params.Q)
 
 		return t
 	})
@@ -116,7 +116,7 @@ func (s *RingLWE) center(X data.Matrix) data.Matrix {
 //
 // In case secret key could not be generated, it returns an error.
 func (s *RingLWE) GenerateSecretKey() (data.Matrix, error) {
-	return data.NewRandomMatrix(s.params.l, s.params.n, s.sampler)
+	return data.NewRandomMatrix(s.Params.L, s.Params.N, s.Sampler)
 }
 
 // GeneratePublicKey accepts a master secret key SK and generates a
@@ -124,25 +124,25 @@ func (s *RingLWE) GenerateSecretKey() (data.Matrix, error) {
 // Public key is a matrix of l*n elements.
 // In case of a malformed secret key the function returns an error.
 func (s *RingLWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
-	if !SK.CheckDims(s.params.l, s.params.n) {
+	if !SK.CheckDims(s.Params.L, s.Params.N) {
 		return nil, gofe.MalformedPubKey
 	}
 	// Generate noise matrix
 	// Elements are sampled from the same distribution as the secret key S.
-	E, err := data.NewRandomMatrix(s.params.l, s.params.n, s.sampler)
+	E, err := data.NewRandomMatrix(s.Params.L, s.Params.N, s.Sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "public key generation failed")
 	}
 
 	// Calculate public key PK row by row as PKi = (a * SKi + Ei) % q.
 	// Multiplication and addition are in the ring of polynomials
-	PK := make(data.Matrix, s.params.l)
+	PK := make(data.Matrix, s.Params.L)
 	for i := 0; i < PK.Rows(); i++ {
-		pkI, _ := SK[i].MulAsPolyInRing(s.params.a)
+		pkI, _ := SK[i].MulAsPolyInRing(s.Params.A)
 		pkI = pkI.Add(E[i])
 		PK[i] = pkI
 	}
-	PK = PK.Mod(s.params.q)
+	PK = PK.Mod(s.Params.Q)
 
 	return PK, nil
 }
@@ -152,10 +152,10 @@ func (s *RingLWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 // In case of malformed secret key or input vector that violates the
 // configured bound, it returns an error.
 func (s *RingLWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
-	if err := y.CheckBound(s.params.bound); err != nil {
+	if err := y.CheckBound(s.Params.Bound); err != nil {
 		return nil, err
 	}
-	if !SK.CheckDims(s.params.l, s.params.n) {
+	if !SK.CheckDims(s.Params.L, s.Params.N) {
 		return nil, gofe.MalformedSecKey
 	}
 	// Secret key is a linear combination of input vector y and master secret keys.
@@ -164,7 +164,7 @@ func (s *RingLWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) 
 	if err != nil {
 		return nil, gofe.MalformedInput
 	}
-	skY = skY.Mod(s.params.q)
+	skY = skY.Mod(s.Params.Q)
 
 	return skY, nil
 }
@@ -176,50 +176,50 @@ func (s *RingLWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) 
 //
 //The resulting ciphertext has dimensions (l + 1) * n.
 func (s *RingLWE) Encrypt(X data.Matrix, PK data.Matrix) (data.Matrix, error) {
-	if err := X.CheckBound(s.params.bound); err != nil {
+	if err := X.CheckBound(s.Params.Bound); err != nil {
 		return nil, err
 	}
 
-	if !PK.CheckDims(s.params.l, s.params.n) {
+	if !PK.CheckDims(s.Params.L, s.Params.N) {
 		return nil, gofe.MalformedPubKey
 	}
-	if !X.CheckDims(s.params.l, s.params.n) {
+	if !X.CheckDims(s.Params.L, s.Params.N) {
 		return nil, gofe.MalformedInput
 	}
 
 	// Create a small random vector r
-	r, err := data.NewRandomVector(s.params.n, s.sampler)
+	r, err := data.NewRandomVector(s.Params.N, s.Sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in encrypt")
 	}
 	// Create noise matrix E to secure the encryption
-	E, err := data.NewRandomMatrix(s.params.l, s.params.n, s.sampler)
+	E, err := data.NewRandomMatrix(s.Params.L, s.Params.N, s.Sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in encrypt")
 	}
 	// Calculate cipher CT row by row as CTi = (PKi * r + Ei) % q.
 	// Multiplication and addition are in the ring of polynomials.
-	CT0 := make(data.Matrix, s.params.l)
+	CT0 := make(data.Matrix, s.Params.L)
 	for i := 0; i < CT0.Rows(); i++ {
 		CT0i, _ := PK[i].MulAsPolyInRing(r)
 		CT0i = CT0i.Add(E[i])
 		CT0[i] = CT0i
 	}
-	CT0 = CT0.Mod(s.params.q)
+	CT0 = CT0.Mod(s.Params.Q)
 
 	// Include the message X in the encryption
 	T := s.center(X)
 	CT0, _ = CT0.Add(T)
-	CT0 = CT0.Mod(s.params.q)
+	CT0 = CT0.Mod(s.Params.Q)
 
 	// Construct the last row of the cipher
-	ct1, _ := s.params.a.MulAsPolyInRing(r)
-	e, err := data.NewRandomVector(s.params.n, s.sampler)
+	ct1, _ := s.Params.A.MulAsPolyInRing(r)
+	e, err := data.NewRandomVector(s.Params.N, s.Sampler)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in encrypt")
 	}
 	ct1 = ct1.Add(e)
-	ct1 = ct1.Mod(s.params.q)
+	ct1 = ct1.Mod(s.Params.Q)
 
 	return append(CT0, ct1), nil
 }
@@ -229,25 +229,25 @@ func (s *RingLWE) Encrypt(X data.Matrix, PK data.Matrix) (data.Matrix, error) {
 // If decryption failed (for instance with input data that violates the
 // configured bound or malformed ciphertext or keys), error is returned.
 func (s *RingLWE) Decrypt(CT data.Matrix, skY, y data.Vector) (data.Vector, error) {
-	if err := y.CheckBound(s.params.bound); err != nil {
+	if err := y.CheckBound(s.Params.Bound); err != nil {
 		return nil, err
 	}
-	if len(skY) != s.params.n {
+	if len(skY) != s.Params.N {
 		return nil, gofe.MalformedDecKey
 	}
-	if len(y) != s.params.l {
+	if len(y) != s.Params.L {
 		return nil, gofe.MalformedInput
 	}
 
-	if !CT.CheckDims(s.params.l+1, s.params.n) {
+	if !CT.CheckDims(s.Params.L +1, s.Params.N) {
 		return nil, gofe.MalformedCipher
 	}
-	CT0 := CT[:s.params.l] // First l rows of cipher
-	ct1 := CT[s.params.l]  // Last row of cipher
+	CT0 := CT[:s.Params.L] // First l rows of cipher
+	ct1 := CT[s.Params.L]  // Last row of cipher
 
 	CT0Trans := CT0.Transpose()
 	CT0TransMulY, _ := CT0Trans.MulVec(y)
-	CT0TransMulY = CT0TransMulY.Mod(s.params.q)
+	CT0TransMulY = CT0TransMulY.Mod(s.Params.Q)
 
 	ct1MulSkY, _ := ct1.MulAsPolyInRing(skY)
 	ct1MulSkY = ct1MulSkY.Apply(func(x *big.Int) *big.Int {
@@ -255,16 +255,16 @@ func (s *RingLWE) Decrypt(CT data.Matrix, skY, y data.Vector) (data.Vector, erro
 	})
 
 	d := CT0TransMulY.Add(ct1MulSkY)
-	d = d.Mod(s.params.q)
-	halfQ := new(big.Int).Div(s.params.q, big.NewInt(2))
+	d = d.Mod(s.Params.Q)
+	halfQ := new(big.Int).Div(s.Params.Q, big.NewInt(2))
 
 	d = d.Apply(func(x *big.Int) *big.Int {
 		if x.Cmp(halfQ) == 1 {
-			x.Sub(x, s.params.q)
+			x.Sub(x, s.Params.Q)
 		}
-		x.Mul(x, s.params.p)
+		x.Mul(x, s.Params.P)
 		x.Add(x, halfQ)
-		x.Div(x, s.params.q)
+		x.Div(x, s.Params.Q)
 
 		return x
 	})

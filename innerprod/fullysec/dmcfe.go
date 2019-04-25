@@ -33,10 +33,10 @@ import (
 // DMCFEClient is to be instantiated by the encryptor. Idx presents index of the encryptor entity.
 type DMCFEClient struct {
 	Idx  int
-	tSec data.Matrix
+	TSec data.Matrix
 	TPub data.Matrix
-	t    data.Matrix
-	s    data.Vector
+	T    data.Matrix
+	S    data.Vector
 }
 
 // NewDMCFEClient is to be called by the party that wants to encrypt number x_i.
@@ -64,9 +64,9 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 
 	return &DMCFEClient{
 		Idx:  idx,
-		tSec: tSec,
+		TSec: tSec,
 		TPub: tPub,
-		s:    s,
+		S:    s,
 	}, nil
 }
 
@@ -83,7 +83,7 @@ func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
 		}
 		for i := 0; i < 2; i++ {
 			for j := 0; j < 2; j++ {
-				add[i][j] = new(big.Int).Exp(pubT[k][i][j], c.tSec[i][j], bn256.Order)
+				add[i][j] = new(big.Int).Exp(pubT[k][i][j], c.TSec[i][j], bn256.Order)
 			}
 		}
 		if k < c.Idx {
@@ -99,7 +99,7 @@ func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
 		}
 		t = t.Mod(bn256.Order)
 	}
-	c.t = t
+	c.T = t
 
 	return nil
 }
@@ -107,7 +107,7 @@ func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
 // Encrypt encrypts number x under some label.
 func (c *DMCFEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	u := hash([]byte(label))
-	ct, err := u.Dot(c.s)
+	ct, err := u.Dot(c.S)
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing inner product")
 	}
@@ -136,8 +136,8 @@ func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	}
 	v := hash(yRepr)
 
-	keyShare1 := c.s.MulScalar(y[c.Idx])
-	keyShare2, err := c.t.MulVec(v)
+	keyShare1 := c.S.MulScalar(y[c.Idx])
+	keyShare2, err := c.T.MulVec(v)
 	if err != nil {
 		return nil, errors.Wrap(err, "error multiplying matrix with vector")
 	}
@@ -151,14 +151,14 @@ func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 }
 
 type DMCFEDecryptor struct {
-	y        data.Vector
-	label    string
-	ciphers  []*bn256.G1
-	key1     *bn256.G2
-	key2     *bn256.G2
-	bound    *big.Int
-	gCalc    *dlog.CalcBN256
-	gInvCalc *dlog.CalcBN256
+	Y        data.Vector
+	Label    string
+	Ciphers  []*bn256.G1
+	Key1     *bn256.G2
+	Key2     *bn256.G2
+	Bound    *big.Int
+	GCalc    *dlog.CalcBN256
+	GInvCalc *dlog.CalcBN256
 }
 
 // NewDMCFEDecryptor is to be called by a party that wants to decrypt a message - to compute inner product
@@ -175,14 +175,14 @@ func NewDMCFEDecryptor(y data.Vector, label string, ciphers []*bn256.G1, keyShar
 	}
 
 	return &DMCFEDecryptor{
-		y:        y,
-		label:    label,
-		ciphers:  ciphers,
-		key1:     key1,
-		key2:     key2,
-		bound:    bound,
-		gCalc:    dlog.NewCalc().InBN256(),
-		gInvCalc: dlog.NewCalc().InBN256(),
+		Y:        y,
+		Label:    label,
+		Ciphers:  ciphers,
+		Key1:     key1,
+		Key2:     key2,
+		Bound:    bound,
+		GCalc:    dlog.NewCalc().InBN256(),
+		GInvCalc: dlog.NewCalc().InBN256(),
 	}
 }
 
@@ -190,16 +190,16 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	cSum := new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 	cAdd := new(bn256.G1)
-	for i := 0; i < len(d.ciphers); i++ {
-		cAdd.ScalarMult(d.ciphers[i], d.y[i])
+	for i := 0; i < len(d.Ciphers); i++ {
+		cAdd.ScalarMult(d.Ciphers[i], d.Y[i])
 		cSum.Add(cSum, cAdd)
 	}
 	s := bn256.Pair(cSum, gen)
-	u := hash([]byte(d.label))
+	u := hash([]byte(d.Label))
 	u0 := new(bn256.G1).ScalarBaseMult(u[0])
 	u1 := new(bn256.G1).ScalarBaseMult(u[1])
-	t1 := bn256.Pair(u0, d.key1)
-	t2 := bn256.Pair(u1, d.key2)
+	t1 := bn256.Pair(u0, d.Key1)
+	t2 := bn256.Pair(u1, d.Key2)
 	t1.Add(t1, t2)
 	t1.Neg(t1)
 	s.Add(s, t1)
@@ -209,10 +209,10 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	g := bn256.Pair(g1gen, g2gen)
 
 	var dec *big.Int // dec is decryption
-	dec, err := d.gCalc.WithBound(d.bound).BabyStepGiantStepStd(s, g)
+	dec, err := d.GCalc.WithBound(d.Bound).BabyStepGiantStepStd(s, g)
 	if err != nil {
 		gInv := new(bn256.GT).Neg(g)
-		dec, err = d.gInvCalc.WithBound(d.bound).BabyStepGiantStepStd(s, gInv)
+		dec, err = d.GInvCalc.WithBound(d.Bound).BabyStepGiantStepStd(s, gInv)
 		if err != nil {
 			return nil, err
 		}
