@@ -29,34 +29,34 @@ import (
 	"github.com/pkg/errors"
 )
 
-// lweParams represents parameters for the fully secure LWE scheme.
-type lweParams struct {
-	l int // Length of data vectors for inner product
+// LWEParams represents parameters for the fully secure LWE scheme.
+type LWEParams struct {
+	L      int      // Length of data vectors for inner product
 
-	n int // Main security parameters of the scheme
-	m int // Number of samples
+	N      int      // Main security parameters of the scheme
+	M      int      // Number of samples
 
-	boundX *big.Int // Message space size
-	boundY *big.Int // Inner product vector space size
+	BoundX *big.Int // Message space size
+	BoundY *big.Int // Inner product vector space size
 
-	// Modulus for the resulting inner product.
-	// K depends on the parameters l, P and V and is computed by the scheme.
-	K *big.Int
+			// Modulus for the resulting inner product.
+			// K depends on the parameters L, P and V and is computed by the scheme.
+	K      *big.Int
 
-	// Modulus for ciphertext and keys.
-	// Must be significantly larger than K.
-	// TODO check appropriateness of this parameter in constructor!
-	q *big.Int
+			// Modulus for ciphertext and keys.
+			// Must be significantly larger than K.
+			// TODO check appropriateness of this parameter in constructor!
+	Q      *big.Int
 
-	// standard deviation for the noise terms in the encryption process
-	sigmaQ *big.Float
-	// standard deviation for first half of the matrix for sampling private key
-	sigma1 *big.Float
-	// standard deviation for second half of the matrix for sampling private key
-	sigma2 *big.Float
+			// standard deviation for the noise terms in the encryption process
+	SigmaQ *big.Float
+			// standard deviation for first half of the matrix for sampling private key
+	Sigma1 *big.Float
+			// standard deviation for second half of the matrix for sampling private key
+	Sigma2 *big.Float
 
-	// Matrix A of dimensions m*n is a public parameter of the scheme
-	A data.Matrix
+			// Matrix A of dimensions M*N is a public parameter of the scheme
+	A      data.Matrix
 }
 
 // LWE represents a scheme instantiated from the LWE problem.
@@ -65,7 +65,7 @@ type lweParams struct {
 // "Fully secure functional encryption for inner products,
 // from standard assumptions".
 type LWE struct {
-	params *lweParams
+	Params *LWEParams
 }
 
 // NewLWE configures a new instance of the scheme.
@@ -174,17 +174,17 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 			"cannot generate parameters, generating a random matrix failed")
 	}
 	return &LWE{
-		params: &lweParams{
-			l:      l,
-			n:      n,
-			m:      m,
-			boundX: boundX,
-			boundY: boundY,
-			q:      q,
+		Params: &LWEParams{
+			L:      l,
+			N:      n,
+			M:      m,
+			BoundX: boundX,
+			BoundY: boundY,
+			Q:      q,
 			K:      K,
-			sigmaQ: sigmaQ,
-			sigma1: sigma1,
-			sigma2: sigma2,
+			SigmaQ: sigmaQ,
+			Sigma1: sigma1,
+			Sigma2: sigma2,
 			A:      randMat,
 		},
 	}, nil
@@ -197,19 +197,19 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	var val *big.Int
 
-	sampler1, err := sample.NewNormalDouble(s.params.sigma1, uint(s.params.n), big.NewFloat(1))
+	sampler1, err := sample.NewNormalDouble(s.Params.Sigma1, uint(s.Params.N), big.NewFloat(1))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating secret key")
 	}
-	sampler2, err := sample.NewNormalDouble(s.params.sigma2, uint(s.params.n), big.NewFloat(1))
+	sampler2, err := sample.NewNormalDouble(s.Params.Sigma2, uint(s.Params.N), big.NewFloat(1))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating secret key")
 	}
 
-	Z := make(data.Matrix, s.params.l)
+	Z := make(data.Matrix, s.Params.L)
 	halfRows := Z.Rows() / 2
 	for i := 0; i < Z.Rows(); i++ {
-		Z[i] = make(data.Vector, s.params.m)
+		Z[i] = make(data.Vector, s.Params.M)
 		for j := 0; j < Z.Cols(); j++ {
 			if j < halfRows { // first half
 				val, _ = sampler1.Sample()
@@ -232,12 +232,12 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 // Public key is a matrix of l*m elements.
 // In case of a malformed secret key the function returns an error.
 func (s *LWE) GeneratePublicKey(Z data.Matrix) (data.Matrix, error) {
-	if !Z.CheckDims(s.params.l, s.params.m) {
+	if !Z.CheckDims(s.Params.L, s.Params.M) {
 		return nil, gofe.MalformedSecKey
 	}
 	// public key is obtained by multiplying secret key Z by a random matrix A.
-	U, _ := Z.Mul(s.params.A)
-	U = U.Mod(s.params.q)
+	U, _ := Z.Mul(s.Params.A)
+	U = U.Mod(s.Params.Q)
 
 	return U, nil
 }
@@ -247,10 +247,10 @@ func (s *LWE) GeneratePublicKey(Z data.Matrix) (data.Matrix, error) {
 // In case of malformed secret key or input vector that violates the
 // configured bound, it returns an error.
 func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
-	if err := y.CheckBound(s.params.boundY); err != nil {
+	if err := y.CheckBound(s.Params.BoundY); err != nil {
 		return nil, err
 	}
-	if !Z.CheckDims(s.params.l, s.params.m) {
+	if !Z.CheckDims(s.Params.L, s.Params.M) {
 		return nil, gofe.MalformedSecKey
 	}
 	// Secret key is a linear combination of input vector x and master secret key Z.
@@ -258,7 +258,7 @@ func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
 	if err != nil {
 		return nil, gofe.MalformedInput
 	}
-	zY = zY.Mod(s.params.q)
+	zY = zY.Mod(s.Params.Q)
 
 	return zY, nil
 }
@@ -268,46 +268,46 @@ func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
 // public key or input vector that violates the configured bound,
 // it returns an error.
 func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
-	if err := x.CheckBound(s.params.boundX); err != nil {
+	if err := x.CheckBound(s.Params.BoundX); err != nil {
 		return nil, err
 	}
-	if !U.CheckDims(s.params.l, s.params.n) {
+	if !U.CheckDims(s.Params.L, s.Params.N) {
 		return nil, gofe.MalformedPubKey
 	}
-	if len(x) != s.params.l {
+	if len(x) != s.Params.L {
 		return nil, gofe.MalformedInput
 	}
 
 	// Create a random vector
-	r, err := data.NewRandomVector(s.params.n, sample.NewUniform(s.params.q))
+	r, err := data.NewRandomVector(s.Params.N, sample.NewUniform(s.Params.Q))
 	if err != nil {
 		return nil, errors.Wrap(err, "error in encrypt")
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	sampler, err := sample.NewNormalDouble(s.params.sigmaQ, uint(s.params.n), big.NewFloat(1))
+	sampler, err := sample.NewNormalDouble(s.Params.SigmaQ, uint(s.Params.N), big.NewFloat(1))
 	if err != nil {
 		return nil, errors.Wrap(err, "error in encrypt")
 	}
-	e0, err0 := data.NewRandomVector(s.params.m, sampler)
-	e1, err1 := data.NewRandomVector(s.params.l, sampler)
+	e0, err0 := data.NewRandomVector(s.Params.M, sampler)
+	e1, err1 := data.NewRandomVector(s.Params.L, sampler)
 	if err0 != nil || err1 != nil {
 		return nil, errors.Wrap(err0, "error in encrypt")
 	}
 
 	// calculate first part of the cipher
-	c0, _ := s.params.A.MulVec(r)
+	c0, _ := s.Params.A.MulVec(r)
 	c0 = c0.Add(e0)
-	c0 = c0.Mod(s.params.q)
+	c0 = c0.Mod(s.Params.Q)
 
 	// calculate second part of the cipher
-	qDivK := new(big.Int).Div(s.params.q, s.params.K)
+	qDivK := new(big.Int).Div(s.Params.Q, s.Params.K)
 	t := x.MulScalar(qDivK) // center
 
 	c1, _ := U.MulVec(r)
 	c1 = c1.Add(e1)
 	c1 = c1.Add(t)
-	c1 = c1.Mod(s.params.q)
+	c1 = c1.Mod(s.Params.Q)
 
 	return append(c0, c1...), nil
 }
@@ -317,33 +317,33 @@ func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
 // If decryption failed (for instance with input data that violates the
 // configured bound or malformed ciphertext or keys), error is returned.
 func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
-	if err := y.CheckBound(s.params.boundY); err != nil {
+	if err := y.CheckBound(s.Params.BoundY); err != nil {
 		return nil, err
 	}
-	if len(zY) != s.params.m {
+	if len(zY) != s.Params.M {
 		return nil, gofe.MalformedDecKey
 	}
-	if len(y) != s.params.l {
+	if len(y) != s.Params.L {
 		return nil, gofe.MalformedInput
 	}
 
-	if len(cipher) != s.params.m+s.params.l {
+	if len(cipher) != s.Params.M +s.Params.L {
 		return nil, gofe.MalformedCipher
 	}
-	c0 := cipher[:s.params.m]
-	c1 := cipher[s.params.m:]
+	c0 := cipher[:s.Params.M]
+	c1 := cipher[s.Params.M:]
 	yDotC1, _ := y.Dot(c1)
 	zYDotC0, _ := zY.Dot(c0)
 
 	mu1 := new(big.Int).Sub(yDotC1, zYDotC0)
-	mu1.Mod(mu1, s.params.q)
-	if mu1.Cmp(new(big.Int).Quo(s.params.q, big.NewInt(2))) == 1 {
-		mu1.Sub(mu1, s.params.q)
+	mu1.Mod(mu1, s.Params.Q)
+	if mu1.Cmp(new(big.Int).Quo(s.Params.Q, big.NewInt(2))) == 1 {
+		mu1.Sub(mu1, s.Params.Q)
 	}
 	// TODO Improve!
-	kTimes2 := new(big.Int).Lsh(s.params.K, 1)
-	qDivK := new(big.Int).Div(s.params.q, s.params.K)
-	qDivKTimes2 := new(big.Int).Div(s.params.q, kTimes2)
+	kTimes2 := new(big.Int).Lsh(s.Params.K, 1)
+	qDivK := new(big.Int).Div(s.Params.Q, s.Params.K)
+	qDivKTimes2 := new(big.Int).Div(s.Params.Q, kTimes2)
 
 	mu := new(big.Int).Add(mu1, qDivKTimes2)
 	mu.Div(mu, qDivK)

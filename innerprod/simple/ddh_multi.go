@@ -31,7 +31,7 @@ import (
 // Function-Hiding Realizations and Constructions without Pairings".
 type DDHMulti struct {
 	// number of encryptors
-	slots int
+	Slots int
 	*DDH
 }
 
@@ -50,7 +50,7 @@ func NewDDHMulti(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error)
 	}
 
 	return &DDHMulti{
-		slots: slots,
+		Slots: slots,
 		DDH:   ddh,
 	}, nil
 }
@@ -60,16 +60,16 @@ func NewDDHMulti(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error)
 // the scheme with same configuration parameters.
 //
 // It returns a new DDHMulti instance.
-func NewDDHMultiFromParams(slots int, params *ddhParams) *DDHMulti {
+func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
 	return &DDHMulti{
-		slots: slots,
+		Slots: slots,
 		DDH:   &DDH{params},
 	}
 }
 
 // DDHMultiSecKey is a secret key for DDH multi input scheme.
 type DDHMultiSecKey struct {
-	msk    data.Matrix
+	Msk    data.Matrix
 	OtpKey data.Matrix
 }
 
@@ -78,11 +78,11 @@ type DDHMultiSecKey struct {
 //
 // It returns an error in case master keys could not be generated.
 func (dm *DDHMulti) GenerateMasterKeys() (data.Matrix, *DDHMultiSecKey, error) {
-	mskVecs := make([]data.Vector, dm.slots)
-	mpkVecs := make([]data.Vector, dm.slots)
-	otpVecs := make([]data.Vector, dm.slots)
+	mskVecs := make([]data.Vector, dm.Slots)
+	mpkVecs := make([]data.Vector, dm.Slots)
+	otpVecs := make([]data.Vector, dm.Slots)
 
-	for i := 0; i < dm.slots; i++ {
+	for i := 0; i < dm.Slots; i++ {
 		masterSecretKey, masterPublicKey, err := dm.DDH.GenerateMasterKeys()
 
 		if err != nil {
@@ -91,7 +91,7 @@ func (dm *DDHMulti) GenerateMasterKeys() (data.Matrix, *DDHMultiSecKey, error) {
 		mskVecs[i] = masterSecretKey
 		mpkVecs[i] = masterPublicKey
 
-		otpVector, err := data.NewRandomVector(dm.Params.l, sample.NewUniform(dm.Params.bound))
+		otpVector, err := data.NewRandomVector(dm.Params.L, sample.NewUniform(dm.Params.Bound))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in random vector generation")
 		}
@@ -118,7 +118,7 @@ func (dm *DDHMulti) GenerateMasterKeys() (data.Matrix, *DDHMultiSecKey, error) {
 
 // DDHMultiDerivedKey is functional encryption key for DDH Scheme.
 type DDHMultiDerivedKey struct {
-	keys   data.Vector
+	Keys   data.Vector
 	OTPKey *big.Int
 }
 
@@ -126,7 +126,7 @@ type DDHMultiDerivedKey struct {
 // of input vectors, and returns the functional encryption key.
 // In case the key could not be derived, it returns an error.
 func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiDerivedKey, error) {
-	if err := y.CheckBound(dm.Params.bound); err != nil {
+	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}
 
@@ -134,12 +134,12 @@ func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiD
 	if err != nil {
 		return nil, err
 	}
-	z.Mod(z, dm.Params.bound)
+	z.Mod(z, dm.Params.Bound)
 
-	derivedKeys := make([]*big.Int, dm.slots)
+	derivedKeys := make([]*big.Int, dm.Slots)
 
-	for i := 0; i < dm.slots; i++ {
-		derivedKey, err := dm.DDH.DeriveKey(secKey.msk[i], y[i])
+	for i := 0; i < dm.Slots; i++ {
+		derivedKey, err := dm.DDH.DeriveKey(secKey.Msk[i], y[i])
 		if err != nil {
 			return nil, err
 		}
@@ -155,13 +155,13 @@ func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiD
 // It returns the sum of inner products.
 // If decryption failed, error is returned.
 func (dm *DDHMulti) Decrypt(cipher data.Matrix, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
-	if err := y.CheckBound(dm.Params.bound); err != nil {
+	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}
 
 	sum := big.NewInt(0)
-	for i := 0; i < dm.slots; i++ {
-		c, err := dm.DDH.Decrypt(cipher[i], key.keys[i], y[i])
+	for i := 0; i < dm.Slots; i++ {
+		c, err := dm.DDH.Decrypt(cipher[i], key.Keys[i], y[i])
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +170,7 @@ func (dm *DDHMulti) Decrypt(cipher data.Matrix, key *DDHMultiDerivedKey, y data.
 	}
 
 	res := new(big.Int).Sub(sum, key.OTPKey)
-	res.Mod(res, dm.Params.bound)
+	res.Mod(res, dm.Params.Bound)
 	return res, nil
 }
 
@@ -181,7 +181,7 @@ type DDHMultiEnc struct {
 
 // NewDDHMultiEnc takes configuration parameters of an underlying
 // DDH scheme instance, and instantiates a new DDHMultiEnc.
-func NewDDHMultiEnc(params *ddhParams) *DDHMultiEnc {
+func NewDDHMultiEnc(params *DDHParams) *DDHMultiEnc {
 	return &DDHMultiEnc{
 		DDH: &DDH{params},
 	}
@@ -192,12 +192,12 @@ func NewDDHMultiEnc(params *ddhParams) *DDHMultiEnc {
 // is a part of the secret key). It returns the ciphertext vector.
 // If encryption failed, error is returned.
 func (e *DDHMultiEnc) Encrypt(x data.Vector, pubKey, otp data.Vector) (data.Vector, error) {
-	if err := x.CheckBound(e.Params.bound); err != nil {
+	if err := x.CheckBound(e.Params.Bound); err != nil {
 		return nil, err
 	}
 
 	otp = x.Add(otp)
-	otpModulo := otp.Mod(e.Params.bound)
+	otpModulo := otp.Mod(e.Params.Bound)
 
 	return e.DDH.Encrypt(otpModulo, pubKey)
 }

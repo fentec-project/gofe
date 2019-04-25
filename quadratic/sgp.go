@@ -38,17 +38,17 @@ import (
 // and vectors x, y are only known to the encryptor, but not to decryptor.
 type SGP struct {
 	// length of vectors x and y (matrix F is N x N)
-	N int
+	N        int
 	// Modulus for ciphertext and keys
-	mod *big.Int
+	Mod      *big.Int
 
-	// TODO: If needed, bound can be changed to have different bounds for x, y, F.
+	// TODO: If needed, Bound can be changed to have different bounds for x, y, F.
 	// The value by which elements of vectors x, y, and the
 	// matrix F are bounded.
-	Bound *big.Int
+	Bound    *big.Int
 
-	gCalc    *dlog.CalcBN256
-	gInvCalc *dlog.CalcBN256
+	GCalc    *dlog.CalcBN256
+	GInvCalc *dlog.CalcBN256
 }
 
 // NewSGP configures a new instance of the SGP scheme.
@@ -58,10 +58,10 @@ type SGP struct {
 func NewSGP(n int, b *big.Int) *SGP {
 	return &SGP{
 		N:        n,
-		mod:      bn256.Order,
+		Mod:      bn256.Order,
 		Bound:    b,
-		gCalc:    dlog.NewCalc().InBN256(), //.WithBound(b),
-		gInvCalc: dlog.NewCalc().InBN256(), //.WithBound(b),
+		GCalc:    dlog.NewCalc().InBN256(), //.WithBound(b),
+		GInvCalc: dlog.NewCalc().InBN256(), //.WithBound(b),
 	}
 }
 
@@ -86,7 +86,7 @@ func NewSGPSecKey(s, t data.Vector) *SGPSecKey {
 // not be generated.
 func (q *SGP) GenerateMasterKey() (*SGPSecKey, error) {
 	// msk is random s, t from Z_p^n
-	sampler := sample.NewUniform(q.mod)
+	sampler := sample.NewUniform(q.Mod)
 	s, err := data.NewRandomVector(q.N, sampler)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func NewSGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
 // master secret key msk. It returns the appropriate ciphertext.
 // If ciphertext could not be generated, it returns an error.
 func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
-	sampler := sample.NewUniform(q.mod)
+	sampler := sample.NewUniform(q.Mod)
 	gamma, err := sampler.Sample()
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		return nil, err
 	}
 
-	WInv, err := W.InverseMod(q.mod)
+	WInv, err := W.InverseMod(q.Mod)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 	for i := 0; i < q.N; i++ {
 		// v = (x_i, gamma * s_i)
 		tmp := new(big.Int).Mul(gamma, msk.S[i])
-		tmp.Mod(tmp, q.mod)
+		tmp.Mod(tmp, q.Mod)
 		v := data.NewVector([]*big.Int{x[i], tmp})
 		ai, err := WInvT.MulVec(v)
 		if err != nil {
@@ -153,7 +153,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		a[i] = ai
 
 		// v = (y_i, -t_i)
-		tiNeg := new(big.Int).Sub(q.mod, msk.T[i])
+		tiNeg := new(big.Int).Sub(q.Mod, msk.T[i])
 		bi, err := W.MulVec(data.NewVector([]*big.Int{y[i], tiNeg}))
 		if err != nil {
 			return nil, err
@@ -226,5 +226,5 @@ func (q *SGP) Decrypt(c *SGPCipher, key *bn256.G2, F data.Matrix) (*big.Int, err
 	n2 := new(big.Int).Exp(big.NewInt(int64(q.N)), big.NewInt(2), nil)
 	b := new(big.Int).Mul(n2, b3)
 
-	return q.gCalc.WithBound(b).WithNeg().BabyStepGiantStep(prod, g)
+	return q.GCalc.WithBound(b).WithNeg().BabyStepGiantStep(prod, g)
 }

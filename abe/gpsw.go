@@ -64,8 +64,8 @@ func NewGPSW(l int) *GPSW {
 
 // GPSWPubKey represents a public key of the GPSW ABE-scheme.
 type GPSWPubKey struct {
-	t data.VectorG2
-	y *bn256.GT
+	T data.VectorG2
+	Y *bn256.GT
 }
 
 // GenerateMasterKeys generates a new set of public keys, needed
@@ -80,15 +80,15 @@ func (a *GPSW) GenerateMasterKeys() (*GPSWPubKey, data.Vector, error) {
 	t := sk[:a.Params.L].MulG2()
 	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.L])
 
-	return &GPSWPubKey{t: t, y: y}, sk, nil
+	return &GPSWPubKey{T: t, Y: y}, sk, nil
 }
 
 // GPSWCipher represents a ciphertext of the GPSW ABE-scheme.
 type GPSWCipher struct {
-	gamma     []int         // the set of attributes that can be used for policy of decryption
-	attribToI map[int]int   // a map that connects the attributes in gamma with elements of e
-	e0        *bn256.GT     // the first part of the encryption
-	e         data.VectorG2 // the second part of the encryption
+	Gamma     []int         // the set of attributes that can be used for policy of decryption
+	AttribToI map[int]int   // a map that connects the attributes in gamma with elements of e
+	E0        *bn256.GT     // the first part of the encryption
+	E         data.VectorG2 // the second part of the encryption
 }
 
 // Encrypt takes as an input a message msg given as a string, gamma a set of
@@ -107,18 +107,18 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 		return nil, err
 	}
 
-	e0 := new(bn256.GT).Add(msgInGt, new(bn256.GT).ScalarMult(pk.y, s))
+	e0 := new(bn256.GT).Add(msgInGt, new(bn256.GT).ScalarMult(pk.Y, s))
 	e := make(data.VectorG2, len(gamma))
 	attribToI := make(map[int]int)
 	for i, el := range gamma {
-		e[i] = new(bn256.G2).ScalarMult(pk.t[el], s)
+		e[i] = new(bn256.G2).ScalarMult(pk.T[el], s)
 		attribToI[el] = i
 	}
 
-	return &GPSWCipher{gamma: gamma,
-		attribToI: attribToI,
-		e0:        e0,
-		e:         e}, nil
+	return &GPSWCipher{Gamma: gamma,
+		AttribToI: attribToI,
+		E0:        e0,
+		E:         e}, nil
 }
 
 // GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
@@ -178,13 +178,13 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 }
 
 // GPSWKey represents a key structure for decrypting a ciphertext. It includes
-// mat a matrix, d a set of vectors and rowToAttib a mapping from rows of mat
-// (or entries of d) to corresponding attributes. Vector d is a set of keys
+// Mat a matrix, D a set of vectors and RowToAttib a mapping from rows of Mat
+// (or entries of D) to corresponding attributes. Vector D is a set of keys
 // that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
 type GPSWKey struct {
-	mat         data.Matrix
-	d           data.VectorG1
-	rowToAttrib []int
+	Mat         data.Matrix
+	D           data.VectorG1
+	RowToAttrib []int
 }
 
 // DelegateKeys given the set of all keys produced from the MSP struct msp joins
@@ -216,9 +216,9 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 		}
 	}
 
-	return &GPSWKey{mat: mat,
-		d:           d,
-		rowToAttrib: rowToAttrib}
+	return &GPSWKey{Mat: mat,
+		D:           d,
+		RowToAttrib: rowToAttrib}
 }
 
 // Decrypt takes as an input a cipher and an GPSWKey key and tries to decrypt
@@ -227,15 +227,15 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 // is not possible, an error is returned.
 func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get a combination alpha of keys needed to decrypt
-	ones := data.NewConstantVector(len(key.mat[0]), big.NewInt(1))
-	alpha, err := gaussianElimination(key.mat.Transpose(), ones, a.Params.P)
+	ones := data.NewConstantVector(len(key.Mat[0]), big.NewInt(1))
+	alpha, err := gaussianElimination(key.Mat.Transpose(), ones, a.Params.P)
 	if err != nil {
 		return "", fmt.Errorf("the provided key is not sufficient for the decryption")
 	}
 
-	msgInGt := new(bn256.GT).Set(cipher.e0)
+	msgInGt := new(bn256.GT).Set(cipher.E0)
 	for i := 0; i < len(alpha); i++ {
-		pair := bn256.Pair(key.d[i], cipher.e[cipher.attribToI[key.rowToAttrib[i]]])
+		pair := bn256.Pair(key.D[i], cipher.E[cipher.AttribToI[key.RowToAttrib[i]]])
 		pair.ScalarMult(pair, alpha[i])
 		pair.Neg(pair)
 		msgInGt.Add(msgInGt, pair)

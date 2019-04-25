@@ -31,7 +31,7 @@ import (
 // Function-Hiding Realizations and Constructions without Pairings".
 type DamgardMulti struct {
 	// number of encryptors
-	slots int
+	Slots int
 	*Damgard
 }
 
@@ -50,7 +50,7 @@ func NewDamgardMulti(slots, l, modulusLength int, bound *big.Int) (*DamgardMulti
 	}
 
 	return &DamgardMulti{
-		slots:   slots,
+		Slots:   slots,
 		Damgard: damgard,
 	}, nil
 }
@@ -60,16 +60,16 @@ func NewDamgardMulti(slots, l, modulusLength int, bound *big.Int) (*DamgardMulti
 // the scheme with same configuration parameters.
 //
 // It returns a new DamgardMulti instance.
-func NewDamgardMultiFromParams(slots int, params *damgardParams) *DamgardMulti {
+func NewDamgardMultiFromParams(slots int, params *DamgardParams) *DamgardMulti {
 	return &DamgardMulti{
-		slots:   slots,
+		Slots:   slots,
 		Damgard: &Damgard{params},
 	}
 }
 
 // DamgardMultiSecKey is a secret key for Damgard multi input scheme.
 type DamgardMultiSecKey struct {
-	msk []*DamgardSecKey
+	Msk []*DamgardSecKey
 	Otp data.Matrix
 }
 
@@ -78,11 +78,11 @@ type DamgardMultiSecKey struct {
 //
 // It returns an error in case master keys could not be generated.
 func (dm *DamgardMulti) GenerateMasterKeys() (data.Matrix, *DamgardMultiSecKey, error) {
-	multiMsk := make([]*DamgardSecKey, dm.slots)
-	multiMpk := make([]data.Vector, dm.slots)
-	multiOtp := make([]data.Vector, dm.slots)
+	multiMsk := make([]*DamgardSecKey, dm.Slots)
+	multiMpk := make([]data.Vector, dm.Slots)
+	multiOtp := make([]data.Vector, dm.Slots)
 
-	for i := 0; i < dm.slots; i++ {
+	for i := 0; i < dm.Slots; i++ {
 		msk, mpk, err := dm.Damgard.GenerateMasterKeys()
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in master key generation")
@@ -90,7 +90,7 @@ func (dm *DamgardMulti) GenerateMasterKeys() (data.Matrix, *DamgardMultiSecKey, 
 		multiMsk[i] = msk
 		multiMpk[i] = mpk
 
-		otp, err := data.NewRandomVector(dm.Params.l, sample.NewUniform(dm.Params.bound))
+		otp, err := data.NewRandomVector(dm.Params.L, sample.NewUniform(dm.Params.Bound))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in random vector generation")
 		}
@@ -98,7 +98,7 @@ func (dm *DamgardMulti) GenerateMasterKeys() (data.Matrix, *DamgardMultiSecKey, 
 	}
 
 	secKey := &DamgardMultiSecKey{
-		msk: multiMsk,
+		Msk: multiMsk,
 		Otp: multiOtp,
 	}
 
@@ -107,8 +107,8 @@ func (dm *DamgardMulti) GenerateMasterKeys() (data.Matrix, *DamgardMultiSecKey, 
 
 // DamgardMultiDerivedKey is a functional encryption key for DamgardMulti scheme.
 type DamgardMultiDerivedKey struct {
-	keys1 data.Vector
-	keys2 data.Vector
+	Keys1 data.Vector
+	Keys2 data.Vector
 	Z     *big.Int // Σ <u_i, y_i> where u_i is OTP key for i-th encryptor
 }
 
@@ -116,7 +116,7 @@ type DamgardMultiDerivedKey struct {
 // of input vectors, and returns the functional encryption key.
 // In case the key could not be derived, it returns an error.
 func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKey, y data.Matrix) (*DamgardMultiDerivedKey, error) {
-	if err := y.CheckBound(dm.Params.bound); err != nil {
+	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}
 
@@ -124,20 +124,20 @@ func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKey, y data.Matrix) (*D
 	if err != nil {
 		return nil, err
 	}
-	z.Mod(z, dm.Params.bound)
+	z.Mod(z, dm.Params.Bound)
 
-	derivedKeys1 := make([]*big.Int, dm.slots)
-	derivedKeys2 := make([]*big.Int, dm.slots)
+	derivedKeys1 := make([]*big.Int, dm.Slots)
+	derivedKeys2 := make([]*big.Int, dm.Slots)
 
-	for i := 0; i < dm.slots; i++ {
+	for i := 0; i < dm.Slots; i++ {
 		//secKeyI := &DamgardSecKey{secKey.msk1[i], secKey.msk2[i]}
-		derivedKey, err := dm.Damgard.DeriveKey(secKey.msk[i], y[i])
+		derivedKey, err := dm.Damgard.DeriveKey(secKey.Msk[i], y[i])
 		if err != nil {
 			return nil, err
 		}
 
-		derivedKeys1[i] = derivedKey.key1
-		derivedKeys2[i] = derivedKey.key2
+		derivedKeys1[i] = derivedKey.Key1
+		derivedKeys2[i] = derivedKey.Key2
 	}
 
 	return &DamgardMultiDerivedKey{data.NewVector(derivedKeys1), data.NewVector(derivedKeys2), z}, nil
@@ -148,13 +148,13 @@ func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKey, y data.Matrix) (*D
 // It returns the sum of inner products.
 // If decryption failed, error is returned.
 func (dm *DamgardMulti) Decrypt(cipher data.Matrix, key *DamgardMultiDerivedKey, y data.Matrix) (*big.Int, error) {
-	if err := y.CheckBound(dm.Params.bound); err != nil {
+	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}
 
 	sum := big.NewInt(0)
-	for i := 0; i < dm.slots; i++ {
-		keyI := &DamgardDerivedKey{key.keys1[i], key.keys2[i]}
+	for i := 0; i < dm.Slots; i++ {
+		keyI := &DamgardDerivedKey{key.Keys1[i], key.Keys2[i]}
 		cy, err := dm.Damgard.Decrypt(cipher[i], keyI, y[i])
 		if err != nil {
 			return nil, err
@@ -164,7 +164,7 @@ func (dm *DamgardMulti) Decrypt(cipher data.Matrix, key *DamgardMultiDerivedKey,
 	}
 
 	res := new(big.Int).Sub(sum, key.Z)
-	res.Mod(res, dm.Params.bound)
+	res.Mod(res, dm.Params.Bound)
 	return res, nil
 }
 
@@ -175,7 +175,7 @@ type DamgardMultiEnc struct {
 
 // NewDamgardMultiEnc takes configuration parameters of an underlying
 // Damgard scheme instance, and instantiates a new DamgardMultiEnc.
-func NewDamgardMultiEnc(params *damgardParams) *DamgardMultiEnc {
+func NewDamgardMultiEnc(params *DamgardParams) *DamgardMultiEnc {
 	return &DamgardMultiEnc{
 		Damgard: &Damgard{params},
 	}
@@ -186,12 +186,12 @@ func NewDamgardMultiEnc(params *damgardParams) *DamgardMultiEnc {
 // is a part of the secret key). It returns the ciphertext vector.
 // If encryption failed, error is returned.
 func (e *DamgardMultiEnc) Encrypt(x data.Vector, pubKey, otp data.Vector) (data.Vector, error) {
-	if err := x.CheckBound(e.Params.bound); err != nil {
+	if err := x.CheckBound(e.Params.Bound); err != nil {
 		return nil, err
 	}
 
 	otp = x.Add(otp)
-	otpModulo := otp.Mod(e.Params.bound)
+	otpModulo := otp.Mod(e.Params.Bound)
 
 	return e.Damgard.Encrypt(otpModulo, pubKey)
 }
