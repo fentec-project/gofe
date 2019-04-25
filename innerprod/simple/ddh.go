@@ -27,8 +27,8 @@ import (
 	emmy "github.com/xlab-si/emmy/crypto/common"
 )
 
-// DdhParams represents configuration parameters for the DDH scheme instance.
-type DdhParams struct {
+// DDHParams represents configuration parameters for the DDH scheme instance.
+type DDHParams struct {
 	// length of input vectors x and y
 	L     int
 	// The value by which coordinates of input vectors x and y are bounded.
@@ -46,7 +46,7 @@ type DdhParams struct {
 // Abdalla, Bourse, De Caro, and Pointchev:
 // "Simple Functional Encryption Schemes for Inner Products".
 type DDH struct {
-	Params *DdhParams
+	Params *DDHParams
 }
 
 // NewDDH configures a new instance of the scheme.
@@ -68,7 +68,7 @@ func NewDDH(l, modulusLength int, bound *big.Int) (*DDH, error) {
 	}
 
 	sip := DDH{
-		Params: &DdhParams{
+		Params: &DDHParams{
 			L:     l,
 			Bound: bound,
 			G:     key.G,
@@ -83,7 +83,7 @@ func NewDDH(l, modulusLength int, bound *big.Int) (*DDH, error) {
 // NewDDHFromParams takes configuration parameters of an existing
 // DDH scheme instance, and reconstructs the scheme with same configuration
 // parameters. It returns a new DDH instance.
-func NewDDHFromParams(params *DdhParams) *DDH {
+func NewDDHFromParams(params *DDHParams) *DDH {
 	return &DDH{
 		Params: params,
 	}

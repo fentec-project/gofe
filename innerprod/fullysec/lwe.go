@@ -29,8 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LweParams represents parameters for the fully secure LWE scheme.
-type LweParams struct {
+// LWEParams represents parameters for the fully secure LWE scheme.
+type LWEParams struct {
 	L      int      // Length of data vectors for inner product
 
 	N      int      // Main security parameters of the scheme
@@ -65,7 +65,7 @@ type LweParams struct {
 // "Fully secure functional encryption for inner products,
 // from standard assumptions".
 type LWE struct {
-	Params *LweParams
+	Params *LWEParams
 }
 
 // NewLWE configures a new instance of the scheme.
@@ -174,7 +174,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 			"cannot generate parameters, generating a random matrix failed")
 	}
 	return &LWE{
-		Params: &LweParams{
+		Params: &LWEParams{
 			L:      l,
 			N:      n,
 			M:      m,

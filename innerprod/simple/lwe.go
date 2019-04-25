@@ -31,8 +31,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LweParams represents parameters for the simple LWE scheme.
-type LweParams struct {
+// LWEParams represents parameters for the simple LWE scheme.
+type LWEParams struct {
 	L      int      // Length of data vectors for inner product
 
 	N      int      // Main security parameters of the scheme
@@ -55,7 +55,7 @@ type LweParams struct {
 // Abdalla, Bourse, De Caro, and Pointchev:
 // "Simple Functional Encryption Schemes for Inner Products".
 type LWE struct {
-	Params *LweParams
+	Params *LWEParams
 }
 
 // NewLWE configures a new instance of the scheme.
@@ -121,7 +121,7 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 		return nil, errors.Wrap(err, "cannot generate public parameters")
 	}
 	return &LWE{
-		Params: &LweParams{
+		Params: &LWEParams{
 			L:      l,
 			BoundX: boundX,
 			BoundY: boundY,

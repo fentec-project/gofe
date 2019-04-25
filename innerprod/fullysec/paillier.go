@@ -30,7 +30,7 @@ import (
 )
 
 // PaillerParams represents parameters for the fully secure Paillier scheme.
-type PaillerParams struct {
+type PaillierParams struct {
 	L       int        // Length of data vectors for inner product
 	N       *big.Int   // a big integer, a product of two safe primes
 	NSquare *big.Int   // N^2 a modulus for computations
@@ -46,7 +46,7 @@ type PaillerParams struct {
 // "Fully secure functional encryption for inner products,
 // from standard assumptions".
 type Paillier struct {
-	Params *PaillerParams
+	Params *PaillierParams
 }
 
 // NewPaillier configures a new instance of the scheme.
@@ -119,7 +119,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	sigma.SetInt(sigmaI)
 
 	return &Paillier{
-		Params: &PaillerParams{
+		Params: &PaillierParams{
 			L:       l,
 			N:       n,
 			NSquare: nSquare,
@@ -135,7 +135,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 // NewPaillierFromParams takes configuration parameters of an existing
 // Paillier scheme instance, and reconstructs the scheme with same configuration
 // parameters. It returns a new Paillier instance.
-func NewPaillierFromParams(params *PaillerParams) *Paillier {
+func NewPaillierFromParams(params *PaillierParams) *Paillier {
 	return &Paillier{
 		Params: params,
 	}

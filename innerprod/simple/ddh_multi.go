@@ -60,7 +60,7 @@ func NewDDHMulti(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error)
 // the scheme with same configuration parameters.
 //
 // It returns a new DDHMulti instance.
-func NewDDHMultiFromParams(slots int, params *DdhParams) *DDHMulti {
+func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
 	return &DDHMulti{
 		Slots: slots,
 		DDH:   &DDH{params},
@@ -181,7 +181,7 @@ type DDHMultiEnc struct {
 
 // NewDDHMultiEnc takes configuration parameters of an underlying
 // DDH scheme instance, and instantiates a new DDHMultiEnc.
-func NewDDHMultiEnc(params *DdhParams) *DDHMultiEnc {
+func NewDDHMultiEnc(params *DDHParams) *DDHMultiEnc {
 	return &DDHMultiEnc{
 		DDH: &DDH{params},
 	}
