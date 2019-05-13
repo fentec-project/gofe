@@ -288,6 +288,7 @@ func (s *LWE) Decrypt(ct, skY, y data.Vector) (*big.Int, error) {
 
 	// d will hold the decrypted message
 	d := new(big.Int).Sub(yDotCtLast, ct0DotSkY)
+	d.Mod(d, s.Params.Q)
 	// in case d > q/2 the result will be negative
 	if d.Cmp(halfQ) == 1 {
 		d.Sub(d, s.Params.Q)

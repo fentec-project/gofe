@@ -208,15 +208,9 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	g := bn256.Pair(g1gen, g2gen)
 
-	var dec *big.Int // dec is decryption
-	dec, err := d.GCalc.WithBound(d.Bound).BabyStepGiantStepStd(s, g)
+	dec, err := d.GCalc.WithBound(d.Bound).BabyStepGiantStep(s, g)
 	if err != nil {
-		gInv := new(bn256.GT).Neg(g)
-		dec, err = d.GInvCalc.WithBound(d.Bound).BabyStepGiantStepStd(s, gInv)
-		if err != nil {
-			return nil, err
-		}
-		dec.Neg(dec)
+		return nil, err
 	}
 
 	return dec, nil
