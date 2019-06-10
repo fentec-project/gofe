@@ -26,33 +26,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple_MultiDDH(t *testing.T) {
+func TestSimple_DMCFEDDH(t *testing.T) {
 	numOfSlots := 2
 	l := 3
 	bound := big.NewInt(1000)
 	sampler := sample.NewUniform(bound)
 	modulusLength := 64
 
-	multiDDH, err := simple.NewDDHMulti(numOfSlots, l, modulusLength, bound)
+	DMCFEDDH, err := simple.NewDDHDMCFE(numOfSlots, l, modulusLength, bound)
 	if err != nil {
-		t.Fatalf("Failed to initialize multi input inner product: %v", err)
+		t.Fatalf("Failed to initialize DMCFE input inner product: %v", err)
 	}
 
-	pubKey, secKey, err := multiDDH.GenerateMasterKeys()
+	pubKey, secKey, err := DMCFEDDH.GenerateMasterKeys()
 
 	y, err := data.NewRandomMatrix(numOfSlots, l, sampler)
 	if err != nil {
 		t.Fatalf("Error during matrix generation: %v", err)
 	}
 
-	// we simulate different clients encrypting which might be on different machines (this means "multi-input"),
+	// we simulate different encryptors which might be on different machines (this means "DMCFE-input"),
 	// ciphertexts are then collected by decryptor and inner-product over vectors from all encryptors is computed
-	clients := make([]*simple.DDHMultiClient, numOfSlots)
+	encryptors := make([]*simple.DDHDMCFEEnc, numOfSlots)
 	for i := 0; i < numOfSlots; i++ {
-		clients[i] = simple.NewDDHMultiClient(multiDDH.Params)
+		encryptors[i] = simple.NewDDHDMCFEEnc(DMCFEDDH.Params)
 	}
 
-	derivedKey, err := multiDDH.DeriveKey(secKey, y)
+	derivedKey, err := DMCFEDDH.DeriveKey(secKey, y)
 	if err != nil {
 		t.Fatalf("Error during key derivation: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestSimple_MultiDDH(t *testing.T) {
 		}
 		collectedX[i] = x
 
-		c, err := clients[i].Encrypt(x, pubKey[i], secKey.OtpKey[i])
+		c, err := encryptors[i].Encrypt(x, pubKey[i], secKey.OtpKey[i])
 		if err != nil {
 			t.Fatalf("Error during encryption: %v", err)
 		}
@@ -84,7 +84,7 @@ func TestSimple_MultiDDH(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 
-	decryptor := simple.NewDDHMultiFromParams(numOfSlots, multiDDH.Params)
+	decryptor := simple.NewDDHDMCFEFromParams(numOfSlots, DMCFEDDH.Params)
 
 	ciphertextMatrix, err := data.NewMatrix(ciphertexts)
 	if err != nil {
