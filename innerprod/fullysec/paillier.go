@@ -81,9 +81,9 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	// i.e. security parameter should be big enough that
 	// the generated n is much greater than l and the bounds
 	xSquareL := new(big.Int).Mul(boundX, boundX)
-	xSquareL.Mul(xSquareL, big.NewInt(int64(l)))
+	xSquareL.Mul(xSquareL, big.NewInt(int64(2 * l)))
 	ySquareL := new(big.Int).Mul(boundY, boundY)
-	ySquareL.Mul(ySquareL, big.NewInt(int64(l)))
+	ySquareL.Mul(ySquareL, big.NewInt(int64(2 * l)))
 	if n.Cmp(xSquareL) < 1 {
 		return nil, fmt.Errorf("parameters generation failed," +
 			"boundX and l too big for bitLen")

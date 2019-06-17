@@ -66,6 +66,10 @@ type LWE struct {
 // bounds provided in the phd thesis Functional Encryption for
 // Inner-Product Evaluations, see Section 8.3.1 in
 // https://www.di.ens.fr/~fbourse/publications/Thesis.pdf
+// Note that this is a prototype implementation and should not be
+// used in production before security testing against various
+// known attacks has been performed. Unfortunately, no such (theoretical)
+// evaluation exists yet in the literature.
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.

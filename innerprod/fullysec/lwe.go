@@ -71,7 +71,14 @@ type LWE struct {
 // NewLWE configures a new instance of the scheme.
 // It accepts the length of input vectors l, the main security parameter
 // n, the message space size boundX, and the inner product vector space size
-// boundY.
+// boundY. The function sets up the remaining public parameters as
+// it is suggested in the paper by Agrawal, Shweta, Libert, and Stehle:
+// "Fully secure functional encryption for inner products,
+// from standard assumptions".
+// Note that this is a prototype implementation and should not be
+// used in production before security testing against various
+// known attacks has been performed. Unfortunately, no such (theoretical)
+// evaluation exists yet in the literature.
 //
 // It returns an error in case public parameters of the scheme could
 // not be generated.
