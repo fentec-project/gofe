@@ -34,9 +34,6 @@ func TestSGP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error when generating random matrix: %v", err)
 	}
-	// FIXME tests sometimes fail when negative values are present in the matrix F!
-	//f[0][0].Set(big.NewInt(-99))
-	//f[1][0].Set(big.NewInt(-99))
 
 	q := quadratic.NewSGP(n, bound)
 	msk, err := q.GenerateMasterKey()
