@@ -250,8 +250,8 @@ Note that above we instantiate multiple encryptors - in reality,
  
 
 ##### Using quadratic polynomial scheme
-In the example below, we omit instantiation of three different entities
-(trusted entity, encryptor and decryptor).
+In the example below, we omit instantiation of different entities
+(encryptor and decryptor).
 ```go
 l := 2 // length of input vectors
 bound := big.NewInt(10) // Upper bound for coordinates of vectors x, y, and matrix F
