@@ -69,9 +69,9 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 	two := big.NewInt(2)
 
 	bSquared := new(big.Int).Exp(bound, two, nil)
-	prod := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
-	if prod.Cmp(key.P) > 0 {
-		return nil, fmt.Errorf("l * bound^2 should be smaller than group order")
+	prod := new(big.Int).Mul(big.NewInt(int64(2 * l)), bSquared)
+	if prod.Cmp(key.Q) > 0 {
+		return nil, fmt.Errorf("2 * l * bound^2 should be smaller than group order")
 	}
 
 	h := new(big.Int)
