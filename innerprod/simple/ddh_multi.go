@@ -64,7 +64,17 @@ func NewDDHMulti(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error)
 	}, nil
 }
 
-func NewDDHMultiFromParams(numOfSlots, multiDDH.Params)
+// NewDDHMultiFromParams takes the number of slots and configuration
+// parameters of an existing DDH scheme instance, and reconstructs
+// the scheme with same configuration parameters.
+//
+// It returns a new DDHMulti instance.
+func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
+	return &DDHMulti{
+		Slots: slots,
+		DDH:   &DDH{params},
+	}
+}
 
 // NewDDHMulti configures a new instance of the scheme.
 // It accepts the number of slots (encryptors), the length of
@@ -182,7 +192,7 @@ func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiD
 // functional encryption key, and a matrix y comprised of plaintext vectors.
 // It returns the sum of inner products.
 // If decryption failed, error is returned.
-func (dm *DDHMulti) Decrypt(cipher data.Matrix, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *DDHMulti) Decrypt(cipher[] data.Vector, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
 	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}

@@ -172,7 +172,8 @@ func (m Matrix) Apply(f func(*big.Int) *big.Int) Matrix {
 	return res
 }
 
-// Dot calculates the dot product (inner product) of matrices m and other.
+// Dot calculates the dot product (inner product) of matrices m and other,
+// which we define as the sum of the dot product of rows of both matrices.
 // It returns an error if m and other have different dimensions.
 func (m Matrix) Dot(other Matrix) (*big.Int, error) {
 	if !m.DimsMatch(other) {
