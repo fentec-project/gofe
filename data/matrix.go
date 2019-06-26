@@ -238,8 +238,8 @@ func (m Matrix) Mul(other Matrix) (Matrix, error) {
 		return nil, fmt.Errorf("cannot multiply matrices")
 	}
 
-	prod := make([]Vector, m.Rows()) // tok vrstic kot m, tok stolpcev kot other
-	for i := 0; i < m.Rows(); i++ {  // po vrsticah od m
+	prod := make([]Vector, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
 		prod[i] = make([]*big.Int, other.Cols())
 		for j := 0; j < other.Cols(); j++ {
 			otherCol, _ := other.GetCol(j)

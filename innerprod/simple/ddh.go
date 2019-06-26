@@ -63,8 +63,8 @@ func NewDDH(l, modulusLength int, bound *big.Int) (*DDH, error) {
 		return nil, err
 	}
 
-	if new(big.Int).Mul(big.NewInt(int64(l)), new(big.Int).Exp(bound, big.NewInt(2), big.NewInt(0))).Cmp(key.P) > 0 {
-		return nil, fmt.Errorf("l * bound^2 should be smaller than group order")
+	if new(big.Int).Mul(big.NewInt(int64(2 * l)), new(big.Int).Exp(bound, big.NewInt(2), big.NewInt(0))).Cmp(key.Q) > 0 {
+		return nil, fmt.Errorf("2 * l * bound^2 should be smaller than group order")
 	}
 
 	sip := DDH{
@@ -131,7 +131,7 @@ func (d *DDH) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(1), d.Params.P)
+	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
 	if err != nil {
 		return nil, err
 	}

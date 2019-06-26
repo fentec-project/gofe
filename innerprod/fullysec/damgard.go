@@ -69,14 +69,14 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 	two := big.NewInt(2)
 
 	bSquared := new(big.Int).Exp(bound, two, nil)
-	prod := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
-	if prod.Cmp(key.P) > 0 {
-		return nil, fmt.Errorf("l * bound^2 should be smaller than group order")
+	prod := new(big.Int).Mul(big.NewInt(int64(2 * l)), bSquared)
+	if prod.Cmp(key.Q) > 0 {
+		return nil, fmt.Errorf("2 * l * bound^2 should be smaller than group order")
 	}
 
 	h := new(big.Int)
 	for {
-		r, err := emmy.GetRandomIntFromRange(one, key.Q)
+		r, err := emmy.GetRandomIntFromRange(two, key.Q)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (d *Damgard) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(1), d.Params.P)
+	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
 	if err != nil {
 		return nil, err
 	}

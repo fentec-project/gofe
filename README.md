@@ -195,7 +195,7 @@ xy, _ := dec.Decrypt(cipher, feKey, y)
 This example demonstrates how multi input FE schemes can be used.
  
  Here we assume
- that there are `slots` encryptors (e<sub>i</sub>), each with their corresponding
+ that there are `numClients` encryptors (e<sub>i</sub>), each with their corresponding
  input vector x<sub>i</sub>. A trusted entity generates all the master keys needed
  for encryption and distributes appropriate keys to appropriate encryptor. Then, 
  encryptor e<sub>i</sub> uses their keys to encrypt their data x<sub>i</sub>.
@@ -205,44 +205,44 @@ This example demonstrates how multi input FE schemes can be used.
 over all vectors, as _Σ <x<sub>i</sub>,y<sub>i</sub>>._
 
 ```go
-slots := 2                // number of encryptors
+numClients := 2           // number of encryptors
 l := 3                    // length of input vectors
 bound := big.NewInt(1000) // upper bound for input vectors
 
 // Simulate collection of input data.
 // X and Y represent matrices of input vectors, where X are collected
-// from slots encryptors (ommitted), and Y is only known by a single decryptor.
+// from numClients encryptors (omitted), and Y is only known by a single decryptor.
 // Encryptor i only knows its own input vector X[i].
 sampler := sample.NewUniform(bound)
-X, _ := data.NewRandomMatrix(slots, l, sampler)
-Y, _ := data.NewRandomMatrix(slots, l, sampler)
+X, _ := data.NewRandomMatrix(numClients, l, sampler)
+Y, _ := data.NewRandomMatrix(numClients, l, sampler)
 
 // Trusted entity instantiates scheme instance and generates
 // master keys for all the encryptors. It also derives the FE
 // key derivedKey for the decryptor.
 modulusLength := 64
-multiDDH, _ := simple.NewDDHMulti(slots, l, modulusLength, bound)
+multiDDH, _ := simple.NewDDHMulti(numClients, l, modulusLength, bound)
 pubKey, secKey, _ := multiDDH.GenerateMasterKeys()
 derivedKey, _ := multiDDH.DeriveKey(secKey, Y)
 
 // Different encryptors may reside on different machines.
-// We simulate this with the for loop below, where slots
+// We simulate this with the for loop below, where numClients
 // encryptors are generated.
-encryptors := make([]*simple.DDHMultiEnc, slots)
-for i := 0; i < slots; i++ {
+encryptors := make([]*simple.DDHMultiEnc, numClients)
+for i := 0; i < numClients; i++ {
     encryptors[i] = simple.NewDDHMultiEnc(multiDDH.Params)
 }
 // Each encryptor encrypts its own input vector X[i] with the
 // keys given to it by the trusted entity.
-ciphers := make([]data.Vector, slots)
-for i := 0; i < slots; i++ {
+ciphers := make([]data.Vector, numClients)
+for i := 0; i < numClients; i++ {
     cipher, _ := encryptors[i].Encrypt(X[i], pubKey[i], secKey.OtpKey[i])
     ciphers[i] = cipher
 }
 
 // Ciphers are collected by decryptor, who then computes
 // inner product over vectors from all encryptors.
-decryptor := simple.NewDDHMultiFromParams(slots, multiDDH.Params)
+decryptor := simple.NewDDHMultiFromParams(numClients, multiDDH.Params)
 prod, _ = decryptor.Decrypt(ciphers, derivedKey, Y)
 ```
 Note that above we instantiate multiple encryptors - in reality,
@@ -250,20 +250,20 @@ Note that above we instantiate multiple encryptors - in reality,
  
 
 ##### Using quadratic polynomial scheme
-In the example below, we omit instantiation of three different entities
-(trusted entity, encryptor and decryptor).
+In the example below, we omit instantiation of different entities
+(encryptor and decryptor).
 ```go
-n := 2 // length of input vectors
+l := 2 // length of input vectors
 bound := big.NewInt(10) // Upper bound for coordinates of vectors x, y, and matrix F
 
 // Here we fill our vectors and the matrix F (that represents the
 // quadratic function) with random data from [0, bound).
 sampler := sample.NewUniform(bound)
-F, _ := data.NewRandomMatrix(n, n, sampler)
-x, _ := data.NewRandomVector(n, sampler)
-y, _ := data.NewRandomVector(n, sampler)
+F, _ := data.NewRandomMatrix(l, l, sampler)
+x, _ := data.NewRandomVector(l, sampler)
+y, _ := data.NewRandomVector(l, sampler)
 
-sgp := quadratic.NewSGP(n, bound)     // Create scheme instance
+sgp := quadratic.NewSGP(l, bound)     // Create scheme instance
 msk, _ := sgp.GenerateMasterKey()     // Create master secret key
 cipher, _ := sgp.Encrypt(x, y, msk)   // Encrypt input vectors x, y with secret key
 key, _ := sgp.DeriveKey(msk, F)       // Derive FE key for decryption

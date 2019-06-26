@@ -150,7 +150,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		if err != nil {
 			return nil, err
 		}
-		a[i] = ai
+		a[i] = ai.Mod(q.Mod)
 
 		// v = (y_i, -t_i)
 		tiNeg := new(big.Int).Sub(q.Mod, msk.T[i])
@@ -158,7 +158,7 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		if err != nil {
 			return nil, err
 		}
-		b[i] = bi
+		b[i] = bi.Mod(q.Mod)
 	}
 	aMulG1 := make([]data.VectorG1, q.N)
 	bMulG2 := make([]data.VectorG2, q.N)
@@ -196,17 +196,16 @@ func (q *SGP) DeriveKey(msk *SGPSecKey, F data.Matrix) (*bn256.G2, error) {
 // encryption key key in order to obtain function x^T * F * y.
 func (q *SGP) Decrypt(c *SGPCipher, key *bn256.G2, F data.Matrix) (*big.Int, error) {
 	prod := bn256.Pair(c.G1MulGamma, key)
-	zero := big.NewInt(0)
 
 	for i, row := range F {
 		for j, rowEl := range row {
-			if rowEl.Cmp(zero) != 0 {
+			if rowEl.Sign() != 0 {
 				e1 := bn256.Pair(c.AMulG1[i][0], c.BMulG2[j][0])
 				e2 := bn256.Pair(c.AMulG1[i][1], c.BMulG2[j][1])
 				e := new(bn256.GT).Add(e1, e2)
 
 				tmp := new(big.Int).Set(rowEl)
-				if tmp.Cmp(zero) == -1 {
+				if tmp.Sign() == -1 {
 					tmp.Neg(tmp)
 					e.Neg(e)
 				}
