@@ -205,13 +205,13 @@ This example demonstrates how multi input FE schemes can be used.
 over all vectors, as _Σ <x<sub>i</sub>,y<sub>i</sub>>._
 
 ```go
-numClients := 2                // number of encryptors
+numClients := 2           // number of encryptors
 l := 3                    // length of input vectors
 bound := big.NewInt(1000) // upper bound for input vectors
 
 // Simulate collection of input data.
 // X and Y represent matrices of input vectors, where X are collected
-// from numClients encryptors (ommitted), and Y is only known by a single decryptor.
+// from numClients encryptors (omitted), and Y is only known by a single decryptor.
 // Encryptor i only knows its own input vector X[i].
 sampler := sample.NewUniform(bound)
 X, _ := data.NewRandomMatrix(numClients, l, sampler)

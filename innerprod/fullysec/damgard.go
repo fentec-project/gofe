@@ -76,7 +76,7 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 
 	h := new(big.Int)
 	for {
-		r, err := emmy.GetRandomIntFromRange(one, key.Q)
+		r, err := emmy.GetRandomIntFromRange(two, key.Q)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (d *Damgard) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(1), d.Params.P)
+	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
 	if err != nil {
 		return nil, err
 	}

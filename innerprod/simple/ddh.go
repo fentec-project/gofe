@@ -131,7 +131,7 @@ func (d *DDH) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(1), d.Params.P)
+	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
 	if err != nil {
 		return nil, err
 	}

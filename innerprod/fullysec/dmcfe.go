@@ -209,11 +209,8 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	g := bn256.Pair(g1gen, g2gen)
 
 	dec, err := d.GCalc.WithBound(d.Bound).BabyStepGiantStep(s, g)
-	if err != nil {
-		return nil, err
-	}
 
-	return dec, nil
+	return dec, err
 }
 
 func hash(bytes []byte) data.Vector {
