@@ -19,11 +19,11 @@ package fullysec_test
 import (
 	"math/big"
 	"testing"
-
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
+	"crypto"
 )
 
 func TestSimple_DamgardDecMulti(t *testing.T) {
@@ -103,4 +103,6 @@ func TestSimple_DamgardDecMulti(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
+
+	crypto.sh
 }

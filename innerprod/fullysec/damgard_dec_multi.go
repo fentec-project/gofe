@@ -39,8 +39,8 @@ type DamgardDecMultiClient struct {
 	// number of encryptors
 	Idx int
 	DamgardScheme *DamgardMulti
-	TPub data.Matrix
-	TSec data.Matrix
+	TPub *big.Int
+	TSec *big.Int
 	KeyShare data.Matrix
 }
 
@@ -53,17 +53,11 @@ type DamgardDecMultiClient struct {
 func NewDamgardDecMultiClient(idx int, damgardMulti *DamgardMulti) (*DamgardDecMultiClient, error) {
 	// TODO: whait for Abdalla to confirm how to do this
 	sampler := sample.NewUniform(damgardMulti.Params.Q)
-	tSec, err := data.NewRandomMatrix(damgardMulti.NumClients, damgardMulti.Params.L, sampler)
+	tSec, err := sampler.Sample()
 	if err != nil {
-		return nil, fmt.Errorf("could not generate random vector")
+		return nil, fmt.Errorf("could not generate random value")
 	}
-	tPub := data.NewConstantMatrix(damgardMulti.NumClients, damgardMulti.Params.L, big.NewInt(0))
-	for i := 0; i < damgardMulti.NumClients; i++ {
-		for j := 0; j < damgardMulti.Params.L; j++ {
-			// public keys are created based on DDH assumption
-			tPub[i][j] = new(big.Int).Exp(big.NewInt(3), tSec[i][j], damgardMulti.Params.Q)
-		}
-	}
+	tPub := new(big.Int).Exp(damgardMulti.Params.G, tSec, damgardMulti.Params.Q)
 
 	return &DamgardDecMultiClient{
 		Idx:             idx,
@@ -76,7 +70,7 @@ func NewDamgardDecMultiClient(idx int, damgardMulti *DamgardMulti) (*DamgardDecM
 // SetT sets a secret key for client c, based on the public keys of all the
 // clients involved in the scheme. It assumes that Idx of a client indicates
 // which is the corresponding public key in pubT.
-func (c *DamgardDecMultiClient) SetKeyShare(pubT []data.Matrix) error {
+func (c *DamgardDecMultiClient) SetKeyShare(pubT []*big.Int) error {
 	t := data.NewConstantMatrix(c.DamgardScheme.NumClients, c.DamgardScheme.Params.L, big.NewInt(0))
 	add := data.NewConstantMatrix(c.DamgardScheme.NumClients, c.DamgardScheme.Params.L, big.NewInt(0))
 	var err error
@@ -84,6 +78,10 @@ func (c *DamgardDecMultiClient) SetKeyShare(pubT []data.Matrix) error {
 		if k == c.Idx {
 			continue
 		}
+		sharedNum := new(big.Int).Exp(pubT[k], c.TSec, c.DamgardScheme.Params.P)
+		sharedKey := sha
+
+
 		for i := 0; i < c.DamgardScheme.NumClients; i++ {
 			for j := 0; j < c.DamgardScheme.Params.L; j++ {
 				add[i][j] = new(big.Int).Exp(pubT[k][i][j], c.TSec[i][j], c.DamgardScheme.Params.Q)
