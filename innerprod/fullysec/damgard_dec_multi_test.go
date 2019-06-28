@@ -19,35 +19,34 @@ package fullysec_test
 import (
 	"math/big"
 	"testing"
-	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
-	"crypto"
+	"github.com/fentec-project/gofe/sample"
+	"github.com/fentec-project/gofe/data"
 )
 
 func TestSimple_DamgardDecMulti(t *testing.T) {
-	// choose mata-parameters
-	numOfClients := 10
-	l := 5
+	// choose parameters
+	numOfClients := 20
+	l := 2
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	// security parameter
 	modulusLength := 512
 
 	// create a (non-decentralized) multi-input scheme as the underlying scheme
-	// for decentralization
+	// for the decentralization
 	damgardMulti, err := fullysec.NewDamgardMulti(numOfClients, l, modulusLength, bound)
 	assert.NoError(t, err)
 
 	// we simulate different independent, decentralized clients and
 	// we collect all of their public keys
 	clients := make([]*fullysec.DamgardDecMultiClient, numOfClients)
-	pubKeys := make([]data.Matrix, numOfClients)
+	pubKeys := make([]*big.Int, numOfClients)
 	for i := 0; i < numOfClients; i++ {
 		clients[i], err = fullysec.NewDamgardDecMultiClient(i, damgardMulti)
 		assert.NoError(t, err)
-		pubKeys[i] = clients[i].TPub
+		pubKeys[i] = clients[i].ClientPubKey
 	}
 
 	// each client makes a private partial key out of the public keys and
@@ -103,6 +102,4 @@ func TestSimple_DamgardDecMulti(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
-
-	crypto.sh
 }

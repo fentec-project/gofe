@@ -31,7 +31,7 @@ func TestUniformDet(t *testing.T) {
 		r, _ := samper.Sample()
 		key[i] = byte(r.Int64())
 	}
-	sampler := sample.NewUniformDet(big.NewInt(4), &key)
-	val := sampler.Sample()
+	sampler := sample.NewUniformDet(big.NewInt(2), &key)
+	val := sampler.Sample(100)
 	fmt.Println(val)
 }

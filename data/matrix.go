@@ -68,6 +68,25 @@ func NewRandomMatrix(rows, cols int, sampler sample.Sampler) (Matrix, error) {
 	return NewMatrix(mat)
 }
 
+// NewRandomDetMatrix returns a new Matrix instance
+// with random elements sampled random elements sampled by a pseudo-random
+// number generator. Elements are sampled from [0, max) and key
+// determines the pseudo-random generator.
+func NewRandomDetMatrix(rows, cols int, max *big.Int, key *[32]byte) (Matrix, error) {
+	l := rows * cols
+	v, err := NewRandomDetVector(l, max, key)
+	if err != nil {
+		return nil, err
+	}
+
+	mat := make([]Vector, rows)
+	for i := 0; i < rows; i++ {
+		mat[i] = NewVector(v[(i * cols): ((i + 1) * cols)])
+	}
+
+	return NewMatrix(mat)
+}
+
 // NewConstantMatrix returns a new Matrix instance
 // with all elements set to constant c.
 func NewConstantMatrix(rows, cols int, c *big.Int) Matrix {

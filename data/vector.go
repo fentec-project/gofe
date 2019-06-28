@@ -22,6 +22,7 @@ import (
 
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/sample"
+	"golang.org/x/crypto/salsa20"
 )
 
 // Vector wraps a slice of *big.Int elements.
@@ -47,6 +48,57 @@ func NewRandomVector(len int, sampler sample.Sampler) (Vector, error) {
 	}
 
 	return NewVector(vec), nil
+}
+
+// NewRandomDetVector returns a new Vector instance
+// with (deterministic) random elements sampled by a pseudo-random
+// number generator. Elements are sampled from [0, max) and key
+// determines the pseudo-random generator.
+func NewRandomDetVector(len int, max *big.Int, key *[32]byte) (Vector, error) {
+	if max.Cmp(big.NewInt(2)) < 0 {
+		return nil, fmt.Errorf("upper bound on samples should be at least 2")
+	}
+
+	maxBits := new(big.Int).Sub(max, big.NewInt(1)).BitLen()
+	maxBytes := (maxBits / 8) + 1
+	over := uint(8 - (maxBits % 8))
+	if over == 8 {
+		maxBytes -= 1
+		over = 0
+	}
+
+	lTimesMaxBytes := len * maxBytes
+	nounce := make([]byte, 8)
+	ret := make([]*big.Int, len)
+	for i := range nounce { nounce[i] = 0 }
+	for i := 3; true; i++ {
+		in := make([]byte, i * lTimesMaxBytes)
+		for i := range in { in[i] = 0 }
+
+		out := make([]byte, i * lTimesMaxBytes)
+
+		salsa20.XORKeyStream(out, in, nounce, key)
+
+		j := 0
+		k := 0
+		for j < (i * lTimesMaxBytes) {
+			out[j] = out[j] >> over
+			ret[k] = new(big.Int).SetBytes(out[j:(j + maxBytes)])
+			if ret[k].Cmp(max) < 0 {
+				k++
+			}
+			if k == len {
+				break
+			}
+			j += maxBytes
+
+		}
+		if k == len {
+			break
+		}
+	}
+
+	return NewVector(ret), nil
 }
 
 // NewConstantVector returns a new Vector instance

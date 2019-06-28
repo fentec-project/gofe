@@ -58,6 +58,15 @@ func TestVector(t *testing.T) {
 
 	assert.Equal(t, innerProd, mul, "inner product should calculate correctly")
 
+	samper := sample.NewUniform(big.NewInt(256))
+	var key [32]byte
+	for i := range key {
+		r, _ := samper.Sample()
+		key[i] = byte(r.Int64())
+	}
+
+	NewRandomDetMatrix(1000, 1000, new(big.Int).Exp(big.NewInt(2), big.NewInt(1000), nil), &key)
+
 }
 
 func TestVector_MulAsPolyInRing(t *testing.T) {

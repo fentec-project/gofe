@@ -41,26 +41,45 @@ func NewUniformDet(max *big.Int, key *[32]byte) *UniformDet {
 }
 
 // UniformRange samples random values from the interval [min, max).
-func (u *UniformDet) Sample() (*big.Int) {
+func (u *UniformDet) Sample(l int) []*big.Int {
+	ret := make([]*big.Int, l)
+
 	maxBytes := (u.maxBits / 8) + 1
 	over := uint(8 - (u.maxBits % 8))
 	if over == 8 {
 		maxBytes -= 1
 		over = 0
 	}
-	var ret *big.Int
-	for {
-		in := make([]byte, maxBytes)
-		out := make([]byte, maxBytes)
+
+	lTimesMaxBytes := l * maxBytes
+	nounce := make([]byte, 8)
+	for i := range nounce { nounce[i] = 0 }
+	for i := 3; true; i++ {
+		in := make([]byte, i * lTimesMaxBytes)
+		out := make([]byte, i * lTimesMaxBytes)
 		for i := range in { in[i] = 0 }
-		nounce := make([]byte, 8)
-		for i := range nounce { nounce[i] = 0 }
+
 
 		salsa20.XORKeyStream(out, in, nounce, u.key)
 
-		out[0] = out[0] >> over
-		ret = new(big.Int).SetBytes(out)
-		break
+		j := 0
+		k := 0
+		for j < (i * lTimesMaxBytes) {
+			out[j] = out[j] >> over
+			ret[k] = new(big.Int).SetBytes(out[j:(j + maxBytes)])
+			if ret[k].Cmp(u.max) < 0 {
+				k++
+			}
+			if k == l {
+				break
+			}
+			j += maxBytes
+
+		}
+		if k == l {
+			break
+		}
 	}
+
 	return ret
 }

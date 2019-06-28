@@ -30,13 +30,13 @@ import (
 	"crypto/sha512"
 )
 
-// DMCFEClient is to be instantiated by the encryptor. Idx presents index of the encryptor entity.
+// DMCFEClient is to be instantiated by the client. Idx presents index of the client.
 type DMCFEClient struct {
-	Idx  int
-	TSec data.Matrix
-	TPub data.Matrix
-	T    data.Matrix
-	S    data.Vector
+	Idx          int
+	ClientSecKey *big.Int
+	ClientPubKey *bn256.G1
+	KeyShare     data.Matrix
+	S            data.Vector
 }
 
 // NewDMCFEClient is to be called by the party that wants to encrypt number x_i.
@@ -49,57 +49,55 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not generate random vector")
 	}
-	tSec, err := data.NewRandomMatrix(2, 2, sampler)
+	sec, err := sampler.Sample()
 	if err != nil {
-		return nil, fmt.Errorf("could not generate random vector")
+		return nil, fmt.Errorf("could not generate random value")
 	}
-	tPub := data.NewConstantMatrix(2, 2, big.NewInt(0))
-	for i := 0; i < 2; i++ {
-		for j := 0; j < 2; j++ {
-			// public keys are created based on DDH assumption in Z_p^* for p being
-			// order the order of bn256 and the generator being 3
-			tPub[i][j] = new(big.Int).Exp(big.NewInt(3), tSec[i][j], bn256.Order)
-		}
-	}
+	pub := new(bn256.G1).ScalarBaseMult(sec)
 
 	return &DMCFEClient{
-		Idx:  idx,
-		TSec: tSec,
-		TPub: tPub,
-		S:    s,
+		Idx:          idx,
+		ClientSecKey: sec,
+		ClientPubKey: pub,
+		S:            s,
 	}, nil
 }
 
-// SetT sets a secret key for client c, based on the public keys of all the
+
+// SetKeyShare sets a shared key for client c, based on the public keys of all the
 // clients involved in the scheme. It assumes that Idx of a client indicates
-// which is the corresponding public key in pubT.
-func (c *DMCFEClient) SetT(pubT []data.Matrix) error {
-	t := data.NewConstantMatrix(2, 2, big.NewInt(0))
-	add := data.NewConstantMatrix(2, 2, big.NewInt(0))
+// which is the corresponding public key in pubKeys. Shared keys are such that
+// each client has a random key but all the shared keys sum to 0.
+func (c *DMCFEClient) SetKeyShare(pubKeys []*bn256.G1) error {
+	c.KeyShare = data.NewConstantMatrix(2, 2, big.NewInt(0))
+	var add data.Matrix
 	var err error
-	for k := 0; k < len(pubT); k++ {
+	for k := 0; k < len(pubKeys); k++ {
 		if k == c.Idx {
 			continue
 		}
-		for i := 0; i < 2; i++ {
-			for j := 0; j < 2; j++ {
-				add[i][j] = new(big.Int).Exp(pubT[k][i][j], c.TSec[i][j], bn256.Order)
-			}
+		sharedG1 := new(bn256.G1).ScalarMult(pubKeys[k], c.ClientSecKey)
+		sharedKey := sha256.New().Sum([]byte(sharedG1.String()))
+		var sharedKeyFixed [32]byte
+		copy(sharedKeyFixed[:], sharedKey)
+
+		add, err = data.NewRandomDetMatrix(2, 2, bn256.Order, &sharedKeyFixed)
+		if err != nil {
+			return err
 		}
+
 		if k < c.Idx {
-			t, err = t.Add(add)
+			c.KeyShare, err = c.KeyShare.Add(add)
 			if err != nil {
 				return err
 			}
 		} else {
-			t, err = t.Sub(add)
+			c.KeyShare, err = c.KeyShare.Sub(add)
 			if err != nil {
 				return err
 			}
 		}
-		t = t.Mod(bn256.Order)
 	}
-	c.T = t
 
 	return nil
 }
@@ -137,7 +135,7 @@ func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	v := hash(yRepr)
 
 	keyShare1 := c.S.MulScalar(y[c.Idx])
-	keyShare2, err := c.T.MulVec(v)
+	keyShare2, err := c.KeyShare.MulVec(v)
 	if err != nil {
 		return nil, errors.Wrap(err, "error multiplying matrix with vector")
 	}
@@ -190,8 +188,16 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	cSum := new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 	cAdd := new(bn256.G1)
+	pow := new(big.Int)
 	for i := 0; i < len(d.Ciphers); i++ {
-		cAdd.ScalarMult(d.Ciphers[i], d.Y[i])
+		cAdd.Set(d.Ciphers[i])
+		pow.Set(d.Y[i])
+		if pow.Sign() < 0 {
+			cAdd.Neg(cAdd)
+			pow.Neg(pow)
+		}
+
+		cAdd.ScalarMult(cAdd, pow)
 		cSum.Add(cSum, cAdd)
 	}
 	s := bn256.Pair(cSum, gen)
@@ -208,11 +214,12 @@ func (d *DMCFEDecryptor) Decrypt() (*big.Int, error) {
 	g2gen := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
 	g := bn256.Pair(g1gen, g2gen)
 
-	dec, err := d.GCalc.WithBound(d.Bound).BabyStepGiantStep(s, g)
+	dec, err := d.GCalc.WithNeg().WithBound(d.Bound).BabyStepGiantStep(s, g)
 
 	return dec, err
 }
 
+// TODO: change hashing
 func hash(bytes []byte) data.Vector {
 	h1 := sha256.Sum256(bytes)
 	h2 := sha512.Sum512(bytes)
