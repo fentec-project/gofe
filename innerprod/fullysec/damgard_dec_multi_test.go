@@ -19,10 +19,11 @@ package fullysec_test
 import (
 	"math/big"
 	"testing"
-	"github.com/stretchr/testify/assert"
+
+	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
-	"github.com/fentec-project/gofe/data"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimple_DamgardDecMulti(t *testing.T) {

@@ -31,32 +31,32 @@ import (
 
 // LWEParams represents parameters for the fully secure LWE scheme.
 type LWEParams struct {
-	L      int      // Length of data vectors for inner product
+	L int // Length of data vectors for inner product
 
-	N      int      // Main security parameters of the scheme
-	M      int      // Number of samples
+	N int // Main security parameters of the scheme
+	M int // Number of samples
 
 	BoundX *big.Int // Message space size
 	BoundY *big.Int // Inner product vector space size
 
-			// Modulus for the resulting inner product.
-			// K depends on the parameters L, P and V and is computed by the scheme.
-	K      *big.Int
+	// Modulus for the resulting inner product.
+	// K depends on the parameters L, P and V and is computed by the scheme.
+	K *big.Int
 
-			// Modulus for ciphertext and keys.
-			// Must be significantly larger than K.
-			// TODO check appropriateness of this parameter in constructor!
-	Q      *big.Int
+	// Modulus for ciphertext and keys.
+	// Must be significantly larger than K.
+	// TODO check appropriateness of this parameter in constructor!
+	Q *big.Int
 
-			// standard deviation for the noise terms in the encryption process
+	// standard deviation for the noise terms in the encryption process
 	SigmaQ *big.Float
-			// standard deviation for first half of the matrix for sampling private key
+	// standard deviation for first half of the matrix for sampling private key
 	Sigma1 *big.Float
-			// standard deviation for second half of the matrix for sampling private key
+	// standard deviation for second half of the matrix for sampling private key
 	Sigma2 *big.Float
 
-			// Matrix A of dimensions M*N is a public parameter of the scheme
-	A      data.Matrix
+	// Matrix A of dimensions M*N is a public parameter of the scheme
+	A data.Matrix
 }
 
 // LWE represents a scheme instantiated from the LWE problem.
@@ -334,7 +334,7 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 		return nil, gofe.MalformedInput
 	}
 
-	if len(cipher) != s.Params.M +s.Params.L {
+	if len(cipher) != s.Params.M+s.Params.L {
 		return nil, gofe.MalformedCipher
 	}
 	c0 := cipher[:s.Params.M]

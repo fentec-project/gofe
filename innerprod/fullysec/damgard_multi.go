@@ -21,9 +21,9 @@ import (
 	"math/big"
 
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/dlog"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // DamgardMulti represents a multi input variant of the
@@ -65,7 +65,7 @@ type DamgardMultiClient struct {
 // instances could not be properly instantiated.
 func NewDamgardMulti(numClients, l, modulusLength int, bound *big.Int) (*DamgardMulti, error) {
 	bSquared := new(big.Int).Exp(bound, big.NewInt(2), nil)
-	prod := new(big.Int).Mul(big.NewInt(int64(l * numClients * 2)), bSquared)
+	prod := new(big.Int).Mul(big.NewInt(int64(l*numClients*2)), bSquared)
 
 	damgard, err := NewDamgard(l, modulusLength, bound)
 	if err != nil {
@@ -93,6 +93,7 @@ func NewDamgardMultiClientFromParams(bound *big.Int, params *DamgardParams) *Dam
 		Damgard: &Damgard{params},
 	}
 }
+
 // NewDamgardMultiFromParams takes the number of clients, bound and configuration
 // parameters of an existing Damgard scheme instance, and reconstructs
 // the scheme with same configuration parameters.
@@ -162,8 +163,8 @@ func (e *DamgardMultiClient) Encrypt(x data.Vector, pubKey, otp data.Vector) (da
 
 // DamgardMultiDerivedKey is a functional encryption key for DamgardMulti scheme.
 type DamgardMultiDerivedKey struct {
-	Keys[] *DamgardDerivedKey
-	Z     *big.Int // Σ <u_i, y_i> where u_i is OTP key for i-th client
+	Keys []*DamgardDerivedKey
+	Z    *big.Int // Σ <u_i, y_i> where u_i is OTP key for i-th client
 }
 
 // DeriveKey takes master secret key and a matrix y comprised
@@ -196,7 +197,7 @@ func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKeys, y data.Matrix) (*
 // functional encryption key, and a matrix y describing the inner-product.
 // It returns the sum of inner products Σ_i <x_i, y_i>.
 // If decryption failed, error is returned.
-func (dm *DamgardMulti) Decrypt(cipher[] data.Vector, key *DamgardMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *DamgardMulti) Decrypt(cipher []data.Vector, key *DamgardMultiDerivedKey, y data.Matrix) (*big.Int, error) {
 	if err := y.CheckBound(dm.Bound); err != nil {
 		return nil, err
 	}
@@ -232,7 +233,7 @@ func (dm *DamgardMulti) Decrypt(cipher[] data.Vector, key *DamgardMultiDerivedKe
 	calc = calc.WithNeg()
 
 	bound := new(big.Int).Mul(dm.Bound, dm.Bound)
-	bound.Mul(bound, big.NewInt(int64(dm.Params.L * dm.NumClients)))
+	bound.Mul(bound, big.NewInt(int64(dm.Params.L*dm.NumClients)))
 	res, err := calc.WithBound(bound).BabyStepGiantStep(r, dm.Params.G)
 	return res, nil
 }

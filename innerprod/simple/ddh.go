@@ -30,15 +30,15 @@ import (
 // DDHParams represents configuration parameters for the DDH scheme instance.
 type DDHParams struct {
 	// length of input vectors x and y
-	L     int
+	L int
 	// The value by which coordinates of input vectors x and y are bounded.
 	Bound *big.Int
 	// Generator of a cyclic group Z_P: G^(Q) = 1 (mod P).
-	G     *big.Int
+	G *big.Int
 	// Modulus - we are operating in a cyclic group Z_P.
-	P     *big.Int
+	P *big.Int
 	// Order of the generator G.
-	Q     *big.Int
+	Q *big.Int
 }
 
 // DDH represents a scheme instantiated from the DDH assumption,
@@ -63,7 +63,7 @@ func NewDDH(l, modulusLength int, bound *big.Int) (*DDH, error) {
 		return nil, err
 	}
 
-	if new(big.Int).Mul(big.NewInt(int64(2 * l)), new(big.Int).Exp(bound, big.NewInt(2), big.NewInt(0))).Cmp(key.Q) > 0 {
+	if new(big.Int).Mul(big.NewInt(int64(2*l)), new(big.Int).Exp(bound, big.NewInt(2), big.NewInt(0))).Cmp(key.Q) > 0 {
 		return nil, fmt.Errorf("2 * l * bound^2 should be smaller than group order")
 	}
 

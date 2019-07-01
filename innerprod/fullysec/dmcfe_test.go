@@ -56,7 +56,7 @@ func Test_DMCFE(t *testing.T) {
 	// the decryption of the inner product is possible
 	label := "some label"
 	bound := big.NewInt(1000)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(big.NewInt(0), bound)
 	y, err := data.NewRandomVector(numClients, sampler)
 	if err != nil {
 		t.Fatalf("could not create random vector: %v", err)
@@ -89,8 +89,7 @@ func Test_DMCFE(t *testing.T) {
 
 	bound.Mul(bound, bound)
 	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
-	dec := fullysec.NewDMCFEDecryptor(y, label, ciphers, keyShares, bound)
-	d, err := dec.Decrypt()
+	d, err := fullysec.DMCFEDecrypt(ciphers, keyShares, y, label, bound)
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)
 	}

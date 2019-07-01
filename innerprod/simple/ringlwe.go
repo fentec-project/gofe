@@ -29,22 +29,22 @@ import (
 
 // RingLWEParams represents parameters for the ring LWE scheme.
 type RingLWEParams struct {
-	L     int        // Length of data vectors for inner product
+	L int // Length of data vectors for inner product
 
-			 // Main security parameters of the scheme
-	N     int
+	// Main security parameters of the scheme
+	N int
 
-			 // Settings for discrete gaussian sampler
+	// Settings for discrete gaussian sampler
 	Sigma *big.Float // standard deviation
 
-	Bound *big.Int   // upper bound for coordinates of input vectors
+	Bound *big.Int // upper bound for coordinates of input vectors
 
-	P     *big.Int   // modulus for the resulting inner product
-	Q     *big.Int   // modulus for ciphertext and keys
+	P *big.Int // modulus for the resulting inner product
+	Q *big.Int // modulus for ciphertext and keys
 
-			 // A is a vector with N coordinates.
-			 // It represents a random polynomial for the scheme.
-	A     data.Vector
+	// A is a vector with N coordinates.
+	// It represents a random polynomial for the scheme.
+	A data.Vector
 }
 
 // RingLWE represents a scheme instantiated from the LWE problem,
@@ -239,7 +239,7 @@ func (s *RingLWE) Decrypt(CT data.Matrix, skY, y data.Vector) (data.Vector, erro
 		return nil, gofe.MalformedInput
 	}
 
-	if !CT.CheckDims(s.Params.L +1, s.Params.N) {
+	if !CT.CheckDims(s.Params.L+1, s.Params.N) {
 		return nil, gofe.MalformedCipher
 	}
 	CT0 := CT[:s.Params.L] // First l rows of cipher

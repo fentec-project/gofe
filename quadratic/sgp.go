@@ -38,14 +38,14 @@ import (
 // and vectors x, y are only known to the encryptor, but not to decryptor.
 type SGP struct {
 	// length of vectors x and y (matrix F is N x N)
-	N        int
+	N int
 	// Modulus for ciphertext and keys
-	Mod      *big.Int
+	Mod *big.Int
 
 	// TODO: If needed, Bound can be changed to have different bounds for x, y, F.
 	// The value by which elements of vectors x, y, and the
 	// matrix F are bounded.
-	Bound    *big.Int
+	Bound *big.Int
 
 	GCalc    *dlog.CalcBN256
 	GInvCalc *dlog.CalcBN256

@@ -33,21 +33,21 @@ import (
 
 // LWEParams represents parameters for the simple LWE scheme.
 type LWEParams struct {
-	L      int      // Length of data vectors for inner product
+	L int // Length of data vectors for inner product
 
-	N      int      // Main security parameters of the scheme
-	M      int      // Number of rows (samples) for the LWE problem
+	N int // Main security parameters of the scheme
+	M int // Number of rows (samples) for the LWE problem
 
 	BoundX *big.Int // Bound for input vector coordinates (for x)
 	BoundY *big.Int // Bound for inner product vector coordinates (for y)
 
-	P      *big.Int // Modulus for message space
-	Q      *big.Int // Modulus for ciphertext and keys
+	P *big.Int // Modulus for message space
+	Q *big.Int // Modulus for ciphertext and keys
 
 	SigmaQ *big.Float
 
-			// Matrix A of dimensions M*N is a public parameter of the scheme
-	A      data.Matrix
+	// Matrix A of dimensions M*N is a public parameter of the scheme
+	A data.Matrix
 }
 
 // LWE represents a scheme instantiated from the LWE assumption,
@@ -276,7 +276,7 @@ func (s *LWE) Decrypt(ct, skY, y data.Vector) (*big.Int, error) {
 	// Break down the ciphertext vector into
 	// ct0     which holds first n elements of the cipher, and
 	// ctLast  which holds last n elements of the cipher
-	if len(ct) != s.Params.N +s.Params.L {
+	if len(ct) != s.Params.N+s.Params.L {
 		return nil, gofe.MalformedCipher
 	}
 	ct0 := ct[:s.Params.N]

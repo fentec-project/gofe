@@ -81,7 +81,7 @@ func NewRandomDetMatrix(rows, cols int, max *big.Int, key *[32]byte) (Matrix, er
 
 	mat := make([]Vector, rows)
 	for i := 0; i < rows; i++ {
-		mat[i] = NewVector(v[(i * cols): ((i + 1) * cols)])
+		mat[i] = NewVector(v[(i * cols):((i + 1) * cols)])
 	}
 
 	return NewMatrix(mat)

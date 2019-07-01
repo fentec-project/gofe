@@ -17,9 +17,9 @@
 package fullysec
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/big"
-	"crypto/sha256"
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
@@ -42,7 +42,7 @@ type DamgardDecMultiClient struct {
 	DamgardScheme *DamgardMulti
 	ClientPubKey  *big.Int
 	ClientSecKey  *big.Int
-	KeyShare      data.Matrix
+	Share         data.Matrix
 }
 
 // NewDamgardDecMultiClient configures a new client in the decentalized scheme
@@ -72,7 +72,7 @@ func NewDamgardDecMultiClient(idx int, damgardMulti *DamgardMulti) (*DamgardDecM
 // which is the corresponding public key in pubKeys. Shared keys are such that
 // each client has a random key but all the shared keys sum to 0.
 func (c *DamgardDecMultiClient) SetKeyShare(pubKeys []*big.Int) error {
-	c.KeyShare = data.NewConstantMatrix(c.DamgardScheme.NumClients, c.DamgardScheme.Params.L, big.NewInt(0))
+	c.Share = data.NewConstantMatrix(c.DamgardScheme.NumClients, c.DamgardScheme.Params.L, big.NewInt(0))
 	var add data.Matrix
 	var err error
 	for k := 0; k < len(pubKeys); k++ {
@@ -90,17 +90,17 @@ func (c *DamgardDecMultiClient) SetKeyShare(pubKeys []*big.Int) error {
 		}
 
 		if k < c.Idx {
-			c.KeyShare, err = c.KeyShare.Add(add)
+			c.Share, err = c.Share.Add(add)
 			if err != nil {
 				return err
 			}
 		} else {
-			c.KeyShare, err = c.KeyShare.Sub(add)
+			c.Share, err = c.Share.Sub(add)
 			if err != nil {
 				return err
 			}
 		}
-		c.KeyShare = c.KeyShare.Mod(c.DamgardScheme.Params.Q)
+		c.Share = c.Share.Mod(c.DamgardScheme.Params.Q)
 	}
 
 	return nil
@@ -108,8 +108,8 @@ func (c *DamgardDecMultiClient) SetKeyShare(pubKeys []*big.Int) error {
 
 // DamgardDecMultiSecKey is a secret key that each client has.
 type DamgardDecMultiSecKey struct {
-	sk    *DamgardSecKey
-	pk    data.Vector
+	sk     *DamgardSecKey
+	pk     data.Vector
 	OtpKey data.Vector
 }
 
@@ -120,18 +120,18 @@ func (dm *DamgardDecMultiClient) GenerateKeys() (*DamgardDecMultiSecKey, error) 
 	masterSecretKey, masterPublicKey, err := dm.DamgardScheme.Damgard.GenerateMasterKeys()
 
 	if err != nil {
-			return nil, fmt.Errorf("error in master key generation")
-		}
+		return nil, fmt.Errorf("error in master key generation")
+	}
 
-		otpVector, err := data.NewRandomVector(dm.DamgardScheme.Damgard.Params.L,
-			sample.NewUniform(dm.DamgardScheme.Damgard.Params.Q))
-		if err != nil {
-			return nil, fmt.Errorf("error in random vector generation")
-		}
+	otpVector, err := data.NewRandomVector(dm.DamgardScheme.Damgard.Params.L,
+		sample.NewUniform(dm.DamgardScheme.Damgard.Params.Q))
+	if err != nil {
+		return nil, fmt.Errorf("error in random vector generation")
+	}
 
 	return &DamgardDecMultiSecKey{sk: masterSecretKey,
-						   pk:        masterPublicKey,
-						   OtpKey:    otpVector,}, nil
+		pk:     masterPublicKey,
+		OtpKey: otpVector}, nil
 }
 
 // Encrypt generates a ciphertext from the input vector x
@@ -170,7 +170,7 @@ func (dm *DamgardDecMultiClient) DeriveKeyShare(secKey *DamgardDecMultiSecKey, y
 		return nil, err
 	}
 
-	z2, err := dm.KeyShare.Dot(y)
+	z2, err := dm.Share.Dot(y)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func NewDamgardDecMultiDec(damgardMulti *DamgardMulti) *DamgardDecMultiDec {
 // an array of partial functional encryption keys, and a matrix y representing
 // the inner-product vectors. It returns the sum of inner products.
 // If decryption failed, an error is returned.
-func (dm *DamgardDecMultiDec) Decrypt(cipher[] data.Vector, partKeys[] *DamgardDecMultiDerivedKeyPart, y data.Matrix) (*big.Int, error) {
+func (dm *DamgardDecMultiDec) Decrypt(cipher []data.Vector, partKeys []*DamgardDecMultiDerivedKeyPart, y data.Matrix) (*big.Int, error) {
 	if err := y.CheckBound(dm.DamgardScheme.Params.Bound); err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func (dm *DamgardDecMultiDec) Decrypt(cipher[] data.Vector, partKeys[] *DamgardD
 	}
 	z.Mod(z, dm.DamgardScheme.Params.Q)
 	key := &DamgardMultiDerivedKey{Keys: keys,
-								  Z:    z,
+		Z: z,
 	}
 
 	return dm.DamgardScheme.Decrypt(cipher, key, y)

@@ -86,7 +86,7 @@ func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
 // not be properly instantiated.
 func NewDDHMultiClient(params *DDHParams) *DDHMultiClient {
 	return &DDHMultiClient{
-		DDH:   &DDH{params},
+		DDH: &DDH{params},
 	}
 }
 
@@ -192,7 +192,7 @@ func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiD
 // functional encryption key, and a matrix y comprised of plaintext vectors.
 // It returns the sum of inner products.
 // If decryption failed, error is returned.
-func (dm *DDHMulti) Decrypt(cipher[] data.Vector, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *DDHMulti) Decrypt(cipher []data.Vector, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
 	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}

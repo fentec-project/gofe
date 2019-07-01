@@ -70,12 +70,16 @@ func NewRandomDetVector(len int, max *big.Int, key *[32]byte) (Vector, error) {
 	lTimesMaxBytes := len * maxBytes
 	nounce := make([]byte, 8)
 	ret := make([]*big.Int, len)
-	for i := range nounce { nounce[i] = 0 }
+	for i := range nounce {
+		nounce[i] = 0
+	}
 	for i := 3; true; i++ {
-		in := make([]byte, i * lTimesMaxBytes)
-		for i := range in { in[i] = 0 }
+		in := make([]byte, i*lTimesMaxBytes)
+		for i := range in {
+			in[i] = 0
+		}
 
-		out := make([]byte, i * lTimesMaxBytes)
+		out := make([]byte, i*lTimesMaxBytes)
 
 		salsa20.XORKeyStream(out, in, nounce, key)
 
@@ -299,4 +303,13 @@ func (v Vector) MulVecG2(g2 VectorG2) VectorG2 {
 	}
 
 	return prod
+}
+
+// String produces a string representation of a vector.
+func (v Vector) String() string {
+	vStr := ""
+	for _, yi := range v {
+		vStr = vStr + " " + yi.String()
+	}
+	return vStr
 }
