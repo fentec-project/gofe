@@ -69,7 +69,7 @@ func NewRandomMatrix(rows, cols int, sampler sample.Sampler) (Matrix, error) {
 }
 
 // NewRandomDetMatrix returns a new Matrix instance
-// with random elements sampled random elements sampled by a pseudo-random
+// with random elements sampled by a pseudo-random
 // number generator. Elements are sampled from [0, max) and key
 // determines the pseudo-random generator.
 func NewRandomDetMatrix(rows, cols int, max *big.Int, key *[32]byte) (Matrix, error) {

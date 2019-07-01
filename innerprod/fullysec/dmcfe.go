@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"math/big"
 
+	"crypto/sha256"
+	"strconv"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
-	"crypto/sha256"
-	"strconv"
 )
 
 // DMCFEClient is to be instantiated by the client. Idx presents index of the client.
@@ -62,11 +63,11 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 }
 
 // TODO: make hashing functions random
-// SetKeyShare sets a shared key for client c, based on the public keys of all the
+// SetShare sets a shared key for client c, based on the public keys of all the
 // clients involved in the scheme. It assumes that Idx of a client indicates
 // which is the corresponding public key in pubKeys. Shared keys are such that
 // each client has a random key but all the shared keys sum to 0.
-func (c *DMCFEClient) SetKeyShare(pubKeys []*bn256.G1) error {
+func (c *DMCFEClient) SetShare(pubKeys []*bn256.G1) error {
 	c.Share = data.NewConstantMatrix(2, 2, big.NewInt(0))
 	var add data.Matrix
 	var err error
@@ -127,8 +128,8 @@ func (c *DMCFEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
 	return cipher, nil
 }
 
-// GenerateKeyShare generates client's key share. Decryptor needs shares from all clients.
-func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
+// DeriveKeyShare generates client's key share. Decryptor needs shares from all clients.
+func (c *DMCFEClient) DeriveKeyShare(y data.Vector) (data.VectorG2, error) {
 	hs := make([]*bn256.G2, 2)
 	var err error
 	for i := 0; i < 2; i++ {
@@ -139,7 +140,7 @@ func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 	}
 
 	keyShare := data.VectorG2{new(bn256.G2).ScalarBaseMult(big.NewInt(0)),
-	                          new(bn256.G2).ScalarBaseMult(big.NewInt(0))}
+		new(bn256.G2).ScalarBaseMult(big.NewInt(0))}
 	for k := 0; k < 2; k++ {
 		for i := 0; i < 2; i++ {
 			add := new(bn256.G2).ScalarMult(hs[i], c.Share[k][i])
@@ -160,7 +161,7 @@ func (c *DMCFEClient) GenerateKeyShare(y data.Vector) (data.VectorG2, error) {
 // a string under which vector x has been encrypted (each client encrypted x_i under this label). The value bound
 // specifies the bound of the output (solution will be in the interval (-bound, bound)) and can be nil.
 func DMCFEDecrypt(ciphers []*bn256.G1, keyShares []data.VectorG2, y data.Vector, label string,
-		bound *big.Int) (*big.Int, error) {
+	bound *big.Int) (*big.Int, error) {
 	key1 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	key2 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < len(keyShares); i++ {

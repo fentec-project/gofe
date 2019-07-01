@@ -45,7 +45,7 @@ func Test_DMCFE(t *testing.T) {
 
 	// based on public values of each client create private matrices T_i summing to 0
 	for i := 0; i < numClients; i++ {
-		err := clients[i].SetKeyShare(pubKeys)
+		err := clients[i].SetShare(pubKeys)
 		if err != nil {
 			panic(errors.Wrap(err, "could not create private values"))
 		}
@@ -56,7 +56,7 @@ func Test_DMCFE(t *testing.T) {
 	// the decryption of the inner product is possible
 	label := "some label"
 	bound := big.NewInt(1000)
-	sampler := sample.NewUniformRange(big.NewInt(0), bound)
+	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	y, err := data.NewRandomVector(numClients, sampler)
 	if err != nil {
 		t.Fatalf("could not create random vector: %v", err)
@@ -80,7 +80,7 @@ func Test_DMCFE(t *testing.T) {
 		}
 		ciphers[i] = c
 
-		keyShare, err := clients[i].GenerateKeyShare(y)
+		keyShare, err := clients[i].DeriveKeyShare(y)
 		if err != nil {
 			t.Fatalf("could not generate key share: %v", err)
 		}

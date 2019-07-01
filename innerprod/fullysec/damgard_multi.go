@@ -115,7 +115,7 @@ type DamgardMultiSecKeys struct {
 	Otp data.Matrix
 }
 
-// GenerateMasterKeys generates an the keys and one time pads for all the clients.
+// GenerateMasterKeys generates keys and one time pads for all the clients.
 //
 // It returns an error in case values could not be generated.
 func (dm *DamgardMulti) GenerateMasterKeys() (*DamgardMultiSecKeys, error) {

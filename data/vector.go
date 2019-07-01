@@ -60,12 +60,8 @@ func NewRandomDetVector(len int, max *big.Int, key *[32]byte) (Vector, error) {
 	}
 
 	maxBits := new(big.Int).Sub(max, big.NewInt(1)).BitLen()
-	maxBytes := (maxBits / 8) + 1
-	over := uint(8 - (maxBits % 8))
-	if over == 8 {
-		maxBytes -= 1
-		over = 0
-	}
+	maxBytes := (maxBits + 7) / 8
+	over := uint((8 * maxBytes) - maxBits)
 
 	lTimesMaxBytes := len * maxBytes
 	nounce := make([]byte, 8)

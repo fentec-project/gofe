@@ -54,7 +54,7 @@ func TestSimple_DamgardDecMulti(t *testing.T) {
 	// create its own secret key for the encryption of a vector
 	secKeys := make([]*fullysec.DamgardDecMultiSecKey, numOfClients)
 	for i := 0; i < numOfClients; i++ {
-		clients[i].SetKeyShare(pubKeys)
+		clients[i].SetShare(pubKeys)
 		secKeys[i], err = clients[i].GenerateKeys()
 	}
 

@@ -65,8 +65,8 @@ func TestVector(t *testing.T) {
 		key[i] = byte(r.Int64())
 	}
 
-	NewRandomDetMatrix(1000, 1000, new(big.Int).Exp(big.NewInt(2), big.NewInt(1000), nil), &key)
-
+	_, err = NewRandomDetMatrix(100, 100, big.NewInt(5), &key)
+	assert.Equal(t, err, nil)
 }
 
 func TestVector_MulAsPolyInRing(t *testing.T) {
