@@ -74,6 +74,9 @@ func NewDamgardMulti(numClients, l, modulusLength int, bound *big.Int) (*Damgard
 	if prod.Cmp(damgard.Params.Q) > 0 {
 		return nil, fmt.Errorf("2 * l * numClients * bound^2 should be smaller than group order")
 	}
+	// the bound of the underlying Damgard scheme is set to
+	// the maximum value since the scheme will be used to encrypt
+	// values summed with one time pad, thus arbitrary big
 	damgard.Params.Bound = damgard.Params.Q
 
 	return &DamgardMulti{
