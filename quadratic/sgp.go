@@ -26,7 +26,7 @@ import (
 )
 
 // SGP implements efficient FE scheme for quadratic multi-variate polynomials
-// based on  Sans, Gay and Pointcheval:
+// based on Dufour Sans, Gay and Pointcheval:
 // "Reading in the Dark: Classifying Encrypted Digits with
 // Functional Encryption".
 // See paper: https://eprint.iacr.org/2018/206.pdf which is based on bilinear pairings.
