@@ -35,6 +35,15 @@ type DDHMulti struct {
 	*DDH
 }
 
+// DDHMulti represents a multi input variant of the
+// underlying DDH scheme based on
+// Abdalla, Catalano, Fiore, Gay, and Ursu:
+// "Multi-Input Functional Encryption for Inner Products:
+// Function-Hiding Realizations and Constructions without Pairings".
+type DDHMultiClient struct {
+	*DDH
+}
+
 // NewDDHMulti configures a new instance of the scheme.
 // It accepts the number of slots (encryptors), the length of
 // input vectors l, the bit length of the modulus (we are
@@ -64,6 +73,20 @@ func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
 	return &DDHMulti{
 		Slots: slots,
 		DDH:   &DDH{params},
+	}
+}
+
+// NewDDHMulti configures a new instance of the scheme.
+// It accepts the number of slots (encryptors), the length of
+// input vectors l, the bit length of the modulus (we are
+// operating in the Z_p group), and a bound by which coordinates
+// of input vectors are bounded.
+//
+// It returns an error in case the underlying DDH scheme instances could
+// not be properly instantiated.
+func NewDDHMultiClient(params *DDHParams) *DDHMultiClient {
+	return &DDHMultiClient{
+		DDH: &DDH{params},
 	}
 }
 
@@ -116,6 +139,21 @@ func (dm *DDHMulti) GenerateMasterKeys() (data.Matrix, *DDHMultiSecKey, error) {
 	return pubKey, &DDHMultiSecKey{secKey, otp}, nil
 }
 
+// Encrypt generates a ciphertext from the input vector x
+// with the provided public key and one-time pad otp (which
+// is a part of the secret key). It returns the ciphertext vector.
+// If encryption failed, error is returned.
+func (e *DDHMultiClient) Encrypt(x data.Vector, pubKey, otp data.Vector) (data.Vector, error) {
+	if err := x.CheckBound(e.Params.Bound); err != nil {
+		return nil, err
+	}
+
+	otp = x.Add(otp)
+	otpModulo := otp.Mod(e.Params.Bound)
+
+	return e.DDH.Encrypt(otpModulo, pubKey)
+}
+
 // DDHMultiDerivedKey is functional encryption key for DDH Scheme.
 type DDHMultiDerivedKey struct {
 	Keys   data.Vector
@@ -154,7 +192,7 @@ func (dm *DDHMulti) DeriveKey(secKey *DDHMultiSecKey, y data.Matrix) (*DDHMultiD
 // functional encryption key, and a matrix y comprised of plaintext vectors.
 // It returns the sum of inner products.
 // If decryption failed, error is returned.
-func (dm *DDHMulti) Decrypt(cipher data.Matrix, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *DDHMulti) Decrypt(cipher []data.Vector, key *DDHMultiDerivedKey, y data.Matrix) (*big.Int, error) {
 	if err := y.CheckBound(dm.Params.Bound); err != nil {
 		return nil, err
 	}
@@ -172,32 +210,4 @@ func (dm *DDHMulti) Decrypt(cipher data.Matrix, key *DDHMultiDerivedKey, y data.
 	res := new(big.Int).Sub(sum, key.OTPKey)
 	res.Mod(res, dm.Params.Bound)
 	return res, nil
-}
-
-// DDHMultiEnc represents a single encryptor for the DDHMulti scheme.
-type DDHMultiEnc struct {
-	*DDH
-}
-
-// NewDDHMultiEnc takes configuration parameters of an underlying
-// DDH scheme instance, and instantiates a new DDHMultiEnc.
-func NewDDHMultiEnc(params *DDHParams) *DDHMultiEnc {
-	return &DDHMultiEnc{
-		DDH: &DDH{params},
-	}
-}
-
-// Encrypt generates a ciphertext from the input vector x
-// with the provided public key and one-time pad otp (which
-// is a part of the secret key). It returns the ciphertext vector.
-// If encryption failed, error is returned.
-func (e *DDHMultiEnc) Encrypt(x data.Vector, pubKey, otp data.Vector) (data.Vector, error) {
-	if err := x.CheckBound(e.Params.Bound); err != nil {
-		return nil, err
-	}
-
-	otp = x.Add(otp)
-	otpModulo := otp.Mod(e.Params.Bound)
-
-	return e.DDH.Encrypt(otpModulo, pubKey)
 }

@@ -17,12 +17,11 @@
 package fullysec
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 
 	emmy "github.com/xlab-si/emmy/crypto/common"
-
-	"crypto/rand"
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal"
@@ -81,9 +80,9 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	// i.e. security parameter should be big enough that
 	// the generated n is much greater than l and the bounds
 	xSquareL := new(big.Int).Mul(boundX, boundX)
-	xSquareL.Mul(xSquareL, big.NewInt(int64(2 * l)))
+	xSquareL.Mul(xSquareL, big.NewInt(int64(2*l)))
 	ySquareL := new(big.Int).Mul(boundY, boundY)
-	ySquareL.Mul(ySquareL, big.NewInt(int64(2 * l)))
+	ySquareL.Mul(ySquareL, big.NewInt(int64(2*l)))
 	if n.Cmp(xSquareL) < 1 {
 		return nil, fmt.Errorf("parameters generation failed," +
 			"boundX and l too big for bitLen")
@@ -191,7 +190,7 @@ func (s *Paillier) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 	}
 
 	// encrypt x under randomness r
-	cipher := make(data.Vector, s.Params.L +1)
+	cipher := make(data.Vector, s.Params.L+1)
 	// c_0 = g^r in Z_n^2
 	c0 := new(big.Int).Exp(s.Params.G, r, s.Params.NSquare)
 	cipher[0] = c0

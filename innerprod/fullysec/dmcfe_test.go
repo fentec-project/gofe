@@ -29,10 +29,10 @@ import (
 )
 
 func Test_DMCFE(t *testing.T) {
-	numClients := 100
+	numClients := 10
 	clients := make([]*fullysec.DMCFEClient, numClients)
 
-	pubT := make([]data.Matrix, numClients)
+	pubKeys := make([]*bn256.G1, numClients)
 	// create clients and make a slice of their public values
 	for i := 0; i < numClients; i++ {
 		c, err := fullysec.NewDMCFEClient(i)
@@ -40,12 +40,12 @@ func Test_DMCFE(t *testing.T) {
 			t.Fatalf("could not instantiate fullysec.Client: %v", err)
 		}
 		clients[i] = c
-		pubT[i] = c.TPub
+		pubKeys[i] = c.ClientPubKey
 	}
 
 	// based on public values of each client create private matrices T_i summing to 0
 	for i := 0; i < numClients; i++ {
-		err := clients[i].SetT(pubT)
+		err := clients[i].SetShare(pubKeys)
 		if err != nil {
 			panic(errors.Wrap(err, "could not create private values"))
 		}
@@ -56,12 +56,12 @@ func Test_DMCFE(t *testing.T) {
 	// the decryption of the inner product is possible
 	label := "some label"
 	bound := big.NewInt(1000)
-	sampler1 := sample.NewUniform(bound)
-	y, err := data.NewRandomVector(numClients, sampler1)
+	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	y, err := data.NewRandomVector(numClients, sampler)
 	if err != nil {
 		t.Fatalf("could not create random vector: %v", err)
 	}
-	x, err := data.NewRandomVector(numClients, sampler1)
+	x, err := data.NewRandomVector(numClients, sampler)
 	if err != nil {
 		t.Fatalf("could not create random vector: %v", err)
 	}
@@ -80,7 +80,7 @@ func Test_DMCFE(t *testing.T) {
 		}
 		ciphers[i] = c
 
-		keyShare, err := clients[i].GenerateKeyShare(y)
+		keyShare, err := clients[i].DeriveKeyShare(y)
 		if err != nil {
 			t.Fatalf("could not generate key share: %v", err)
 		}
@@ -89,8 +89,7 @@ func Test_DMCFE(t *testing.T) {
 
 	bound.Mul(bound, bound)
 	bound.Mul(bound, big.NewInt(int64(numClients))) // numClients * (coordinate_bound)^2
-	dec := fullysec.NewDMCFEDecryptor(y, label, ciphers, keyShares, bound)
-	d, err := dec.Decrypt()
+	d, err := fullysec.DMCFEDecrypt(ciphers, keyShares, y, label, bound)
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)
 	}

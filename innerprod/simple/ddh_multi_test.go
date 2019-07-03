@@ -45,11 +45,11 @@ func TestSimple_MultiDDH(t *testing.T) {
 		t.Fatalf("Error during matrix generation: %v", err)
 	}
 
-	// we simulate different encryptors which might be on different machines (this means "multi-input"),
+	// we simulate different clients encrypting which might be on different machines (this means "multi-input"),
 	// ciphertexts are then collected by decryptor and inner-product over vectors from all encryptors is computed
-	encryptors := make([]*simple.DDHMultiEnc, numOfSlots)
+	clients := make([]*simple.DDHMultiClient, numOfSlots)
 	for i := 0; i < numOfSlots; i++ {
-		encryptors[i] = simple.NewDDHMultiEnc(multiDDH.Params)
+		clients[i] = simple.NewDDHMultiClient(multiDDH.Params)
 	}
 
 	derivedKey, err := multiDDH.DeriveKey(secKey, y)
@@ -66,7 +66,7 @@ func TestSimple_MultiDDH(t *testing.T) {
 		}
 		collectedX[i] = x
 
-		c, err := encryptors[i].Encrypt(x, pubKey[i], secKey.OtpKey[i])
+		c, err := clients[i].Encrypt(x, pubKey[i], secKey.OtpKey[i])
 		if err != nil {
 			t.Fatalf("Error during encryption: %v", err)
 		}
