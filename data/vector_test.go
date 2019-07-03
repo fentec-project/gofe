@@ -58,14 +58,14 @@ func TestVector(t *testing.T) {
 
 	assert.Equal(t, innerProd, mul, "inner product should calculate correctly")
 
-	samper := sample.NewUniform(big.NewInt(256))
+	sampler = sample.NewUniform(big.NewInt(256))
 	var key [32]byte
 	for i := range key {
-		r, _ := samper.Sample()
+		r, _ := sampler.Sample()
 		key[i] = byte(r.Int64())
 	}
 
-	_, err = NewRandomDetMatrix(100, 100, big.NewInt(5), &key)
+	_, err = NewRandomDetVector(100, big.NewInt(5), &key)
 	assert.Equal(t, err, nil)
 }
 

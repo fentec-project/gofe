@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple_DamgardDecMulti(t *testing.T) {
+func TestFullySec_DamgardDecMulti(t *testing.T) {
 	// choose parameters
 	numOfClients := 20
 	l := 2

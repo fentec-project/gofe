@@ -54,6 +54,16 @@ func TestMatrix(t *testing.T) {
 			assert.Equal(t, new(big.Int).Mod(x[i][j], modulo), mod[i][j], "coordinates should mod correctly")
 		}
 	}
+
+	sampler = sample.NewUniform(big.NewInt(256))
+	var key [32]byte
+	for i := range key {
+		r, _ := sampler.Sample()
+		key[i] = byte(r.Int64())
+	}
+
+	_, err = NewRandomDetMatrix(100, 100, big.NewInt(5), &key)
+	assert.Equal(t, err, nil)
 }
 
 func TestMatrix_Rows(t *testing.T) {

@@ -45,7 +45,7 @@ type DamgardDecMultiClient struct {
 	Share         data.Matrix
 }
 
-// NewDamgardDecMultiClient configures a new client in the decentalized scheme
+// NewDamgardDecMultiClient configures a new client in the decentralized scheme
 // based on a underlying DamgardMulti scheme.
 // It accepts the identification of the client (an integer from [0, numClients))
 // and the underlying DamgardMulti scheme (which contains all the shared parameters)

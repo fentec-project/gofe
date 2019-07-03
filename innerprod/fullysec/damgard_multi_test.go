@@ -28,7 +28,7 @@ import (
 
 func TestFullySec_DamgardMultiDDH(t *testing.T) {
 	// choose meta-parameters for the scheme
-	numOfSlots := 10
+	numClients := 10
 	l := 5
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
@@ -36,14 +36,14 @@ func TestFullySec_DamgardMultiDDH(t *testing.T) {
 	modulusLength := 512
 
 	// build the central authority for the scheme
-	damgardMulti, err := fullysec.NewDamgardMulti(numOfSlots, l, modulusLength, bound)
+	damgardMulti, err := fullysec.NewDamgardMulti(numClients, l, modulusLength, bound)
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}
 
 	// we simulate different clients which might be on different machines (this means "multi-input"),
-	clients := make([]*fullysec.DamgardMultiClient, numOfSlots)
-	for i := 0; i < numOfSlots; i++ {
+	clients := make([]*fullysec.DamgardMultiClient, numClients)
+	for i := 0; i < numClients; i++ {
 		clients[i] = fullysec.NewDamgardMultiClientFromParams(bound, damgardMulti.Params)
 	}
 
@@ -51,15 +51,15 @@ func TestFullySec_DamgardMultiDDH(t *testing.T) {
 	secKeys, err := damgardMulti.GenerateMasterKeys()
 
 	// pick a matrix that represent the collection of inner-product vectors y_i
-	y, err := data.NewRandomMatrix(numOfSlots, l, sampler)
+	y, err := data.NewRandomMatrix(numClients, l, sampler)
 	if err != nil {
 		t.Fatalf("Error during matrix generation: %v", err)
 	}
 
 	// each client encrypts its vector x_i
-	collectedX := make([]data.Vector, numOfSlots) // solely for checking whether Encrypt/Decrypt works properly
-	ciphertexts := make([]data.Vector, numOfSlots)
-	for i := 0; i < numOfSlots; i++ {
+	collectedX := make([]data.Vector, numClients) // solely for checking whether Encrypt/Decrypt works properly
+	ciphertexts := make([]data.Vector, numClients)
+	for i := 0; i < numClients; i++ {
 		x, err := data.NewRandomVector(l, sampler) // x_i possessed and chosen by client[i]
 		if err != nil {
 			t.Fatalf("Error during random vector generation: %v", err)
@@ -79,7 +79,7 @@ func TestFullySec_DamgardMultiDDH(t *testing.T) {
 	}
 
 	// we simulate the decryptor
-	decryptor := fullysec.NewDamgardMultiFromParams(numOfSlots, bound, damgardMulti.Params)
+	decryptor := fullysec.NewDamgardMultiFromParams(numClients, bound, damgardMulti.Params)
 
 	// decryptor decrypts the value
 	xy, err := decryptor.Decrypt(ciphertexts, derivedKey, y)

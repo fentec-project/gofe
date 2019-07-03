@@ -64,20 +64,15 @@ func NewRandomDetVector(len int, max *big.Int, key *[32]byte) (Vector, error) {
 	over := uint((8 * maxBytes) - maxBits)
 
 	lTimesMaxBytes := len * maxBytes
-	nounce := make([]byte, 8)
+	nonce := make([]byte, 8) // nonce is initialized to zeros
 	ret := make([]*big.Int, len)
-	for i := range nounce {
-		nounce[i] = 0
-	}
+
 	for i := 3; true; i++ {
-		in := make([]byte, i*lTimesMaxBytes)
-		for i := range in {
-			in[i] = 0
-		}
+		in := make([]byte, i*lTimesMaxBytes) // input is initialized to zeros
 
 		out := make([]byte, i*lTimesMaxBytes)
 
-		salsa20.XORKeyStream(out, in, nounce, key)
+		salsa20.XORKeyStream(out, in, nonce, key)
 
 		j := 0
 		k := 0
