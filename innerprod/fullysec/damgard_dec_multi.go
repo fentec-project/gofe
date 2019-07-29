@@ -38,11 +38,11 @@ import (
 // Σ_i <x_i, y_i> (sum of dot products).
 type DamgardDecMultiClient struct {
 	// number of encryptors
-	Idx           int
+	Idx int
 	*DamgardMulti
-	ClientPubKey  *big.Int
-	ClientSecKey  *big.Int
-	Share         data.Matrix
+	ClientPubKey *big.Int
+	ClientSecKey *big.Int
+	Share        data.Matrix
 }
 
 // NewDamgardDecMultiClient configures a new client in the decentralized scheme
@@ -60,10 +60,10 @@ func NewDamgardDecMultiClient(idx int, damgardMulti *DamgardMulti) (*DamgardDecM
 	pub := new(big.Int).Exp(damgardMulti.Params.G, sec, damgardMulti.Params.P)
 
 	return &DamgardDecMultiClient{
-		Idx:           idx,
-		DamgardMulti:  damgardMulti,
-		ClientPubKey:  pub,
-		ClientSecKey:  sec,
+		Idx:          idx,
+		DamgardMulti: damgardMulti,
+		ClientPubKey: pub,
+		ClientSecKey: sec,
 	}, nil
 }
 
@@ -80,11 +80,9 @@ func (c *DamgardDecMultiClient) SetShare(pubKeys []*big.Int) error {
 			continue
 		}
 		sharedNum := new(big.Int).Exp(pubKeys[k], c.ClientSecKey, c.Params.P)
-		sharedKey := sha256.New().Sum([]byte(sharedNum.String()))
-		var sharedKeyFixed [32]byte
-		copy(sharedKeyFixed[:], sharedKey)
+		sharedKey := sha256.Sum256([]byte(sharedNum.String()))
 
-		add, err = data.NewRandomDetMatrix(c.NumClients, c.Params.L, c.Params.Q, &sharedKeyFixed)
+		add, err = data.NewRandomDetMatrix(c.NumClients, c.Params.L, c.Params.Q, &sharedKey)
 		if err != nil {
 			return err
 		}
