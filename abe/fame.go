@@ -22,6 +22,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"crypto/aes"
+	cbc "crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
@@ -93,6 +98,7 @@ type FAMECipher struct {
 	Ct      [][3]*bn256.G1
 	CtPrime *bn256.GT
 	Msp     *MSP
+	SymEnc  []byte // symmetric encryption of the message
 }
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
@@ -101,11 +107,6 @@ type FAMECipher struct {
 // is returned. Note that safety of the encryption is only proved if the mapping
 // msp.RowToAttrib from the rows of msp.Mat to attributes is injective.
 func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
-	msgInGt, err := bn256.MapStringToGT(msg)
-	if err != nil {
-		return nil, err
-	}
-
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -120,6 +121,36 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 
 	}
 
+	// msg is encrypted using CBC, with a random key that is encapsulated
+	// with FAME
+	_, keyGt, err := bn256.RandomGT(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	c, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return nil, err
+	}
+
+	iv := make([]byte, c.BlockSize())
+	encrypterCBC := cbc.NewCBCEncrypter(c, iv)
+
+	msgByte := []byte(msg)
+
+	// message is padded according to pkcs7 standard
+	padLen := c.BlockSize() - (len(msgByte) % c.BlockSize())
+	msgPad := make([]byte, len(msgByte)+padLen)
+	copy(msgPad, msgByte)
+	for i := len(msgByte); i < len(msgPad); i++ {
+		msgPad[i] = byte(padLen)
+	}
+
+	symEnc := make([]byte, len(msgPad))
+	encrypterCBC.CryptBlocks(symEnc, msgPad)
+
+	// encapsulate the key with FAME
 	sampler := sample.NewUniform(a.P)
 	s, err := data.NewRandomVector(2, sampler)
 	if err != nil {
@@ -174,9 +205,9 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 
 	ctPrime := new(bn256.GT).ScalarMult(pk.PartGT[0], s[0])
 	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.PartGT[1], s[1]))
-	ctPrime.Add(ctPrime, msgInGt)
+	ctPrime.Add(ctPrime, keyGt)
 
-	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp}, nil
+	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp, SymEnc: symEnc}, nil
 }
 
 // FAMEAttribKeys represents keys corresponding to attributes possessed by
@@ -334,7 +365,8 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		return "", fmt.Errorf("provided key is not sufficient for decryption")
 	}
 
-	msgInGt := new(bn256.GT).Set(cipher.CtPrime)
+	// get a CBC key needed for the decryption of msg
+	keyGt := new(bn256.GT).Set(cipher.CtPrime)
 
 	ctProd := new([3]*bn256.G1)
 	keyProd := new([3]*bn256.G1)
@@ -349,9 +381,25 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		ctPairing := bn256.Pair(ctProd[j], key.K0[j])
 		keyPairing := bn256.Pair(keyProd[j], cipher.Ct0[j])
 		keyPairing.Neg(keyPairing)
-		msgInGt.Add(msgInGt, ctPairing)
-		msgInGt.Add(msgInGt, keyPairing)
+		keyGt.Add(keyGt, ctPairing)
+		keyGt.Add(keyGt, keyPairing)
 	}
 
-	return bn256.MapGTToString(msgInGt), nil
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	c, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return "", err
+	}
+	iv := make([]byte, c.BlockSize())
+
+	msgPad := make([]byte, len(cipher.SymEnc))
+	decrypter := cbc.NewCBCDecrypter(c, iv)
+	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
+
+	// unpad the message
+	padLen := int(msgPad[len(msgPad)-1])
+	msgByte := msgPad[0:(len(msgPad) - padLen)]
+
+	return string(msgByte), nil
 }

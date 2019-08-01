@@ -76,11 +76,9 @@ func (c *DMCFEClient) SetShare(pubKeys []*bn256.G1) error {
 			continue
 		}
 		sharedG1 := new(bn256.G1).ScalarMult(pubKeys[k], c.ClientSecKey)
-		sharedKey := sha256.New().Sum([]byte(sharedG1.String()))
-		var sharedKeyFixed [32]byte
-		copy(sharedKeyFixed[:], sharedKey)
+		sharedKey := sha256.Sum256([]byte(sharedG1.String()))
 
-		add, err = data.NewRandomDetMatrix(2, 2, bn256.Order, &sharedKeyFixed)
+		add, err = data.NewRandomDetMatrix(2, 2, bn256.Order, &sharedKey)
 		if err != nil {
 			return err
 		}

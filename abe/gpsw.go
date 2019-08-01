@@ -17,6 +17,10 @@
 package abe
 
 import (
+	"crypto/aes"
+	cbc "crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 
@@ -89,25 +93,50 @@ type GPSWCipher struct {
 	AttribToI map[int]int   // a map that connects the attributes in gamma with elements of e
 	E0        *bn256.GT     // the first part of the encryption
 	E         data.VectorG2 // the second part of the encryption
+	SymEnc    []byte        // symmetric encryption of the message
 }
 
 // Encrypt takes as an input a message msg given as a string, gamma a set of
 // attributes that can be latter used in a decryption policy and a public
-// key pk. It returns an encryption of msk. In case of a failed procedure an
+// key pk. It returns an encryption of msg. In case of a failed procedure an
 // error is returned.
 func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, error) {
-	msgInGt, err := bn256.MapStringToGT(msg)
+	// msg is encrypted using CBC, with a random key that is encapsulated
+	// with GPSW
+	_, keyGt, err := bn256.RandomGT(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	c, err := aes.NewCipher(keyCBC[:])
 	if err != nil {
 		return nil, err
 	}
 
+	iv := make([]byte, c.BlockSize())
+	encrypterCBC := cbc.NewCBCEncrypter(c, iv)
+
+	msgByte := []byte(msg)
+	// message is padded according to pkcs7 standard
+	padLen := c.BlockSize() - (len(msgByte) % c.BlockSize())
+	msgPad := make([]byte, len(msgByte)+padLen)
+	copy(msgPad, msgByte)
+	for i := len(msgByte); i < len(msgPad); i++ {
+		msgPad[i] = byte(padLen)
+	}
+
+	symEnc := make([]byte, len(msgPad))
+	encrypterCBC.CryptBlocks(symEnc, msgPad)
+
+	// encapsulate the key with GPSW
 	sampler := sample.NewUniform(a.Params.P)
 	s, err := sampler.Sample()
 	if err != nil {
 		return nil, err
 	}
 
-	e0 := new(bn256.GT).Add(msgInGt, new(bn256.GT).ScalarMult(pk.Y, s))
+	e0 := new(bn256.GT).Add(keyGt, new(bn256.GT).ScalarMult(pk.Y, s))
 	e := make(data.VectorG2, len(gamma))
 	attribToI := make(map[int]int)
 	for i, el := range gamma {
@@ -118,7 +147,8 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 	return &GPSWCipher{Gamma: gamma,
 		AttribToI: attribToI,
 		E0:        e0,
-		E:         e}, nil
+		E:         e,
+		SymEnc:    symEnc}, nil
 }
 
 // GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
@@ -233,13 +263,30 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 		return "", fmt.Errorf("the provided key is not sufficient for the decryption")
 	}
 
-	msgInGt := new(bn256.GT).Set(cipher.E0)
+	// get a CBC key needed for the decryption of msg
+	keyGt := new(bn256.GT).Set(cipher.E0)
 	for i := 0; i < len(alpha); i++ {
 		pair := bn256.Pair(key.D[i], cipher.E[cipher.AttribToI[key.RowToAttrib[i]]])
 		pair.ScalarMult(pair, alpha[i])
 		pair.Neg(pair)
-		msgInGt.Add(msgInGt, pair)
+		keyGt.Add(keyGt, pair)
 	}
 
-	return bn256.MapGTToString(msgInGt), nil
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	c, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return "", err
+	}
+	iv := make([]byte, c.BlockSize())
+
+	msgPad := make([]byte, len(cipher.SymEnc))
+	decrypter := cbc.NewCBCDecrypter(c, iv)
+	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
+
+	// unpad the message
+	padLen := int(msgPad[len(msgPad)-1])
+	msgByte := msgPad[0:(len(msgPad) - padLen)]
+
+	return string(msgByte), nil
 }
