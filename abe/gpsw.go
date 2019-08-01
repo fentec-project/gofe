@@ -121,12 +121,9 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 	// message is padded according to pkcs7 standard
 	padLen := c.BlockSize() - (len(msgByte) % c.BlockSize())
 	msgPad := make([]byte, len(msgByte)+padLen)
-	for i := 0; i < len(msgPad); i++ {
-		if i < len(msgByte) {
-			msgPad[i] = msgByte[i]
-		} else {
-			msgPad[i] = byte(padLen)
-		}
+	copy(msgPad, msgByte)
+	for i := len(msgByte); i < len(msgPad); i++ {
+		msgPad[i] = byte(padLen)
 	}
 
 	symEnc := make([]byte, len(msgPad))

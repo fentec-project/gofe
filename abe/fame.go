@@ -122,7 +122,7 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	}
 
 	// msg is encrypted using CBC, with a random key that is encapsulated
-	// with GPSW
+	// with FAME
 	_, keyGt, err := bn256.RandomGT(rand.Reader)
 	if err != nil {
 		return nil, err
@@ -142,12 +142,9 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	// message is padded according to pkcs7 standard
 	padLen := c.BlockSize() - (len(msgByte) % c.BlockSize())
 	msgPad := make([]byte, len(msgByte)+padLen)
-	for i := 0; i < len(msgPad); i++ {
-		if i < len(msgByte) {
-			msgPad[i] = msgByte[i]
-		} else {
-			msgPad[i] = byte(padLen)
-		}
+	copy(msgPad, msgByte)
+	for i := len(msgByte); i < len(msgPad); i++ {
+		msgPad[i] = byte(padLen)
 	}
 
 	symEnc := make([]byte, len(msgPad))
