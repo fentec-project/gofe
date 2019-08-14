@@ -18,6 +18,7 @@ package data
 
 import (
 	"github.com/fentec-project/bn256"
+	"math/big"
 )
 
 // VectorG1 wraps a slice of elements from elliptic curve BN256.G1 group.
@@ -36,6 +37,15 @@ func (v VectorG1) Add(other VectorG1) VectorG1 {
 	return sum
 }
 
+func (v VectorG1) MulScalar(s *big.Int) VectorG1 {
+	out := make([]*bn256.G1, len(v))
+	for i := range out {
+		out[i] = new(bn256.G1).ScalarMult(v[i], s)
+	}
+
+	return VectorG1(out)
+}
+
 // VectorG2 wraps a slice of elements from elliptic curve BN256.G2 group.
 type VectorG2 []*bn256.G2
 
@@ -50,4 +60,17 @@ func (v VectorG2) Add(other VectorG2) VectorG2 {
 	}
 
 	return sum
+}
+
+// VectorGT wraps a slice of elements from pairing BN256.GT group.
+type VectorGT []*bn256.GT
+
+func (v VectorGT) Dot(other Vector) *bn256.GT {
+	prod := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
+
+	for i, c := range v {
+		prod.Add(prod, new(bn256.GT).ScalarMult(c, other[i]))
+	}
+
+	return prod
 }

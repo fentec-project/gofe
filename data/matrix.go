@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/fentec-project/gofe/sample"
+	"github.com/fentec-project/bn256"
 )
 
 // Matrix wraps a slice of Vector elements. It represents a row-major.
@@ -405,4 +406,37 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 	}
 
 	return co.Transpose(), nil
+}
+
+func (m Matrix) MulG1() MatrixG1 {
+	prod := make(MatrixG1, len(m))
+	for i := range prod {
+		prod[i] = m[i].MulG1()
+	}
+
+	return prod
+}
+
+// MatMulMatG1 multiplies m and other in the sense that
+// if other is t * [bn256.G2] for some matrix t, then the
+// function returns m * t * [bn256.G2] where m * t is a
+// matrix multiplication.
+func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
+	if m.Cols() != other.Rows() {
+		return nil, fmt.Errorf("cannot multiply matrices")
+	}
+
+	prod := make([]VectorG1, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		prod[i] = make([]*bn256.G1, other.Cols())
+		for j := 0; j < other.Cols(); j++ {
+			prod[i][j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
+			for k := 0; k < m.Cols(); k++ {
+				tmp := new(bn256.G1).ScalarMult(other[k][j], m[i][k])
+				prod[i][j].Add(prod[i][j], tmp)
+			}
+		}
+	}
+
+	return MatrixG1(prod), nil
 }
