@@ -62,6 +62,24 @@ func (v VectorG2) Add(other VectorG2) VectorG2 {
 	return sum
 }
 
+func (v VectorG2) Neg() VectorG2 {
+	neg := make(VectorG2, len(v))
+	for i := range neg {
+		neg[i] = new(bn256.G2).Neg(v[i])
+	}
+
+	return neg
+}
+
+func (v VectorG2) MulScalar(s *big.Int) VectorG2 {
+	out := make([]*bn256.G2, len(v))
+	for i := range out {
+		out[i] = new(bn256.G2).ScalarMult(v[i], s)
+	}
+
+	return VectorG2(out)
+}
+
 // VectorGT wraps a slice of elements from pairing BN256.GT group.
 type VectorGT []*bn256.GT
 

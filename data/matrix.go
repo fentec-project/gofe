@@ -418,8 +418,8 @@ func (m Matrix) MulG1() MatrixG1 {
 }
 
 // MatMulMatG1 multiplies m and other in the sense that
-// if other is t * [bn256.G2] for some matrix t, then the
-// function returns m * t * [bn256.G2] where m * t is a
+// if other is t * [bn256.G1] for some matrix t, then the
+// function returns m * t * [bn256.G1] where m * t is a
 // matrix multiplication.
 func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
 	if m.Cols() != other.Rows() {
@@ -433,10 +433,57 @@ func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
 			prod[i][j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 			for k := 0; k < m.Cols(); k++ {
 				tmp := new(bn256.G1).ScalarMult(other[k][j], m[i][k])
-				prod[i][j].Add(prod[i][j], tmp)
+				prod[i][j].Add(tmp, prod[i][j])
 			}
 		}
 	}
 
 	return MatrixG1(prod), nil
+}
+
+// MatMulMatG1 multiplies m and other in the sense that
+// if other is t * [bn256.G2] for some matrix t, then the
+// function returns m * t * [bn256.G2] where m * t is a
+// matrix multiplication.
+func (m Matrix) MatMulMatG2(other MatrixG2) (MatrixG2, error) {
+	if m.Cols() != other.Rows() {
+		return nil, fmt.Errorf("cannot multiply matrices")
+	}
+
+	prod := make([]VectorG2, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		prod[i] = make([]*bn256.G2, other.Cols())
+		for j := 0; j < other.Cols(); j++ {
+			prod[i][j] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+			for k := 0; k < m.Cols(); k++ {
+				tmp := new(bn256.G2).ScalarMult(other[k][j], m[i][k])
+				prod[i][j].Add(tmp, prod[i][j])
+				//fmt.Println("prod", i, j, k, tmp)
+				//fmt.Println(prod[i][j])
+			}
+		}
+	}
+
+	return MatrixG2(prod), nil
+}
+
+// MatMulVecG2 multiplies m and other in the sense that
+// if other is t * [bn256.G2] for some vector t, then the
+// function returns m * t * [bn256.G2] where m * t is a
+// matrix-vector multiplication.
+func (m Matrix) MatMulVecG2(other VectorG2) (VectorG2, error) {
+	if m.Cols() != len(other) {
+		return nil, fmt.Errorf("dimensions don't fit")
+	}
+
+	prod := make(VectorG2, m.Rows())
+	for j := 0; j < m.Rows(); j++ {
+		prod[j] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+		for k := 0; k < m.Cols(); k++ {
+			tmp := new(bn256.G2).ScalarMult(other[k], m[j][k])
+			prod[j].Add(tmp, prod[j])
+		}
+	}
+
+	return prod, nil
 }

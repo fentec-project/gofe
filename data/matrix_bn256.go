@@ -42,16 +42,16 @@ func (m MatrixG1) GetCol(i int) (VectorG1, error) {
 	return VectorG1(column), nil
 }
 
-// Transpose transposes matrix m and returns
-// the result in a new Matrix.
-func (m MatrixG1) Transpose() MatrixG1 {
-	transposed := make([]VectorG1, m.Cols())
-	for i := 0; i < m.Cols(); i++ {
-		transposed[i], _ = m.GetCol(i)
-	}
-
-	return MatrixG1(transposed)
-}
+//// Transpose transposes matrix m and returns
+//// the result in a new Matrix.
+//func (m MatrixG1) Transpose() MatrixG1 {
+//	transposed := make([]VectorG1, m.Cols())
+//	for i := 0; i < m.Cols(); i++ {
+//		transposed[i], _ = m.GetCol(i)
+//	}
+//
+//	return MatrixG1(transposed)
+//}
 
 // Add sums vectors v1 and v2 (also v1 * v2 in multiplicative notation).
 // It returns the result in a new VectorG1 instance.
@@ -83,7 +83,7 @@ func (m MatrixG1) MulVector(v Vector) VectorG1 {
 		out[i] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 		for k := 0; k < m.Cols(); k++ {
 			tmp := new(bn256.G1).ScalarMult(m[i][k], v[k])
-			out[i].Add(out[i], tmp)
+			out[i].Add(tmp, out[i])
 		}
 	}
 
@@ -108,4 +108,30 @@ func (m MatrixG2) Cols() int {
 	}
 
 	return 0
+}
+
+// MulScalar multiplies matrix m by a scalar s
+func (m MatrixG2) MulScalar(s *big.Int) MatrixG2 {
+	out := make([]VectorG2, m.Rows())
+	for i := range out {
+		out[i] = m[i].MulScalar(s)
+	}
+
+	return MatrixG2(out)
+}
+
+// MulVector multiplies matrix m by a vector v, i.e if
+// m is t * [bn256.G2] for some matrix t, then the result
+// is (t * v) [bn256.G2]
+func (m MatrixG2) MulVector(v Vector) VectorG2 {
+	out := make(VectorG2, m.Rows())
+	for i := range out {
+		out[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+		for k := 0; k < m.Cols(); k++ {
+			tmp := new(bn256.G2).ScalarMult(m[i][k], v[k])
+			out[i].Add(tmp, out[i])
+		}
+	}
+
+	return out
 }
