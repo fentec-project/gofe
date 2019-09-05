@@ -17,8 +17,9 @@
 package data
 
 import (
-	"github.com/fentec-project/bn256"
 	"math/big"
+
+	"github.com/fentec-project/bn256"
 )
 
 // VectorG1 wraps a slice of elements from elliptic curve BN256.G1 group.
@@ -37,13 +38,37 @@ func (v VectorG1) Add(other VectorG1) VectorG1 {
 	return sum
 }
 
-func (v VectorG1) MulScalar(s *big.Int) VectorG1 {
-	out := make([]*bn256.G1, len(v))
-	for i := range out {
-		out[i] = new(bn256.G1).ScalarMult(v[i], s)
+func (v VectorG1) Neg() VectorG1 {
+	neg := make(VectorG1, len(v))
+	for i := range neg {
+		neg[i] = new(bn256.G1).Neg(v[i])
 	}
 
-	return VectorG1(out)
+	return neg
+}
+
+func (v VectorG1) Copy() VectorG1 {
+	cp := make(VectorG1, len(v))
+	for i := range cp {
+		cp[i] = new(bn256.G1).Set(v[i])
+	}
+
+	return cp
+}
+
+func (v VectorG1) MulScalar(s *big.Int) VectorG1 {
+	sTmp := new(big.Int).Set(s)
+	out := v.Copy()
+	if s.Sign() == -1 {
+		sTmp.Neg(s)
+		out = out.Neg()
+	}
+
+	for i := range out {
+		out[i].ScalarMult(out[i], sTmp)
+	}
+
+	return out
 }
 
 // VectorG2 wraps a slice of elements from elliptic curve BN256.G2 group.
@@ -71,13 +96,28 @@ func (v VectorG2) Neg() VectorG2 {
 	return neg
 }
 
-func (v VectorG2) MulScalar(s *big.Int) VectorG2 {
-	out := make([]*bn256.G2, len(v))
-	for i := range out {
-		out[i] = new(bn256.G2).ScalarMult(v[i], s)
+func (v VectorG2) Copy() VectorG2 {
+	cp := make(VectorG2, len(v))
+	for i := range cp {
+		cp[i] = new(bn256.G2).Set(v[i])
 	}
 
-	return VectorG2(out)
+	return cp
+}
+
+func (v VectorG2) MulScalar(s *big.Int) VectorG2 {
+	sTmp := new(big.Int).Set(s)
+	out := v.Copy()
+	if s.Sign() == -1 {
+		sTmp.Neg(s)
+		out = out.Neg()
+	}
+
+	for i := range out {
+		out[i].ScalarMult(out[i], sTmp)
+	}
+
+	return out
 }
 
 // VectorGT wraps a slice of elements from pairing BN256.GT group.

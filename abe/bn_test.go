@@ -1,10 +1,10 @@
 package abe_test
 
 import (
-"testing"
+	"testing"
 
-	"math/big"
 	"fmt"
+	"math/big"
 
 	"github.com/fentec-project/bn256"
 )
@@ -26,7 +26,6 @@ func TestBN(t *testing.T) {
 	twice2 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	twice2.Add(twice2, hashed)
 	twice2.ScalarBaseMult(big.NewInt(1))
-
 
 	fmt.Println(twice2)
 	fmt.Println(hashed)

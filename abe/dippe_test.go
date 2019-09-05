@@ -19,56 +19,27 @@ package abe_test
 import (
 	"testing"
 
-	"github.com/fentec-project/gofe/abe"
-	"github.com/fentec-project/bn256"
-	"github.com/fentec-project/gofe/data"
-	"github.com/stretchr/testify/assert"
 	"math/big"
-	"fmt"
+
+	"github.com/fentec-project/bn256"
+	"github.com/fentec-project/gofe/abe"
+	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDIPPE(t *testing.T) {
-	hashed := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	fmt.Println(hashed)
-
-	twice := new(bn256.G2).Add(hashed, hashed)
-	fmt.Println("tw", twice)
-
-
-
-	//hashed = new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	//fmt.Println(hashed)
-
-	twice = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
-	twice.Add(twice, hashed)
-	twice.Add(twice, hashed)
-
-
-	fmt.Println("tw", twice)
-
-	hashed.Neg(hashed)
-	twice = new(bn256.G2).Add(hashed, hashed)
-	fmt.Println("neg", twice)
-
-	twice = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
-	twice.Add(twice, hashed)
-	twice.Add(twice, hashed)
-	fmt.Println("neg", twice)
-
-
-	// create a new FAME struct with the universe of attributes
-	// denoted by integer
-	d, err := abe.NewDIPPE(1)
+	// create a new DIPPE struct, choosing the security parameter
+	d, err := abe.NewDIPPE(3)
 	if err != nil {
 		t.Fatalf("Failed to generate a new scheme: %v", err)
 	}
-	vecLen := 3
+	vecLen := 5
 
-	// generate a public key and a secret key for the scheme
+	// create authorities and their public keys
 	auth := make([]*abe.DIPPEAuth, vecLen)
 	pubKeys := make([]*abe.DIPPEPubKey, vecLen)
-	for i := 0; i < vecLen; i++ {
+	for i := range auth {
 		auth[i], err = d.NewDIPPEAuth(i)
 		if err != nil {
 			t.Fatalf("Failed to generate a new authority: %v", err)
@@ -76,45 +47,143 @@ func TestDIPPE(t *testing.T) {
 		pubKeys[i] = &auth[i].Pk
 	}
 
-	sampler := sample.NewUniformRange(big.NewInt(1), big.NewInt(2))
+	sampler := sample.NewUniform(bn256.Order)
 	randInt, err := sampler.Sample()
-	fmt.Println(randInt)
-	//if err != nil {
-	//	t.Fatalf("Failed to sample message: %v", err)
-	//}
-	msg := new(bn256.GT).ScalarBaseMult(randInt)
-	fmt.Println(msg)
-
-	//policyVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0)})
-	policyVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0)})
-
 	if err != nil {
-		t.Fatalf("Failed to sample policy vector: %v", err)
+		t.Fatalf("Failed to sample message: %v", err)
 	}
+	msg := new(bn256.GT).ScalarBaseMult(randInt)
 
+	// choose a policy vector
+	policyVec := data.Vector([]*big.Int{big.NewInt(1), big.NewInt(0),
+		big.NewInt(0), big.NewInt(0), big.NewInt(0)})
+
+	// encrypt the message with the chosen policy give by a policy vector
 	cipher, err := d.Encrypt(msg, policyVec, pubKeys)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
 
+	// choose a unique user's GID
 	userGID := "someGID"
-	//userVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0)})
-	userVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0)})
+	// choose user's vector, decryption is possible if and only if
+	// the users's and policy vector are orthogonal
+	userVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(1),
+		big.NewInt(2), big.NewInt(3), big.NewInt(4)})
 
-	userKeys := make(data.MatrixG2, vecLen)
-	for i:=0; i<vecLen; i++ {
+	// authorities generate decryption keys for the user
+	userKeys := make([]data.VectorG2, vecLen)
+	for i := range auth {
 		userKeys[i], err = auth[i].Keygen(userVec, pubKeys, userGID)
 		if err != nil {
 			t.Fatalf("Failed to generate a user key: %v", err)
 		}
 	}
 
+	// user decrypts using collected keys
 	dec, err := d.Decrypt(cipher, userKeys, userVec, userGID)
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
 	assert.Equal(t, msg, dec)
-	fmt.Println(msg)
-	fmt.Println(dec)
+}
 
+func TestDIPPE_ABE(t *testing.T) {
+	// create a new DIPPE struct, choosing the security parameter
+	d, err := abe.NewDIPPE(3)
+	if err != nil {
+		t.Fatalf("Failed to generate a new scheme: %v", err)
+	}
+	numAttrib := 10
+
+	// create authorities and their public keys
+	auth := make([]*abe.DIPPEAuth, numAttrib + 1)
+	pubKeys := make([]*abe.DIPPEPubKey, numAttrib + 1)
+	for i := range auth {
+		auth[i], err = d.NewDIPPEAuth(i)
+		if err != nil {
+			t.Fatalf("Failed to generate a new authority: %v", err)
+		}
+		pubKeys[i] = &auth[i].Pk
+	}
+
+	sampler := sample.NewUniform(bn256.Order)
+	randInt, err := sampler.Sample()
+	if err != nil {
+		t.Fatalf("Failed to sample message: %v", err)
+	}
+	msg := new(bn256.GT).ScalarBaseMult(randInt)
+
+	// choose attributes needed for the exact threshold policy
+	thresholdAttrib := []int{0, 2, 5, 8, 9}
+	exactThreshold := 3
+	// generate the exact threshold vector
+	thresholdPolicyVec, err := d.ExactThresholdPolicyVecInit(thresholdAttrib, exactThreshold, numAttrib)
+	if err != nil {
+		t.Fatalf("Failed to generate threshold vector: %v", err)
+	}
+
+	// choose attributes needed for the conjunction policy
+	conjunctAttrib := []int{1, 2, 3, 7}
+	// generate the conjunction vector
+	conjunctPolicyVec, err := d.ConjunctionPolicyVecInit(conjunctAttrib, numAttrib)
+	if err != nil {
+		t.Fatalf("Failed to generate conjucnction vector: %v", err)
+	}
+
+	// encrypt the message with the chosen threshold policy
+	thresholdCipher, err := d.Encrypt(msg, thresholdPolicyVec, pubKeys)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	// encrypt the message with the chosen conjunction policy
+	conjunctCipher, err := d.Encrypt(msg, conjunctPolicyVec, pubKeys)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	// choose two unique users' GIDs
+	thresholdUserGID := "thresholdGID"
+	conjunctUserGID := "conjunctionGID"
+
+	// choose the attributes possessed by the users
+	thresholdUserAttrib := []int{0, 1, 5, 7, 9}
+	conjunctUserAttrib := []int{0, 1, 2, 3, 7, 9}
+
+	// generate users' vectors
+	thresholdUserVec, err := d.AttributeVecInit(thresholdUserAttrib, numAttrib)
+	if err != nil {
+		t.Fatalf("Failed to generate attributes vector: %v", err)
+	}
+	conjunctUserVec, err := d.AttributeVecInit(conjunctUserAttrib, numAttrib)
+	if err != nil {
+		t.Fatalf("Failed to generate attributes vector: %v", err)
+	}
+
+	// authorities generate decryption keys for the users
+	thresholdUserKeys := make([]data.VectorG2, len(auth))
+	conjunctUserKeys := make([]data.VectorG2, len(auth))
+	for i := range auth {
+		thresholdUserKeys[i], err = auth[i].Keygen(thresholdUserVec, pubKeys, thresholdUserGID)
+		if err != nil {
+			t.Fatalf("Failed to generate a user key: %v", err)
+		}
+		conjunctUserKeys[i], err = auth[i].Keygen(conjunctUserVec, pubKeys, conjunctUserGID)
+		if err != nil {
+			t.Fatalf("Failed to generate a user key: %v", err)
+		}
+	}
+
+	// users decrypts using collected keys
+	dec, err := d.Decrypt(thresholdCipher, thresholdUserKeys, thresholdUserVec, thresholdUserGID)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, dec)
+	dec, err = d.Decrypt(conjunctCipher, conjunctUserKeys, conjunctUserVec, conjunctUserGID)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, dec)
 }

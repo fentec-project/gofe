@@ -17,25 +17,26 @@
 package abe
 
 import (
+	"fmt"
 	"math/big"
+	"strconv"
+
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	"github.com/fentec-project/bn256"
-	"strconv"
-	"fmt"
 )
 
 // DIPPE represents a DIPPE scheme.
 type DIPPE struct {
 	AsumpSize int
-	G1ToA data.MatrixG1
-	G1ToUA data.MatrixG1
-	P *big.Int // order of the elliptic curve
+	G1ToA     data.MatrixG1
+	G1ToUA    data.MatrixG1
+	P         *big.Int // order of the elliptic curve
 }
 
 // DIPPEPubKey represents a public key of an authority in DIPPE scheme.
 type DIPPEPubKey struct {
-	G1ToWtA data.MatrixG1
+	G1ToWtA   data.MatrixG1
 	GToAlphaA data.VectorGT
 	G2ToSigma *bn256.G2
 }
@@ -43,7 +44,7 @@ type DIPPEPubKey struct {
 // DIPPESecKey represents a secret key of an authority in DIPPE scheme.
 type DIPPESecKey struct {
 	Sigma *big.Int
-	W data.Matrix
+	W     data.Matrix
 	Alpha data.Vector
 }
 
@@ -56,23 +57,22 @@ type DIPPEAuth struct {
 
 // DIPPEAuth represents an authority in DIPPE scheme
 type DIPPECipher struct {
-	C0 data.VectorG1
-	C data.MatrixG1
+	C0     data.VectorG1
+	C      data.MatrixG1
 	CPrime *bn256.GT
 }
 
 // NewFAME configures a new instance of the scheme.
 func NewDIPPE(assumpSize int) (*DIPPE, error) {
 	sampler := sample.NewUniform(bn256.Order)
-	//sampler := sample.NewUniformRange(big.NewInt(1), big.NewInt(2))
 
-	A, err := data.NewRandomMatrix(assumpSize + 1, assumpSize, sampler)
+	A, err := data.NewRandomMatrix(assumpSize+1, assumpSize, sampler)
 	if err != nil {
 		return nil, err
 	}
 	g1ToA := A.MulG1()
 
-	U, err := data.NewRandomMatrix(assumpSize + 1, assumpSize + 1, sampler)
+	U, err := data.NewRandomMatrix(assumpSize+1, assumpSize+1, sampler)
 	if err != nil {
 		return nil, err
 	}
@@ -83,22 +83,21 @@ func NewDIPPE(assumpSize int) (*DIPPE, error) {
 	UA.Mod(bn256.Order)
 	g1ToUA := UA.MulG1()
 
-	return &DIPPE{AsumpSize:assumpSize,
-				  G1ToA:     g1ToA,
-				  G1ToUA:    g1ToUA,
-				  P: 		 bn256.Order,}, nil
+	return &DIPPE{AsumpSize: assumpSize,
+		G1ToA:  g1ToA,
+		G1ToUA: g1ToUA,
+		P:      bn256.Order}, nil
 }
 
 func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	sampler := sample.NewUniform(bn256.Order)
-	//sampler := sample.NewUniformRange(big.NewInt(1), big.NewInt(2))
 
-	W, err := data.NewRandomMatrix(d.AsumpSize + 1, d.AsumpSize + 1, sampler)
+	W, err := data.NewRandomMatrix(d.AsumpSize+1, d.AsumpSize+1, sampler)
 	if err != nil {
 		return nil, err
 	}
 
-	alpha, err := data.NewRandomVector(d.AsumpSize + 1, sampler)
+	alpha, err := data.NewRandomVector(d.AsumpSize+1, sampler)
 	if err != nil {
 		return nil, err
 	}
@@ -129,15 +128,13 @@ func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 
 	g2ToSigma := new(bn256.G2).ScalarMult(g2, sigma)
 
-	pk := DIPPEPubKey{G1ToWtA:g1ToWtA, GToAlphaA:gtToAlphaA, G2ToSigma:g2ToSigma}
-	fmt.Println(sk, pk)
-	return &DIPPEAuth{Id:id, Sk:sk, Pk:pk}, nil
+	pk := DIPPEPubKey{G1ToWtA: g1ToWtA, GToAlphaA: gtToAlphaA, G2ToSigma: g2ToSigma}
+
+	return &DIPPEAuth{Id: id, Sk: sk, Pk: pk}, nil
 }
 
 func (d *DIPPE) Encrypt(m *bn256.GT, x data.Vector, pubKeys []*DIPPEPubKey) (*DIPPECipher, error) {
 	sampler := sample.NewUniform(bn256.Order)
-	//sampler := sample.NewUniformRange(big.NewInt(1), big.NewInt(2))
-
 	s, err := data.NewRandomVector(d.AsumpSize, sampler)
 	if err != nil {
 		return nil, err
@@ -162,56 +159,40 @@ func (d *DIPPE) Encrypt(m *bn256.GT, x data.Vector, pubKeys []*DIPPEPubKey) (*DI
 	}
 	cPrime.Add(m, cPrime)
 
-	fmt.Println("cprime", cPrime)
-	fmt.Println("c", c)
-
-	return &DIPPECipher{C0:c0, C:c, CPrime:cPrime}, nil
+	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime}, nil
 }
 
 func (a *DIPPEAuth) Keygen(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
-	for i:=0; i< a.Sk.W.Rows(); i++ {
+	for i := 0; i < a.Sk.W.Rows(); i++ {
 		g2ToMu[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	}
 
+	g2ToAlpha := a.Sk.Alpha.MulG2()
+
 	var err error
-	fmt.Println("len", len(pubKeys))
-	for j:=0; j<len(pubKeys); j++ {
+	for j := 0; j < len(pubKeys); j++ {
 		if j == a.Id {
 			continue
 		}
-		yToSigma := new(bn256.G2).ScalarMult(pubKeys[j].G2ToSigma, a.Sk.Sigma)
-		//fmt.Println(j, a.Id, yToSigma)
-		for i:=0; i< a.Sk.W.Rows(); i++ {
-			hashed, err := bn256.HashG2(strconv.Itoa(i) + yToSigma.String() + gid + v.String())
 
-			//fmt.Println("hashed", i, hashed)
-			//hashed.ScalarBaseMult(big.NewInt(1))
+		yToSigma := new(bn256.G2).ScalarMult(pubKeys[j].G2ToSigma, a.Sk.Sigma)
+		for i := 0; i < a.Sk.W.Rows(); i++ {
+			hashed, err := bn256.HashG2(strconv.Itoa(i) + yToSigma.String() + gid + v.String())
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("hashed", hashed)
 
 			if j > a.Id {
-				fmt.Println("here")
-				//negHashed := new(bn256.G2).Neg(hashed)
-				//fmt.Println(negHashed)
-				//fmt.Println(hashed)
-				hashed = new(bn256.G2).Neg(hashed)
+				hashed.Neg(hashed)
 			}
-			//fmt.Println("hashed", hashed)
-			g2ToMu[i] = new(bn256.G2).Add(g2ToMu[i], hashed)
-			fmt.Println("g2to", i, g2ToMu[i])
+			g2ToMu[i] = g2ToMu[i].Add(hashed, g2ToMu[i])
 		}
 	}
-	fmt.Println("g2ToMu", g2ToMu)
-	//negg2tomu := g2ToMu.Neg()
-	//fmt.Println("g2ToMu", negg2tomu)
 
 	g2ToH := make(data.VectorG2, a.Sk.W.Rows())
 	for j := range g2ToH {
 		g2ToH[j], err = bn256.HashG2(strconv.Itoa(j) + gid + v.String())
-		//g2ToH[j].ScalarBaseMult(big.NewInt(0))
 
 		if err != nil {
 			return nil, err
@@ -223,25 +204,19 @@ func (a *DIPPEAuth) Keygen(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (d
 	}
 	g2ToViWH := g2ToWH.MulScalar(v[a.Id]).Neg()
 
-	g2ToAlpha := a.Sk.Alpha.MulG2()
-
-	ret := g2ToAlpha.Add(g2ToViWH).Add(g2ToMu)
-
-	//fmt.Println("key", ret)
-
-	return ret, nil
+	return g2ToAlpha.Add(g2ToViWH).Add(g2ToMu), nil
 }
 
-func (d *DIPPE) Decrypt(c *DIPPECipher, keys data.MatrixG2, v data.Vector, gid string) (*bn256.GT, error) {
+func (d *DIPPE) Decrypt(c *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (*bn256.GT, error) {
 	gTToAlphaAS := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 
-	ones := data.NewConstantMatrix(1, keys.Rows(), big.NewInt(1))
-	kSum, err := ones.MatMulMatG2(keys)
+	ones := data.NewConstantMatrix(1, len(keys), big.NewInt(1))
+	kSum, err := ones.MatMulMatG2(data.MatrixG2(keys))
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ksum", kSum)
-	for i, e:= range c.C0 {
+
+	for i, e := range c.C0 {
 		tmpGT := bn256.Pair(e, kSum[0][i])
 		gTToAlphaAS.Add(gTToAlphaAS, tmpGT)
 	}
@@ -253,18 +228,64 @@ func (d *DIPPE) Decrypt(c *DIPPECipher, keys data.MatrixG2, v data.Vector, gid s
 		return nil, err
 	}
 
-	//fmt.Println(c.C.Cols(), len(v))
 	for j := range cSum[0] {
 		hashed, err := bn256.HashG2(strconv.Itoa(j) + gid + v.String())
-		//hashed.ScalarBaseMult(big.NewInt(0))
-
 		if err != nil {
 			return nil, err
 		}
+
 		tmpGT := bn256.Pair(cSum[0][j], hashed)
 		gTToAlphaAS.Add(gTToAlphaAS, tmpGT)
 	}
 	gTToAlphaAS.Neg(gTToAlphaAS)
 
 	return new(bn256.GT).Add(c.CPrime, gTToAlphaAS), nil
+}
+
+func (d DIPPE) ExactThresholdPolicyVecInit(attrib []int, threshold int, numAttrib int) (data.Vector, error) {
+	policyVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
+	one := big.NewInt(1)
+	for _, e := range attrib {
+		if e > numAttrib {
+			return nil, fmt.Errorf("attributes out of range")
+		}
+		policyVec[e].Set(one)
+	}
+	policyVec[numAttrib].Set(big.NewInt(int64(-threshold)))
+
+	return policyVec, nil
+}
+
+func (d DIPPE) ConjunctionPolicyVecInit(attrib []int, numAttrib int) (data.Vector, error) {
+	policyVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
+	sampler := sample.NewUniform(bn256.Order)
+	last := big.NewInt(0)
+	for _, e := range attrib {
+		if e > numAttrib {
+			return nil, fmt.Errorf("attributes out of range")
+		}
+		tmp, err := sampler.Sample()
+		if err != nil {
+			return nil, err
+		}
+		policyVec[e].Set(tmp)
+		last.Sub(last, tmp)
+	}
+	policyVec[numAttrib].Set(last)
+
+	return policyVec, nil
+}
+
+func (d DIPPE) AttributeVecInit(attrib []int, numAttrib int) (data.Vector, error) {
+	attribVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
+	one := big.NewInt(1)
+	for _, e := range attrib {
+		if e > numAttrib {
+			return nil, fmt.Errorf("attributes out of range")
+		}
+		attribVec[e].Set(one)
+	}
+	attribVec[numAttrib].Set(one)
+
+	return attribVec, nil
 }

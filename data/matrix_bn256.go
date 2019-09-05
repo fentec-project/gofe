@@ -1,9 +1,9 @@
 package data
 
 import (
-	"fmt"
-	"github.com/fentec-project/bn256"
 	"math/big"
+
+	"github.com/fentec-project/bn256"
 )
 
 // Matrix wraps a slice of VectorG1 elements. It represents a row-major.
@@ -27,32 +27,6 @@ func (m MatrixG1) Cols() int {
 	return 0
 }
 
-// GetCol returns i-th column of matrix m as a vector.
-// It returns error if i >= the number of m's columns.
-func (m MatrixG1) GetCol(i int) (VectorG1, error) {
-	if i >= m.Cols() {
-		return nil, fmt.Errorf("column index exceeds matrix dimensions")
-	}
-
-	column := make([]*bn256.G1, m.Rows())
-	for j := 0; j < m.Rows(); j++ {
-		column[j] = m[j][i]
-	}
-
-	return VectorG1(column), nil
-}
-
-//// Transpose transposes matrix m and returns
-//// the result in a new Matrix.
-//func (m MatrixG1) Transpose() MatrixG1 {
-//	transposed := make([]VectorG1, m.Cols())
-//	for i := 0; i < m.Cols(); i++ {
-//		transposed[i], _ = m.GetCol(i)
-//	}
-//
-//	return MatrixG1(transposed)
-//}
-
 // Add sums vectors v1 and v2 (also v1 * v2 in multiplicative notation).
 // It returns the result in a new VectorG1 instance.
 func (v MatrixG1) Add(other MatrixG1) MatrixG1 {
@@ -66,12 +40,12 @@ func (v MatrixG1) Add(other MatrixG1) MatrixG1 {
 
 // MulScalar multiplies matrix m by a scalar s
 func (m MatrixG1) MulScalar(s *big.Int) MatrixG1 {
-	out := make([]VectorG1, m.Rows())
+	out := make(MatrixG1, m.Rows())
 	for i := range out {
 		out[i] = m[i].MulScalar(s)
 	}
 
-	return MatrixG1(out)
+	return out
 }
 
 // MulVector multiplies matrix m by a vector v, i.e if
@@ -82,7 +56,13 @@ func (m MatrixG1) MulVector(v Vector) VectorG1 {
 	for i := range out {
 		out[i] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 		for k := 0; k < m.Cols(); k++ {
-			tmp := new(bn256.G1).ScalarMult(m[i][k], v[k])
+			mik := new(bn256.G1).Set(m[i][k])
+			vk := new(big.Int).Set(v[k])
+			if v[k].Sign() == -1 {
+				vk.Neg(vk)
+				mik.Neg(mik)
+			}
+			tmp := new(bn256.G1).ScalarMult(mik, vk)
 			out[i].Add(tmp, out[i])
 		}
 	}
@@ -101,6 +81,7 @@ type MatrixG2 []VectorG2
 func (m MatrixG2) Rows() int {
 	return len(m)
 }
+
 // Cols returns the number of columns of matrixG2 m.
 func (m MatrixG2) Cols() int {
 	if len(m) != 0 {
@@ -112,12 +93,12 @@ func (m MatrixG2) Cols() int {
 
 // MulScalar multiplies matrix m by a scalar s
 func (m MatrixG2) MulScalar(s *big.Int) MatrixG2 {
-	out := make([]VectorG2, m.Rows())
+	out := make(MatrixG2, m.Rows())
 	for i := range out {
 		out[i] = m[i].MulScalar(s)
 	}
 
-	return MatrixG2(out)
+	return out
 }
 
 // MulVector multiplies matrix m by a vector v, i.e if
@@ -128,7 +109,13 @@ func (m MatrixG2) MulVector(v Vector) VectorG2 {
 	for i := range out {
 		out[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 		for k := 0; k < m.Cols(); k++ {
-			tmp := new(bn256.G2).ScalarMult(m[i][k], v[k])
+			mik := new(bn256.G2).Set(m[i][k])
+			vk := new(big.Int).Set(v[k])
+			if v[k].Sign() == -1 {
+				vk.Neg(vk)
+				mik.Neg(mik)
+			}
+			tmp := new(bn256.G2).ScalarMult(mik, vk)
 			out[i].Add(tmp, out[i])
 		}
 	}
