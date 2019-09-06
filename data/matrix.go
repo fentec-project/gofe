@@ -408,6 +408,8 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 	return co.Transpose(), nil
 }
 
+// MulG1 calculates m * [bn256.G1] and returns the
+// result in a new MatrixG1 instance.
 func (m Matrix) MulG1() MatrixG1 {
 	prod := make(MatrixG1, len(m))
 	for i := range prod {
