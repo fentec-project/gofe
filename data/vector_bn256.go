@@ -38,6 +38,8 @@ func (v VectorG1) Add(other VectorG1) VectorG1 {
 	return sum
 }
 
+// Neg returns a new VectorG1 instance with
+// values -v in the additive notation.
 func (v VectorG1) Neg() VectorG1 {
 	neg := make(VectorG1, len(v))
 	for i := range neg {
@@ -47,6 +49,7 @@ func (v VectorG1) Neg() VectorG1 {
 	return neg
 }
 
+// Copy produces a new copy of vector v.
 func (v VectorG1) Copy() VectorG1 {
 	cp := make(VectorG1, len(v))
 	for i := range cp {
@@ -56,6 +59,7 @@ func (v VectorG1) Copy() VectorG1 {
 	return cp
 }
 
+// MulScalar multiplies s * v (in additive notation).
 func (v VectorG1) MulScalar(s *big.Int) VectorG1 {
 	sTmp := new(big.Int).Set(s)
 	out := v.Copy()
@@ -87,6 +91,8 @@ func (v VectorG2) Add(other VectorG2) VectorG2 {
 	return sum
 }
 
+// Neg returns a new VectorG1 instance with
+// values -v in the additive notation.
 func (v VectorG2) Neg() VectorG2 {
 	neg := make(VectorG2, len(v))
 	for i := range neg {
@@ -96,6 +102,7 @@ func (v VectorG2) Neg() VectorG2 {
 	return neg
 }
 
+// Copy produces a new copy of vector v.
 func (v VectorG2) Copy() VectorG2 {
 	cp := make(VectorG2, len(v))
 	for i := range cp {
@@ -105,6 +112,7 @@ func (v VectorG2) Copy() VectorG2 {
 	return cp
 }
 
+// MulScalar multiplies s * v (in additive notation).
 func (v VectorG2) MulScalar(s *big.Int) VectorG2 {
 	sTmp := new(big.Int).Set(s)
 	out := v.Copy()
@@ -123,6 +131,8 @@ func (v VectorG2) MulScalar(s *big.Int) VectorG2 {
 // VectorGT wraps a slice of elements from pairing BN256.GT group.
 type VectorGT []*bn256.GT
 
+// Dot multiplies v = (v_1,...,v_n) and other = (o_1,...,o_n) to
+// return v1 * o_1 + ... + v_n *o_n (in additive notation)
 func (v VectorGT) Dot(other Vector) *bn256.GT {
 	prod := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 

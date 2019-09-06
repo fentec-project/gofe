@@ -107,6 +107,18 @@ func NewConstantVector(len int, c *big.Int) Vector {
 	return vec
 }
 
+// Copy creates a new vector with the same values
+// of the entries.
+func (v Vector) Copy() Vector {
+	newVec := make(Vector, len(v))
+
+	for i, c := range v {
+		newVec[i] = new(big.Int).Set(c)
+	}
+
+	return newVec
+}
+
 // MulScalar multiplies vector v by a given scalar x.
 // The result is returned in a new Vector.
 func (v Vector) MulScalar(x *big.Int) Vector {

@@ -27,18 +27,19 @@ func (m MatrixG1) Cols() int {
 	return 0
 }
 
-// Add sums vectors v1 and v2 (also v1 * v2 in multiplicative notation).
-// It returns the result in a new VectorG1 instance.
-func (v MatrixG1) Add(other MatrixG1) MatrixG1 {
-	sum := make(MatrixG1, len(v))
+// Add sums matrices m and other componentwise.
+// It returns the result in a new MatrixG1 instance.
+func (m MatrixG1) Add(other MatrixG1) MatrixG1 {
+	sum := make(MatrixG1, len(m))
 	for i := range sum {
-		sum[i] = v[i].Add(other[i])
+		sum[i] = m[i].Add(other[i])
 	}
 
 	return sum
 }
 
-// MulScalar multiplies matrix m by a scalar s
+// MulScalar multiplies matrix m by a scalar s.
+// It returns the result in a new MatrixG1 instance.
 func (m MatrixG1) MulScalar(s *big.Int) MatrixG1 {
 	out := make(MatrixG1, m.Rows())
 	for i := range out {

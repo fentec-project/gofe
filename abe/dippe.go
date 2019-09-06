@@ -17,6 +17,10 @@
 package abe
 
 import (
+	"crypto/aes"
+	cbc "crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -26,7 +30,10 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// DIPPE represents a DIPPE scheme.
+// DIPPE represents a Decentralized Inner-Product Predicate Encryption
+// (DIPPE) scheme introduced by Y. Michalevsky and M. Joye in:
+// "Decentralized Policy-Hiding Attribute-Based Encryption with Receiver Privacy"
+// https://eprint.iacr.org/2018/753.pdf
 type DIPPE struct {
 	AsumpSize int
 	G1ToA     data.MatrixG1
@@ -55,14 +62,18 @@ type DIPPEAuth struct {
 	Pk DIPPEPubKey
 }
 
-// DIPPEAuth represents an authority in DIPPE scheme
+// DIPPECipher represents a ciphertext in DIPPE scheme
 type DIPPECipher struct {
 	C0     data.VectorG1
 	C      data.MatrixG1
 	CPrime *bn256.GT
+	X      data.Vector // policy vector
+	SymEnc []byte      // symmetric encryption of the message
 }
 
-// NewFAME configures a new instance of the scheme.
+// NewDIPPE configures a new instance of the scheme. The input parameter
+// defines the security assumption of the scheme, so called k-Lin assumption,
+// where k is the input.
 func NewDIPPE(assumpSize int) (*DIPPE, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
@@ -89,6 +100,9 @@ func NewDIPPE(assumpSize int) (*DIPPE, error) {
 		P:      bn256.Order}, nil
 }
 
+// NewDIPPEAuth configures a new authority that will be able to
+// produce decryption keys. If the scheme will have n authorities
+// it is assumed that each will have a different id from [0, n).
 func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
@@ -121,7 +135,7 @@ func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	}
 
 	g2 := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	gtToAlphaA := data.VectorGT(make([]*bn256.GT, d.AsumpSize))
+	gtToAlphaA := make(data.VectorGT, d.AsumpSize)
 	for i := 0; i < d.AsumpSize; i++ {
 		gtToAlphaA[i] = bn256.Pair(g1ToAlphaA[0][i], g2)
 	}
@@ -133,7 +147,41 @@ func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	return &DIPPEAuth{Id: id, Sk: sk, Pk: pk}, nil
 }
 
-func (d *DIPPE) Encrypt(m *bn256.GT, x data.Vector, pubKeys []*DIPPEPubKey) (*DIPPECipher, error) {
+// Encrypt takes as an input a string message msg, a vector x representing a
+// decryption policy and a slice of public keys of the participating authorities.
+// The i-th coordinate of x corresponds to i-th public key of the authority with
+// id i. It returns an encryption of msg. In case of a failed procedure an
+// error is returned.
+func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIPPECipher, error) {
+	// msg is encrypted using CBC, with a random key that is encapsulated
+	// with DIPPE
+	_, keyGt, err := bn256.RandomGT(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	a, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return nil, err
+	}
+
+	iv := make([]byte, a.BlockSize())
+	encrypterCBC := cbc.NewCBCEncrypter(a, iv)
+
+	msgByte := []byte(msg)
+	// message is padded according to pkcs7 standard
+	padLen := a.BlockSize() - (len(msgByte) % a.BlockSize())
+	msgPad := make([]byte, len(msgByte)+padLen)
+	copy(msgPad, msgByte)
+	for i := len(msgByte); i < len(msgPad); i++ {
+		msgPad[i] = byte(padLen)
+	}
+
+	symEnc := make([]byte, len(msgPad))
+	encrypterCBC.CryptBlocks(symEnc, msgPad)
+
+	// encapsulate the key with DIPPE
 	sampler := sample.NewUniform(bn256.Order)
 	s, err := data.NewRandomVector(d.AsumpSize, sampler)
 	if err != nil {
@@ -157,11 +205,16 @@ func (d *DIPPE) Encrypt(m *bn256.GT, x data.Vector, pubKeys []*DIPPEPubKey) (*DI
 		tmp := e.GToAlphaA.Dot(s)
 		cPrime.Add(tmp, cPrime)
 	}
-	cPrime.Add(m, cPrime)
+	cPrime.Add(keyGt, cPrime)
 
-	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime}, nil
+	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime, X: x.Copy(), SymEnc: symEnc}, nil
 }
 
+// Keygen allows an authority to give a partial decryption key. Collecting all
+// such partial keys allows a user to decrypt the message. The input vector v contains
+// an information about the user that will allow him to decrypt iff the inner product
+// v times x = 0 for the policy x. GID is a global identifier of the user and a slice of
+// public keys of the authorities should be given.
 func (a *DIPPEAuth) Keygen(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
 	for i := 0; i < a.Sk.W.Rows(); i++ {
@@ -207,31 +260,43 @@ func (a *DIPPEAuth) Keygen(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (d
 	return g2ToAlpha.Add(g2ToViWH).Add(g2ToMu), nil
 }
 
-func (d *DIPPE) Decrypt(c *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (*bn256.GT, error) {
+// Decrypt accepts the ciphertext, a slice of keys obtained from the authorities,
+// a vector v representing the users decryption allowance, and a global identifier.
+// If the provided keys are correct and the inner product v times x = 0 for the policy
+// x, the message is decrypted, otherwise an error is returned.
+func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (string, error) {
+	// check if the decryption is possible
+	prod, err := v.Dot(cipher.X)
+	if prod.Sign() != 0 {
+		return "", fmt.Errorf("insufficient keys")
+	}
+
+	// use DIPPE decryption procedure to get a CBC key
+	// needed for the decryption of the message
 	gTToAlphaAS := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 
 	ones := data.NewConstantMatrix(1, len(keys), big.NewInt(1))
 	kSum, err := ones.MatMulMatG2(data.MatrixG2(keys))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	for i, e := range c.C0 {
+	for i, e := range cipher.C0 {
 		tmpGT := bn256.Pair(e, kSum[0][i])
 		gTToAlphaAS.Add(gTToAlphaAS, tmpGT)
 	}
 
 	vMat := make(data.Matrix, 1)
 	vMat[0] = v
-	cSum, err := vMat.MatMulMatG1(c.C)
+	cSum, err := vMat.MatMulMatG1(cipher.C)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	for j := range cSum[0] {
 		hashed, err := bn256.HashG2(strconv.Itoa(j) + gid + v.String())
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		tmpGT := bn256.Pair(cSum[0][j], hashed)
@@ -239,9 +304,33 @@ func (d *DIPPE) Decrypt(c *DIPPECipher, keys []data.VectorG2, v data.Vector, gid
 	}
 	gTToAlphaAS.Neg(gTToAlphaAS)
 
-	return new(bn256.GT).Add(c.CPrime, gTToAlphaAS), nil
+	keyGt := new(bn256.GT).Add(cipher.CPrime, gTToAlphaAS)
+
+	keyCBC := sha256.Sum256([]byte(keyGt.String()))
+
+	a, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return "", err
+	}
+	iv := make([]byte, a.BlockSize())
+
+	msgPad := make([]byte, len(cipher.SymEnc))
+	decrypter := cbc.NewCBCDecrypter(a, iv)
+	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
+
+	// unpad the message
+	padLen := int(msgPad[len(msgPad)-1])
+	msgByte := msgPad[0:(len(msgPad) - padLen)]
+
+	return string(msgByte), nil
 }
 
+// ExactThresholdPolicyVecInit is used for the transformation of the DIPPE
+// scheme into an ABE scheme with an exact threshold. In particular given a
+// slice of attributes, a threshold value and the number of all possible
+// attributes it creates a policy vector that can be used for the DIPPE encryption.
+// The user will be able to decrypt only if he posses exactly the threshold
+// value of the attributes.
 func (d DIPPE) ExactThresholdPolicyVecInit(attrib []int, threshold int, numAttrib int) (data.Vector, error) {
 	policyVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
 	one := big.NewInt(1)
@@ -256,6 +345,11 @@ func (d DIPPE) ExactThresholdPolicyVecInit(attrib []int, threshold int, numAttri
 	return policyVec, nil
 }
 
+// ConjunctionPolicyVecInit is used for the transformation of the DIPPE
+// scheme into an ABE scheme with conjugation policy. In particular given a
+// slice of attributes and the number of all possible attributes it creates
+// a policy vector that can be used for the DIPPE encryption. The user will
+// be able to decrypt only if he posses all the demanded attributes.
 func (d DIPPE) ConjunctionPolicyVecInit(attrib []int, numAttrib int) (data.Vector, error) {
 	policyVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
 	sampler := sample.NewUniform(bn256.Order)
@@ -276,6 +370,10 @@ func (d DIPPE) ConjunctionPolicyVecInit(attrib []int, numAttrib int) (data.Vecto
 	return policyVec, nil
 }
 
+// AttributeVecInit given the attributes and the number of all possible
+// attributes creates a vector describing the users allowance. The function is
+// needed in the the transformation of the DIPPE scheme into an ABE scheme
+// with threshold or conjugation.
 func (d DIPPE) AttributeVecInit(attrib []int, numAttrib int) (data.Vector, error) {
 	attribVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
 	one := big.NewInt(1)

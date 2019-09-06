@@ -21,10 +21,8 @@ import (
 
 	"math/big"
 
-	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,18 +45,13 @@ func TestDIPPE(t *testing.T) {
 		pubKeys[i] = &auth[i].Pk
 	}
 
-	sampler := sample.NewUniform(bn256.Order)
-	randInt, err := sampler.Sample()
-	if err != nil {
-		t.Fatalf("Failed to sample message: %v", err)
-	}
-	msg := new(bn256.GT).ScalarBaseMult(randInt)
+	msg := "some message"
 
 	// choose a policy vector
-	policyVec := data.Vector([]*big.Int{big.NewInt(1), big.NewInt(0),
-		big.NewInt(0), big.NewInt(0), big.NewInt(0)})
+	policyVec := data.Vector([]*big.Int{big.NewInt(1), big.NewInt(-1),
+		big.NewInt(1), big.NewInt(0), big.NewInt(0)})
 
-	// encrypt the message with the chosen policy give by a policy vector
+	// encrypt the message with the chosen policy give by a policy vector,
 	cipher, err := d.Encrypt(msg, policyVec, pubKeys)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
@@ -69,7 +62,7 @@ func TestDIPPE(t *testing.T) {
 	// choose user's vector, decryption is possible if and only if
 	// the users's and policy vector are orthogonal
 	userVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(1),
-		big.NewInt(2), big.NewInt(3), big.NewInt(4)})
+		big.NewInt(1), big.NewInt(-3), big.NewInt(4)})
 
 	// authorities generate decryption keys for the user
 	userKeys := make([]data.VectorG2, vecLen)
@@ -89,16 +82,25 @@ func TestDIPPE(t *testing.T) {
 }
 
 func TestDIPPE_ABE(t *testing.T) {
+	// this test transforms DIPPE scheme into an ABE scheme
+	// with the exact threshold policy and into conjugation
+	// policy; in threshold policy each user has
+	// attributes but only the users that have exactly the
+	// threshold value of specified attributes can decrypt,
+	// while in the conjugation policy the user must have
+	// all the specified attributes
+
 	// create a new DIPPE struct, choosing the security parameter
 	d, err := abe.NewDIPPE(3)
 	if err != nil {
 		t.Fatalf("Failed to generate a new scheme: %v", err)
 	}
+	// specify the number of all attributes
 	numAttrib := 10
 
 	// create authorities and their public keys
-	auth := make([]*abe.DIPPEAuth, numAttrib + 1)
-	pubKeys := make([]*abe.DIPPEPubKey, numAttrib + 1)
+	auth := make([]*abe.DIPPEAuth, numAttrib+1)
+	pubKeys := make([]*abe.DIPPEPubKey, numAttrib+1)
 	for i := range auth {
 		auth[i], err = d.NewDIPPEAuth(i)
 		if err != nil {
@@ -107,14 +109,10 @@ func TestDIPPE_ABE(t *testing.T) {
 		pubKeys[i] = &auth[i].Pk
 	}
 
-	sampler := sample.NewUniform(bn256.Order)
-	randInt, err := sampler.Sample()
-	if err != nil {
-		t.Fatalf("Failed to sample message: %v", err)
-	}
-	msg := new(bn256.GT).ScalarBaseMult(randInt)
+	msg := "some important message"
 
-	// choose attributes needed for the exact threshold policy
+	// choose attributes needed for the exact threshold policy and the
+	// threshold value
 	thresholdAttrib := []int{0, 2, 5, 8, 9}
 	exactThreshold := 3
 	// generate the exact threshold vector
