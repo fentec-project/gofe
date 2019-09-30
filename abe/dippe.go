@@ -28,6 +28,7 @@ import (
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
+	"io"
 )
 
 // DIPPE represents a Decentralized Inner-Product Predicate Encryption
@@ -35,10 +36,10 @@ import (
 // "Decentralized Policy-Hiding Attribute-Based Encryption with Receiver Privacy"
 // https://eprint.iacr.org/2018/753.pdf
 type DIPPE struct {
-	AsumpSize int
-	G1ToA     data.MatrixG1
-	G1ToUA    data.MatrixG1
-	P         *big.Int // order of the elliptic curve
+	secLevel int
+	G1ToA    data.MatrixG1
+	G1ToUA   data.MatrixG1
+	P        *big.Int // order of the elliptic curve
 }
 
 // DIPPEPubKey represents a public key of an authority in DIPPE scheme.
@@ -69,21 +70,22 @@ type DIPPECipher struct {
 	CPrime *bn256.GT
 	X      data.Vector // policy vector
 	SymEnc []byte      // symmetric encryption of the message
+	Iv     []byte      // initialization vector for symmetric encryption
 }
 
 // NewDIPPE configures a new instance of the scheme. The input parameter
 // defines the security assumption of the scheme, so called k-Lin assumption,
 // where k is the input.
-func NewDIPPE(assumpSize int) (*DIPPE, error) {
+func NewDIPPE(secLevel int) (*DIPPE, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
-	A, err := data.NewRandomMatrix(assumpSize+1, assumpSize, sampler)
+	A, err := data.NewRandomMatrix(secLevel+1, secLevel, sampler)
 	if err != nil {
 		return nil, err
 	}
 	g1ToA := A.MulG1()
 
-	U, err := data.NewRandomMatrix(assumpSize+1, assumpSize+1, sampler)
+	U, err := data.NewRandomMatrix(secLevel+1, secLevel+1, sampler)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +96,7 @@ func NewDIPPE(assumpSize int) (*DIPPE, error) {
 	UA.Mod(bn256.Order)
 	g1ToUA := UA.MulG1()
 
-	return &DIPPE{AsumpSize: assumpSize,
+	return &DIPPE{secLevel: secLevel,
 		G1ToA:  g1ToA,
 		G1ToUA: g1ToUA,
 		P:      bn256.Order}, nil
@@ -106,12 +108,12 @@ func NewDIPPE(assumpSize int) (*DIPPE, error) {
 func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
-	W, err := data.NewRandomMatrix(d.AsumpSize+1, d.AsumpSize+1, sampler)
+	W, err := data.NewRandomMatrix(d.secLevel+1, d.secLevel+1, sampler)
 	if err != nil {
 		return nil, err
 	}
 
-	alpha, err := data.NewRandomVector(d.AsumpSize+1, sampler)
+	alpha, err := data.NewRandomVector(d.secLevel+1, sampler)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +137,8 @@ func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	}
 
 	g2 := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
-	gtToAlphaA := make(data.VectorGT, d.AsumpSize)
-	for i := 0; i < d.AsumpSize; i++ {
+	gtToAlphaA := make(data.VectorGT, d.secLevel)
+	for i := 0; i < d.secLevel; i++ {
 		gtToAlphaA[i] = bn256.Pair(g1ToAlphaA[0][i], g2)
 	}
 
@@ -167,6 +169,10 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIP
 	}
 
 	iv := make([]byte, a.BlockSize())
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return nil, err
+	}
 	encrypterCBC := cbc.NewCBCEncrypter(a, iv)
 
 	msgByte := []byte(msg)
@@ -183,7 +189,7 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIP
 
 	// encapsulate the key with DIPPE
 	sampler := sample.NewUniform(bn256.Order)
-	s, err := data.NewRandomVector(d.AsumpSize, sampler)
+	s, err := data.NewRandomVector(d.secLevel, sampler)
 	if err != nil {
 		return nil, err
 	}
@@ -207,15 +213,15 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIP
 	}
 	cPrime.Add(keyGt, cPrime)
 
-	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime, X: x.Copy(), SymEnc: symEnc}, nil
+	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime, X: x.Copy(), SymEnc: symEnc, Iv: iv}, nil
 }
 
-// Keygen allows an authority to give a partial decryption key. Collecting all
+// DeriveKeyShare allows an authority to give a partial decryption key. Collecting all
 // such partial keys allows a user to decrypt the message. The input vector v contains
 // an information about the user that will allow him to decrypt iff the inner product
 // v times x = 0 for the policy x. GID is a global identifier of the user and a slice of
 // public keys of the authorities should be given.
-func (a *DIPPEAuth) Keygen(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
+func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
 	for i := 0; i < a.Sk.W.Rows(); i++ {
 		g2ToMu[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
@@ -312,14 +318,16 @@ func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector
 	if err != nil {
 		return "", err
 	}
-	iv := make([]byte, a.BlockSize())
 
 	msgPad := make([]byte, len(cipher.SymEnc))
-	decrypter := cbc.NewCBCDecrypter(a, iv)
+	decrypter := cbc.NewCBCDecrypter(a, cipher.Iv)
 	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
 
 	// unpad the message
 	padLen := int(msgPad[len(msgPad)-1])
+	if (len(msgPad) - padLen) < 0 {
+		return "", fmt.Errorf("failed to decrypt")
+	}
 	msgByte := msgPad[0:(len(msgPad) - padLen)]
 
 	return string(msgByte), nil

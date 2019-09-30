@@ -27,6 +27,7 @@ import (
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
+	"io"
 )
 
 // This is a key policy (KP) attribute based (ABE) scheme based on
@@ -94,6 +95,7 @@ type GPSWCipher struct {
 	E0        *bn256.GT     // the first part of the encryption
 	E         data.VectorG2 // the second part of the encryption
 	SymEnc    []byte        // symmetric encryption of the message
+	Iv        []byte        // initialization vector for symmetric encryption
 }
 
 // Encrypt takes as an input a message msg given as a string, gamma a set of
@@ -115,6 +117,10 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 	}
 
 	iv := make([]byte, c.BlockSize())
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return nil, err
+	}
 	encrypterCBC := cbc.NewCBCEncrypter(c, iv)
 
 	msgByte := []byte(msg)
@@ -148,7 +154,8 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 		AttribToI: attribToI,
 		E0:        e0,
 		E:         e,
-		SymEnc:    symEnc}, nil
+		SymEnc:    symEnc,
+	    Iv:        iv}, nil
 }
 
 // GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
@@ -278,14 +285,16 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	iv := make([]byte, c.BlockSize())
 
 	msgPad := make([]byte, len(cipher.SymEnc))
-	decrypter := cbc.NewCBCDecrypter(c, iv)
+	decrypter := cbc.NewCBCDecrypter(c, cipher.Iv)
 	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
 
 	// unpad the message
 	padLen := int(msgPad[len(msgPad)-1])
+	if (len(msgPad) - padLen) < 0 {
+		return "", fmt.Errorf("failed to decrypt")
+	}
 	msgByte := msgPad[0:(len(msgPad) - padLen)]
 
 	return string(msgByte), nil
