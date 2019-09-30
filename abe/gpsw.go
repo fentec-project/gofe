@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"io"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	"io"
 )
 
 // This is a key policy (KP) attribute based (ABE) scheme based on
@@ -155,7 +156,7 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 		E0:        e0,
 		E:         e,
 		SymEnc:    symEnc,
-	    Iv:        iv}, nil
+		Iv:        iv}, nil
 }
 
 // GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret

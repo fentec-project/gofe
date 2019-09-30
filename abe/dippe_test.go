@@ -113,7 +113,7 @@ func TestDIPPE_ABE_threshold(t *testing.T) {
 	thresholdAttrib := []int{0, 2, 5, 8, 9}
 	exactThreshold := 3
 	// generate the exact threshold vector (this conversion allows the
-	// DIPPE scheme to be used as a ABE threshold scheme)
+	// DIPPE scheme to be used as an ABE threshold scheme)
 	thresholdPolicyVec, err := d.ExactThresholdPolicyVecInit(thresholdAttrib, exactThreshold, numAttrib)
 	if err != nil {
 		t.Fatalf("Failed to generate threshold vector: %v", err)
@@ -184,7 +184,7 @@ func TestDIPPE_ABE_conjugation(t *testing.T) {
 	// choose attributes needed for the conjunction policy
 	conjunctAttrib := []int{1, 2, 3, 7}
 	// generate the conjunction vector (this conversion allows the
-	// DIPPE scheme to be used as a ABE conjunction scheme)
+	// DIPPE scheme to be used as an ABE conjunction scheme)
 	conjunctPolicyVec, err := d.ConjunctionPolicyVecInit(conjunctAttrib, numAttrib)
 	if err != nil {
 		t.Fatalf("Failed to generate conjucnction vector: %v", err)

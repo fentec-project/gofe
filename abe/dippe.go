@@ -25,10 +25,11 @@ import (
 	"math/big"
 	"strconv"
 
+	"io"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	"io"
 )
 
 // DIPPE represents a Decentralized Inner-Product Predicate Encryption

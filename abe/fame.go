@@ -27,10 +27,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
+	"io"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
-	"io"
 )
 
 // This is a ciphertext policy (CP) attribute based (ABE) scheme based
