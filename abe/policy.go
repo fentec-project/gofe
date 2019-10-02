@@ -17,7 +17,6 @@
 package abe
 
 import (
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -205,89 +204,4 @@ func makeAndVecs(vec data.Vector, c int) (data.Vector, data.Vector) {
 	vec2[c] = big.NewInt(1)
 
 	return vec1, vec2
-}
-
-// gaussianElimination solves a vector equation mat * x = v and finds vector x,
-// using Gaussian elimination. Arithmetic operations are considered to be over
-// Z_p, where p should be a prime number. If such x does not exist, then the
-// function returns an error.
-func gaussianElimination(mat data.Matrix, v data.Vector, p *big.Int) (data.Vector, error) {
-	if len(mat) == 0 || len(mat[0]) == 0 {
-		return nil, fmt.Errorf("the matrix should not be empty")
-	}
-	if len(mat) != len(v) {
-		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: "+
-			"rows of the matrix %d, length of the vector %d", len(mat), len(v)))
-	}
-
-	// we copy matrix mat into m and v into u
-	cpMat := make([]data.Vector, len(mat))
-	u := make(data.Vector, len(mat))
-	for i := 0; i < len(mat); i++ {
-		cpMat[i] = make(data.Vector, len(mat[0]))
-		for j := 0; j < len(mat[0]); j++ {
-			cpMat[i][j] = new(big.Int).Set(mat[i][j])
-		}
-		u[i] = new(big.Int).Set(v[i])
-	}
-	m, _ := data.NewMatrix(cpMat) // error is impossible to happen
-
-	// m and u are transformed to be in the upper triangular form
-	ret := make(data.Vector, len(mat[0]))
-	h, k := 0, 0
-	for h < len(m) && k < len(m[0]) {
-		zero := true
-		for i := h; i < len(m); i++ {
-			if m[i][k].Sign() != 0 {
-				m[h], m[i] = m[i], m[h]
-
-				u[h], u[i] = u[i], u[h]
-				zero = false
-				break
-			}
-		}
-		if zero {
-			ret[k] = big.NewInt(0)
-			k++
-			continue
-		}
-		mHKInv := new(big.Int).ModInverse(m[h][k], p)
-		for i := h + 1; i < len(m); i++ {
-			f := new(big.Int).Mul(mHKInv, m[i][k])
-			m[i][k] = big.NewInt(0)
-			for j := k + 1; j < len(m[0]); j++ {
-				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
-				m[i][j].Mod(m[i][j], p)
-			}
-			u[i].Sub(u[i], new(big.Int).Mul(f, u[h]))
-			u[i].Mod(u[i], p)
-		}
-		k++
-		h++
-	}
-
-	for i := h; i < len(m); i++ {
-		if u[i].Sign() != 0 {
-			return nil, fmt.Errorf("no solution")
-		}
-	}
-	for j := k; j < len(m[0]); j++ {
-		ret[j] = big.NewInt(0)
-	}
-
-	// use the upper triangular form to obtain the solution
-	for i := h - 1; i >= 0; i-- {
-		for j := k - 1; j >= 0; j-- {
-			if ret[j] == nil {
-				tmpSum, _ := m[i][j+1:].Dot(ret[j+1:])
-				ret[j] = new(big.Int).Sub(u[i], tmpSum)
-				mHKInv := new(big.Int).ModInverse(m[i][j], p)
-				ret[j].Mul(ret[j], mHKInv)
-				ret[j].Mod(ret[j], p)
-				break
-			}
-		}
-	}
-
-	return ret, nil
 }

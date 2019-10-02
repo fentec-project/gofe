@@ -360,7 +360,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	// get a combination alpha of keys needed to decrypt
 	oneVec := data.NewConstantVector(len(matForKey[0]), big.NewInt(0))
 	oneVec[0].SetInt64(1)
-	alpha, err := gaussianElimination(matForKey.Transpose(), oneVec, a.P)
+	alpha, err := data.GaussianEliminationSolver(matForKey.Transpose(), oneVec, a.P)
 	if err != nil {
 		return "", fmt.Errorf("provided key is not sufficient for decryption")
 	}

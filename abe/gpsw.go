@@ -258,7 +258,7 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get a combination alpha of keys needed to decrypt
 	ones := data.NewConstantVector(len(key.Mat[0]), big.NewInt(1))
-	alpha, err := gaussianElimination(key.Mat.Transpose(), ones, a.Params.P)
+	alpha, err := data.GaussianEliminationSolver(key.Mat.Transpose(), ones, a.Params.P)
 	if err != nil {
 		return "", fmt.Errorf("the provided key is not sufficient for the decryption")
 	}

@@ -177,3 +177,100 @@ func TestMatrix_Mul(t *testing.T) {
 	assert.Equal(t, prodExpected, prod, "product of matrices does not work correctly")
 	assert.Error(t, err, "expected an error to because of dimension mismatch")
 }
+
+func TestMatrix_Determinant(t *testing.T) {
+	m := Matrix{
+		Vector{big.NewInt(1), big.NewInt(1), big.NewInt(1)},
+		Vector{big.NewInt(4), big.NewInt(5), big.NewInt(6)},
+		Vector{big.NewInt(4), big.NewInt(4), big.NewInt(3)},
+	}
+	p := big.NewInt(7)
+
+	det1, err := m.Determinant()
+	if err != nil {
+		t.Fatalf("Error during computation of determinant: %v", err)
+	}
+	det1.Mod(det1, p)
+
+	det2, err := m.DeterminantGauss(p)
+	if err != nil {
+		t.Fatalf("Error during computation of determinant: %v", err)
+	}
+
+	assert.Equal(t, det1, det2, "computed determinants are not equal")
+}
+
+func TestMatrix_InverseMod(t *testing.T) {
+	m := Matrix{
+		Vector{big.NewInt(1), big.NewInt(1), big.NewInt(1)},
+		Vector{big.NewInt(4), big.NewInt(5), big.NewInt(6)},
+		Vector{big.NewInt(4), big.NewInt(4), big.NewInt(3)},
+	}
+	p := big.NewInt(7)
+
+	mInv1, err := m.InverseMod(p)
+	if err != nil {
+		t.Fatalf("Error during computation of inverse: %v", err)
+	}
+
+	mInv2, _, err := m.InverseModGauss(p)
+	if err != nil {
+		t.Fatalf("Error during computation of inverse: %v", err)
+	}
+	for i := 0; i < m.Rows(); i++ {
+		for j := 0; j < m.Cols(); j++ {
+			assert.Equal(t, mInv1[i][j].Cmp(mInv2[i][j]), 0, "computed inverses are not equal")
+		}
+
+	}
+}
+
+func TestMatrix_GaussianElimintaion(t *testing.T) {
+	// create instances mat, xTest and v for which mat * xTest = v
+	// as a matrix vector multiplication over Z_p
+
+	p := big.NewInt(17)
+	sampler := sample.NewUniform(p)
+	mat, err := NewRandomMatrix(100, 50, sampler)
+	if err != nil {
+		t.Fatalf("Error during matrix generation: %v", err)
+	}
+
+	xTest, err := NewRandomVector(50, sampler)
+	if err != nil {
+		t.Fatalf("Error during vector generation: %v", err)
+	}
+
+	v, err := mat.MulVec(xTest)
+	if err != nil {
+		t.Fatalf("Error in generating a test vector: %v", err)
+	}
+	v = v.Mod(p)
+
+	// test the Gaussian elimination algorithm that given v and mat
+	// finds x such that mat * x = v
+	x, err := GaussianEliminationSolver(mat, v, p)
+	if err != nil {
+		t.Fatalf("Error in Gaussian elimination: %v", err)
+	}
+
+	// test if the obtained x is correct
+	vCheck, err := mat.MulVec(x)
+	if err != nil {
+		t.Fatalf("Error obtainig a check value: %v", err)
+	}
+	vCheck = vCheck.Mod(p)
+	assert.Equal(t, v, vCheck)
+
+	// test if errors are returned if the inputs have a wrong form
+	vWrong, err := NewRandomVector(101, sampler)
+	if err != nil {
+		t.Fatalf("Error during vector generation: %v", err)
+	}
+	_, err = GaussianEliminationSolver(mat, vWrong, p)
+	assert.Error(t, err)
+
+	matWrong := make(Matrix, 0)
+	_, err = GaussianEliminationSolver(matWrong, v, p)
+	assert.Error(t, err)
+}
