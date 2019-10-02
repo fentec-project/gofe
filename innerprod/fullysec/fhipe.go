@@ -20,13 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/internal"
-	"github.com/fentec-project/gofe/internal/dlog"
-	"github.com/fentec-project/gofe/internal/keygen"
-	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/fentec-project/bn256"
 	"crypto/rand"
+
+	"github.com/fentec-project/bn256"
+	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
 )
 
@@ -37,8 +35,9 @@ import (
 // P (int): Modulus - we are operating in a cyclic group Z_P.
 // Q (int): Multiplicative order of G and H.
 type FHIPEParams struct {
-	L     int
-	Bound *big.Int
+	L      int
+	BoundX *big.Int
+	BoundY *big.Int
 }
 
 // Damgard represents a scheme instantiated from the DDH assumption
@@ -58,17 +57,18 @@ type FHIPE struct {
 // It returns an error in case the scheme could not be properly
 // configured, or if precondition l * bound² is >= order of the cyclic
 // group.
-func NewFHIPE(l int, bound *big.Int) (*FHIPE, error) {
-	bSquared := new(big.Int).Exp(bound, big.NewInt(2), nil)
-	prod := new(big.Int).Mul(big.NewInt(int64(2*l)), bSquared)
+func NewFHIPE(l int, boundX, boundY *big.Int) (*FHIPE, error) {
+	boundXY := new(big.Int).Mul(boundX, boundY)
+	prod := new(big.Int).Mul(big.NewInt(int64(2*l)), boundXY)
 	if prod.Cmp(bn256.Order) > 0 {
-		return nil, fmt.Errorf("2 * l * bound^2 should be smaller than group order")
+		return nil, fmt.Errorf("2 * l * boundX * boundY should be smaller than group order")
 	}
 
 	return &FHIPE{
 		Params: &FHIPEParams{
-			L:     l,
-			Bound: bound}}, nil
+			L:      l,
+			BoundX: boundX,
+			BoundY: boundY}}, nil
 }
 
 // NewDamgardFromParams takes configuration parameters of an existing
@@ -82,9 +82,9 @@ func NewFHIPEFromParams(params *FHIPEParams) *FHIPE {
 
 // DamgardSecKey is a secret key for Damgard scheme.
 type FHIPESecKey struct {
-	G1 *bn256.G1
-	G2 *bn256.G2
-	B data.Matrix
+	G1    *bn256.G1
+	G2    *bn256.G2
+	B     data.Matrix
 	BStar data.Matrix
 }
 
@@ -107,12 +107,12 @@ func (d *FHIPE) GenerateMasterKey() (*FHIPESecKey, error) {
 		return nil, err
 	}
 
-	bStar, err := b.InverseMod(bn256.Order)
+	bStar, det, err := b.InverseModGauss(bn256.Order)
 	if err != nil {
 		return nil, err
 	}
 	bStar = bStar.Transpose()
-	det, err := bStar.Determinant()
+
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,8 @@ type FHIPEDerivedKey struct {
 // DeriveKey takes master secret key and input vector y, and returns the
 // functional encryption key. In case the key could not be derived, it
 // returns an error.
-func (d *FHIPE) DeriveKey(masterKey *FHIPESecKey, y data.Vector) (*FHIPEDerivedKey, error) {
-	if err := y.CheckBound(d.Params.Bound); err != nil {
+func (d *FHIPE) DeriveKey(y data.Vector, masterKey *FHIPESecKey) (*FHIPEDerivedKey, error) {
+	if err := y.CheckBound(d.Params.BoundY); err != nil {
 		return nil, err
 	}
 	if len(y) != d.Params.L {
@@ -145,7 +145,8 @@ func (d *FHIPE) DeriveKey(masterKey *FHIPESecKey, y data.Vector) (*FHIPEDerivedK
 		return nil, err
 	}
 
-	det, err := masterKey.B.Determinant()
+	det, err := masterKey.B.DeterminantGauss(bn256.Order)
+	det.Mod(det, bn256.Order)
 	if err != nil {
 		return nil, err
 	}
@@ -154,73 +155,70 @@ func (d *FHIPE) DeriveKey(masterKey *FHIPESecKey, y data.Vector) (*FHIPEDerivedK
 
 	alphaBY, err := masterKey.B.MulVec(y)
 	alphaBY = alphaBY.MulScalar(alpha)
+	g1Vec := make(data.VectorG1, d.Params.L)
+	for i := 0; i < d.Params.L; i++ {
+		g1Vec[i] = new(bn256.G1).Set(masterKey.G1)
+	}
+	k2 := alphaBY.MulVecG1(g1Vec)
 
+	return &FHIPEDerivedKey{K1: k1, K2: k2}, nil
+}
 
-	return &DamgardDerivedKey{Key1: k1, Key2: k2}, nil
+// DamgardDerivedKey is a functional encryption key for Damgard scheme.
+type FHIPECipher struct {
+	C1 *bn256.G2
+	C2 data.VectorG2
 }
 
 // Encrypt encrypts input vector x with the provided master public key.
 // It returns a ciphertext vector. If encryption failed, error is returned.
-func (d *Damgard) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
-	if err := x.CheckBound(d.Params.Bound); err != nil {
+func (d *FHIPE) Encrypt(x data.Vector, masterKey *FHIPESecKey) (*FHIPECipher, error) {
+	if err := x.CheckBound(d.Params.BoundX); err != nil {
 		return nil, err
 	}
+	if len(x) != d.Params.L {
+		return nil, fmt.Errorf("vector dimension error")
+	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+	sampler := sample.NewUniform(bn256.Order)
+	beta, err := sampler.Sample()
 	if err != nil {
 		return nil, err
 	}
 
-	ciphertext := make([]*big.Int, len(x)+2)
-	// c = g^r
-	// dd = h^r
-	c := new(big.Int).Exp(d.Params.G, r, d.Params.P)
-	ciphertext[0] = c
-	dd := new(big.Int).Exp(d.Params.H, r, d.Params.P)
-	ciphertext[1] = dd
+	c1 := new(bn256.G2).ScalarMult(masterKey.G2, beta)
 
-	for i := 0; i < len(x); i++ {
-		// e_i = h_i^r * g^x_i
-		// e_i = mpk[i]^r * g^x_i
-		t1 := new(big.Int).Exp(masterPubKey[i], r, d.Params.P)
-		t2 := internal.ModExp(d.Params.G, x[i], d.Params.P)
-		ct := new(big.Int).Mod(new(big.Int).Mul(t1, t2), d.Params.P)
-		ciphertext[i+2] = ct
+	betaBStarX, err := masterKey.BStar.MulVec(x)
+	betaBStarX = betaBStarX.MulScalar(beta)
+	g2Vec := make(data.VectorG2, d.Params.L)
+	for i := 0; i < d.Params.L; i++ {
+		g2Vec[i] = new(bn256.G2).Set(masterKey.G2)
 	}
+	c2 := betaBStarX.MulVecG2(g2Vec)
 
-	return data.NewVector(ciphertext), nil
+	return &FHIPECipher{C1: c1, C2: c2}, nil
 }
 
 // Decrypt accepts the encrypted vector, functional encryption key, and
 // a plaintext vector y. It returns the inner product of x and y.
 // If decryption failed, error is returned.
-func (d *Damgard) Decrypt(cipher data.Vector, key *DamgardDerivedKey, y data.Vector) (*big.Int, error) {
-	if err := y.CheckBound(d.Params.Bound); err != nil {
-		return nil, err
+func (d *FHIPE) Decrypt(cipher *FHIPECipher, key *FHIPEDerivedKey) (*big.Int, error) {
+	if len(cipher.C2) != d.Params.L || len(key.K2) != d.Params.L {
+		return nil, fmt.Errorf("key or cipher length error")
 	}
 
-	num := big.NewInt(1)
-	for i, ct := range cipher[2:] {
-		t1 := internal.ModExp(ct, y[i], d.Params.P)
-		num = num.Mod(new(big.Int).Mul(num, t1), d.Params.P)
+	d1 := bn256.Pair(key.K1, cipher.C1)
+
+	d2 := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
+	for i := 0; i < d.Params.L; i++ {
+		pairedI := bn256.Pair(key.K2[i], cipher.C2[i])
+		d2 = new(bn256.GT).Add(pairedI, d2)
+
 	}
 
-	t1 := new(big.Int).Exp(cipher[0], key.Key1, d.Params.P)
-	t2 := new(big.Int).Exp(cipher[1], key.Key2, d.Params.P)
+	boundXY := new(big.Int).Mul(d.Params.BoundX, d.Params.BoundY)
+	bound := new(big.Int).Mul(big.NewInt(int64(d.Params.L)), boundXY)
 
-	denom := new(big.Int).Mod(new(big.Int).Mul(t1, t2), d.Params.P)
-	denomInv := new(big.Int).ModInverse(denom, d.Params.P)
-	r := new(big.Int).Mod(new(big.Int).Mul(num, denomInv), d.Params.P)
-
-	bSquared := new(big.Int).Exp(d.Params.Bound, big.NewInt(2), big.NewInt(0))
-	bound := new(big.Int).Mul(big.NewInt(int64(d.Params.L)), bSquared)
-
-	calc, err := dlog.NewCalc().InZp(d.Params.P, d.Params.Q)
-	if err != nil {
-		return nil, err
-	}
-	calc = calc.WithNeg()
-
-	res, err := calc.WithBound(bound).BabyStepGiantStep(r, d.Params.G)
-	return res, err
+	dec, err := dlog.NewCalc().InBN256().WithNeg().WithBound(bound).BabyStepGiantStep(d2, d1)
+	return dec, err
 }
