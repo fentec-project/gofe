@@ -27,6 +27,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
+	"io"
+
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
@@ -99,6 +101,7 @@ type FAMECipher struct {
 	CtPrime *bn256.GT
 	Msp     *MSP
 	SymEnc  []byte // symmetric encryption of the message
+	Iv      []byte // initialization vector for symmetric encryption
 }
 
 // Encrypt takes as an input a message msg represented as an element of an elliptic
@@ -135,6 +138,10 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	}
 
 	iv := make([]byte, c.BlockSize())
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return nil, err
+	}
 	encrypterCBC := cbc.NewCBCEncrypter(c, iv)
 
 	msgByte := []byte(msg)
@@ -207,7 +214,7 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.PartGT[1], s[1]))
 	ctPrime.Add(ctPrime, keyGt)
 
-	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp, SymEnc: symEnc}, nil
+	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp, SymEnc: symEnc, Iv: iv}, nil
 }
 
 // FAMEAttribKeys represents keys corresponding to attributes possessed by
@@ -391,14 +398,16 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	if err != nil {
 		return "", err
 	}
-	iv := make([]byte, c.BlockSize())
 
 	msgPad := make([]byte, len(cipher.SymEnc))
-	decrypter := cbc.NewCBCDecrypter(c, iv)
+	decrypter := cbc.NewCBCDecrypter(c, cipher.Iv)
 	decrypter.CryptBlocks(msgPad, cipher.SymEnc)
 
 	// unpad the message
 	padLen := int(msgPad[len(msgPad)-1])
+	if (len(msgPad) - padLen) < 0 {
+		return "", fmt.Errorf("failed to decrypt")
+	}
 	msgByte := msgPad[0:(len(msgPad) - padLen)]
 
 	return string(msgByte), nil

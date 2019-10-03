@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/sample"
 )
 
@@ -405,4 +406,102 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 	}
 
 	return co.Transpose(), nil
+}
+
+// MulG1 calculates m * [bn256.G1] and returns the
+// result in a new MatrixG1 instance.
+func (m Matrix) MulG1() MatrixG1 {
+	prod := make(MatrixG1, len(m))
+	for i := range prod {
+		prod[i] = m[i].MulG1()
+	}
+
+	return prod
+}
+
+// MatMulMatG1 multiplies m and other in the sense that
+// if other is t * [bn256.G1] for some matrix t, then the
+// function returns m * t * [bn256.G1] where m * t is a
+// matrix multiplication.
+func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
+	if m.Cols() != other.Rows() {
+		return nil, fmt.Errorf("cannot multiply matrices")
+	}
+
+	prod := make(MatrixG1, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		prod[i] = make([]*bn256.G1, other.Cols())
+		for j := 0; j < other.Cols(); j++ {
+			prod[i][j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
+			for k := 0; k < m.Cols(); k++ {
+				mik := new(big.Int).Set(m[i][k])
+				okj := new(bn256.G1).Set(other[k][j])
+				if m[i][k].Sign() == -1 {
+					okj.Neg(okj)
+					mik.Neg(mik)
+				}
+				tmp := new(bn256.G1).ScalarMult(okj, mik)
+				prod[i][j].Add(tmp, prod[i][j])
+			}
+		}
+	}
+
+	return prod, nil
+}
+
+// MatMulMatG2 multiplies m and other in the sense that
+// if other is t * [bn256.G2] for some matrix t, then the
+// function returns m * t * [bn256.G2] where m * t is a
+// matrix multiplication.
+func (m Matrix) MatMulMatG2(other MatrixG2) (MatrixG2, error) {
+	if m.Cols() != other.Rows() {
+		return nil, fmt.Errorf("cannot multiply matrices")
+	}
+
+	prod := make(MatrixG2, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		prod[i] = make([]*bn256.G2, other.Cols())
+		for j := 0; j < other.Cols(); j++ {
+			prod[i][j] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+			for k := 0; k < m.Cols(); k++ {
+				mik := new(big.Int).Set(m[i][k])
+				okj := new(bn256.G2).Set(other[k][j])
+				if m[i][k].Sign() == -1 {
+					okj.Neg(okj)
+					mik.Neg(mik)
+				}
+				tmp := new(bn256.G2).ScalarMult(okj, mik)
+				prod[i][j].Add(tmp, prod[i][j])
+			}
+		}
+	}
+
+	return prod, nil
+}
+
+// MatMulVecG2 multiplies m and other in the sense that
+// if other is t * [bn256.G2] for some vector t, then the
+// function returns m * t * [bn256.G2] where m * t is a
+// matrix-vector multiplication.
+func (m Matrix) MatMulVecG2(other VectorG2) (VectorG2, error) {
+	if m.Cols() != len(other) {
+		return nil, fmt.Errorf("dimensions don't fit")
+	}
+
+	prod := make(VectorG2, m.Rows())
+	for j := 0; j < m.Rows(); j++ {
+		prod[j] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
+		for k := 0; k < m.Cols(); k++ {
+			mjk := new(big.Int).Set(m[j][k])
+			ok := new(bn256.G2).Set(other[k])
+			if m[j][k].Sign() == -1 {
+				ok.Neg(ok)
+				mjk.Neg(mjk)
+			}
+			tmp := new(bn256.G2).ScalarMult(ok, mjk)
+			prod[j].Add(tmp, prod[j])
+		}
+	}
+
+	return prod, nil
 }

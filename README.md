@@ -47,7 +47,8 @@ We organized implementations in two categories based on their security assumptio
 
 * Schemes with **selective security under chosen-plaintext 
 attacks** (s-IND-CPA security):
-    * Scheme by _Abdalla et. al._ ([paper](https://eprint.iacr.org/2015/017.pdf)). The scheme can be instantiated from DDH (`simple.DDH`), LWE (`simple.LWE`) and RingLWE (`simple.RingLWE`) primitives.
+    * Scheme by _Abdalla et. al._ ([paper](https://eprint.iacr.org/2015/017.pdf)). The scheme can be instantiated from DDH (`simple.DDH`), LWE (`simple.LWE`)  primitives.
+    * Experimental Ring-LWE scheme whose security will be argued in a future paper (`simple.RingLWE`)
     * Multi-input scheme based on paper by _Abdalla et.al_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point (`simple.DDHMulti`).
 
 * Schemes with **adaptive security under chosen-plaintext attacks** (IND-CPA
@@ -55,6 +56,8 @@ security) by
     * Scheme based on paper by _Agrawal, Libert and Stehlé_ ([paper](https://eprint.iacr.org/2015/608.pdf)). It can be instantiated from Damgard DDH (`fullysec.Damgard` - similar to `simple.DDH`, but uses one more group element to achieve full security, similar to how Damgård's encryption scheme is obtained from ElGamal scheme ([paper](https://link.springer.com/chapter/10.1007/3-540-46766-1_36)), LWE (`fullysec.LWE`) and Paillier (`fullysec.Paillier`) primitives.
     * Multi-input scheme based on paper by _Abdalla et.al_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point (`fullysec.DamgardMulti`).
     * Decentralized scheme based on paper by _Chotard, Dufour Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings (`fullysec.DMCFEClient`).
+    * Decentralized scheme based on paper by _Abdalla, Benhamouda, Kohlweiss, Waldner_  ([paper](https://eprint.iacr.org/2019/020.pdf)). Similarly as above this scheme this scheme does not require a trusted party to generate keys and is based on a general 
+procedure for decentralization of an inner product scheme, in particular the decentralization of a Damgard DDH scheme (`fullysec.DamgardDecMultiClient`).
 
 #### Quadratic polynomial schemes
 You will need `SGP` scheme from package `quadratic`. 
@@ -70,10 +73,13 @@ attacks (IND-CPA security).
 Schemes are organized under package `abe`.
 
 It contains two ABE schemes:
-* A ciphertext policy (CP) ABE scheme named FAME by Agrawal, Chase ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
+* A ciphertext policy (CP) ABE scheme named FAME by _Agrawal, Chase_ ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
 message based on a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.fame`.
-* A key policy (KP) ABE scheme by Goyal, Pandey, Sahai, Waters ([paper](https://eprint.iacr.org/2006/309.pdf)) allowing a distribution of
+* A key policy (KP) ABE scheme by _Goyal, Pandey, Sahai, Waters_ ([paper](https://eprint.iacr.org/2006/309.pdf)) allowing a distribution of
 keys following a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.gpsw`.
+* A decentralized inner product predicate scheme by _Michalevsky, Joye_ ([paper](https://eprint.iacr.org/2018/753.pdf)) allowing encryption
+with policy described as a vector, and a decentralized distribution of keys based on users' vectors so that
+only users with  vectors orthogonal to the encryption vector posses a key that can decrypt the ciphertext. It is implemented in `abe.dippe`.
 
 ### Configure selected scheme
 All GoFE schemes are implemented as Go structs with (at least logically)
@@ -169,7 +175,7 @@ You will see that three `DDH` structs are instantiated to simulate the
 // will generate master keys and FE key
 l := 2 // length of input vectors
 bound := big.NewInt(10) // upper bound for input vector coordinates
-modulusLength := 128 // bit length of prime modulus p 
+modulusLength := 2048 // bit length of prime modulus p 
 trustedEnt, _ := simple.NewDDH(l, modulusLength, bound)
 msk, mpk, _ := trustedEnt.GenerateMasterKeys()
 
@@ -220,7 +226,7 @@ Y, _ := data.NewRandomMatrix(numClients, l, sampler)
 // Trusted entity instantiates scheme instance and generates
 // master keys for all the encryptors. It also derives the FE
 // key derivedKey for the decryptor.
-modulusLength := 64
+modulusLength := 2048
 multiDDH, _ := simple.NewDDHMulti(numClients, l, modulusLength, bound)
 pubKey, secKey, _ := multiDDH.GenerateMasterKeys()
 derivedKey, _ := multiDDH.DeriveKey(secKey, Y)
