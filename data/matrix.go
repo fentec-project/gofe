@@ -423,6 +423,17 @@ func (m Matrix) MulG1() MatrixG1 {
 	return prod
 }
 
+// MulG2 calculates m * [bn256.G1] and returns the
+// result in a new MatrixG1 instance.
+func (m Matrix) MulG2() MatrixG2 {
+	prod := make(MatrixG2, len(m))
+	for i := range prod {
+		prod[i] = m[i].MulG2()
+	}
+
+	return prod
+}
+
 // MatMulMatG1 multiplies m and other in the sense that
 // if other is t * [bn256.G1] for some matrix t, then the
 // function returns m * t * [bn256.G1] where m * t is a

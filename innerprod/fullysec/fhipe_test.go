@@ -22,8 +22,8 @@ import (
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
-	"github.com/stretchr/testify/assert"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFHIPE(t *testing.T) {
