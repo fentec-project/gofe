@@ -40,8 +40,8 @@ type FHIPEParams struct {
 // FHIPE represents a Function Hiding Inner Product Encryption scheme
 // based on the paper by Kim, Lewi, Mandal, Montgomery, Roy, Wu:
 // "Function-Hiding Inner Product Encryption is Practical".
-// It allows to encrypt a vector x and generate a secret key based
-// in an inner product vector y so that a deryptor can decrypt the
+// It allows to encrypt a vector x and derive a secret key based
+// on an inner product vector y so that a deryptor can decrypt the
 // inner product <x,y> without revealing x or y.
 // The struct contains the shared choice for parameters on which
 // the functionality of the scheme depend.
@@ -165,7 +165,7 @@ func (d *FHIPE) DeriveKey(y data.Vector, masterKey *FHIPESecKey) (*FHIPEDerivedK
 	return &FHIPEDerivedKey{K1: k1, K2: k2}, nil
 }
 
-// FHIPECipher is a functional encryption key for FHIPE scheme.
+// FHIPECipher is a functional encryption ciphertext for FHIPE scheme.
 type FHIPECipher struct {
 	C1 *bn256.G2
 	C2 data.VectorG2

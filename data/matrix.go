@@ -559,7 +559,7 @@ func (mat Matrix) GaussianElimination(p *big.Int) (Matrix, error) {
 
 // InverseModGauss returns the inverse matrix of m in the group Z_p.
 // The algorithm uses Gaussian elimination. It returns the determinant
-// as well. in case the matrix is not invertible it returns an error.
+// as well. In case the matrix is not invertible it returns an error.
 func (mat Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
 	if mat.Rows() == 0 || mat.Cols() == 0 {
 		return nil, nil, fmt.Errorf("the matrix should not be empty")
@@ -641,7 +641,7 @@ func (m Matrix) DeterminantGauss(p *big.Int) (*big.Int, error) {
 	return ret, nil
 }
 
-// gaussianEliminationSolver solves a vector equation mat * x = v and finds vector x,
+// GaussianEliminationSolver solves a vector equation mat * x = v and finds vector x,
 // using Gaussian elimination. Arithmetic operations are considered to be over
 // Z_p, where p should be a prime number. If such x does not exist, then the
 // function returns an error.
