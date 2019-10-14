@@ -378,6 +378,10 @@ func (m Matrix) InverseMod(p *big.Int) (Matrix, error) {
 		return nil, fmt.Errorf("matrix non-invertable")
 	}
 	invDet := new(big.Int).ModInverse(det, p)
+	if m.Rows() == 1 {
+		mat[0] = Vector{invDet}
+		return mat, nil
+	}
 	sign := new(big.Int)
 	minusOne := big.NewInt(-1)
 	for i := 0; i < m.Rows(); i++ {
@@ -504,4 +508,220 @@ func (m Matrix) MatMulVecG2(other VectorG2) (VectorG2, error) {
 	}
 
 	return prod, nil
+}
+
+// GaussianElimination uses Gaussian elimination to transform a matrix
+// into an equivalent upper triangular form
+func (mat Matrix) GaussianElimination(p *big.Int) (Matrix, error) {
+	if mat.Rows() == 0 || mat.Cols() == 0 {
+		return nil, fmt.Errorf("the matrix should not be empty")
+	}
+
+	// we copy matrix mat into m and v into u
+	m := make(Matrix, mat.Rows())
+	for i := 0; i < mat.Rows(); i++ {
+		m[i] = make(Vector, mat.Cols())
+		for j := 0; j < mat.Cols(); j++ {
+			m[i][j] = new(big.Int).Set(mat[i][j])
+		}
+	}
+
+	// m and u are transformed to be in the upper triangular form
+	h, k := 0, 0
+	for h < mat.Rows() && k < m.Cols() {
+		zero := true
+		for i := h; i < mat.Rows(); i++ {
+			if m[i][k].Sign() != 0 {
+				m[h], m[i] = m[i], m[h]
+				zero = false
+				break
+			}
+		}
+		if zero {
+			k++
+			continue
+		}
+		mHKInv := new(big.Int).ModInverse(m[h][k], p)
+		for i := h + 1; i < mat.Rows(); i++ {
+			f := new(big.Int).Mul(mHKInv, m[i][k])
+			m[i][k] = big.NewInt(0)
+			for j := k + 1; j < m.Cols(); j++ {
+				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
+				m[i][j].Mod(m[i][j], p)
+			}
+		}
+		k++
+		h++
+	}
+
+	return m, nil
+}
+
+// InverseModGauss returns the inverse matrix of m in the group Z_p.
+// The algorithm uses Gaussian elimination. It returns the determinant
+// as well. In case the matrix is not invertible it returns an error.
+func (mat Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
+	if mat.Rows() == 0 || mat.Cols() == 0 {
+		return nil, nil, fmt.Errorf("the matrix should not be empty")
+	}
+	if mat.Rows() != mat.Cols() {
+		return nil, nil, fmt.Errorf("the number of rows must equal the number of columns")
+	}
+
+	// we copy matrix mat into matExt and extend it with identity
+	matExt := make(Matrix, mat.Rows())
+	for i := 0; i < mat.Rows(); i++ {
+		matExt[i] = make(Vector, mat.Cols()*2)
+		for j := 0; j < mat.Cols(); j++ {
+			matExt[i][j] = new(big.Int).Set(mat[i][j])
+		}
+		for j := mat.Cols(); j < 2*mat.Cols(); j++ {
+			if i+mat.Cols() == j {
+				matExt[i][j] = big.NewInt(1)
+			} else {
+				matExt[i][j] = big.NewInt(0)
+			}
+
+		}
+	}
+
+	triang, err := matExt.GaussianElimination(p)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// check if the inverse can be computed
+	det := big.NewInt(1)
+	for i := 0; i < matExt.Rows(); i++ {
+		det.Mul(det, triang[i][i])
+		det.Mod(det, p)
+	}
+	if det.Sign() == 0 {
+		return nil, det, fmt.Errorf("matrix non-invertable")
+	}
+
+	// use the upper triangular form to obtain the solution
+	matInv := make(Matrix, mat.Rows())
+	for k := 0; k < mat.Rows(); k++ {
+		matInv[k] = make(Vector, mat.Cols())
+		for i := mat.Rows() - 1; i >= 0; i-- {
+			for j := mat.Rows() - 1; j >= 0; j-- {
+				if matInv[k][j] == nil {
+					tmpSum, _ := triang[i][j+1 : mat.Cols()].Dot(matInv[k][j+1:])
+					matInv[k][j] = new(big.Int).Sub(triang[i][mat.Cols()+k], tmpSum)
+					mHKInv := new(big.Int).ModInverse(triang[i][j], p)
+					matInv[k][j].Mul(matInv[k][j], mHKInv)
+					matInv[k][j].Mod(matInv[k][j], p)
+					break
+				}
+			}
+		}
+	}
+
+	return matInv.Transpose(), det, nil
+}
+
+// DeterminantGauss returns the determinant of matrix m using Gaussian
+// elimination. It returns an error if the determinant does not exist.
+func (m Matrix) DeterminantGauss(p *big.Int) (*big.Int, error) {
+	if m.Rows() != m.Cols() {
+		return nil, fmt.Errorf("number of rows must equal number of columns")
+	}
+	triang, err := m.GaussianElimination(p)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := big.NewInt(1)
+	for i := 0; i < m.Cols(); i++ {
+		ret.Mul(ret, triang[i][i])
+		ret.Mod(ret, p)
+	}
+
+	return ret, nil
+}
+
+// GaussianEliminationSolver solves a vector equation mat * x = v and finds vector x,
+// using Gaussian elimination. Arithmetic operations are considered to be over
+// Z_p, where p should be a prime number. If such x does not exist, then the
+// function returns an error.
+func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error) {
+	if mat.Rows() == 0 || mat.Cols() == 0 {
+		return nil, fmt.Errorf("the matrix should not be empty")
+	}
+	if mat.Rows() != len(v) {
+		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: "+
+			"rows of the matrix %d, length of the vector %d", mat.Rows(), len(v)))
+	}
+
+	// we copy matrix mat into m and v into u
+	cpMat := make([]Vector, mat.Rows())
+	u := make(Vector, mat.Rows())
+	for i := 0; i < mat.Rows(); i++ {
+		cpMat[i] = make(Vector, mat.Cols())
+		for j := 0; j < mat.Cols(); j++ {
+			cpMat[i][j] = new(big.Int).Set(mat[i][j])
+		}
+		u[i] = new(big.Int).Set(v[i])
+	}
+	m, _ := NewMatrix(cpMat) // error is impossible to happen
+
+	// m and u are transformed to be in the upper triangular form
+	ret := make(Vector, mat.Cols())
+	h, k := 0, 0
+	for h < mat.Rows() && k < mat.Cols() {
+		zero := true
+		for i := h; i < mat.Rows(); i++ {
+			if m[i][k].Sign() != 0 {
+				m[h], m[i] = m[i], m[h]
+
+				u[h], u[i] = u[i], u[h]
+				zero = false
+				break
+			}
+		}
+		if zero {
+			ret[k] = big.NewInt(0)
+			k++
+			continue
+		}
+		mHKInv := new(big.Int).ModInverse(m[h][k], p)
+		for i := h + 1; i < mat.Rows(); i++ {
+			f := new(big.Int).Mul(mHKInv, m[i][k])
+			m[i][k] = big.NewInt(0)
+			for j := k + 1; j < mat.Cols(); j++ {
+				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
+				m[i][j].Mod(m[i][j], p)
+			}
+			u[i].Sub(u[i], new(big.Int).Mul(f, u[h]))
+			u[i].Mod(u[i], p)
+		}
+		k++
+		h++
+	}
+
+	for i := h; i < mat.Rows(); i++ {
+		if u[i].Sign() != 0 {
+			return nil, fmt.Errorf("no solution")
+		}
+	}
+	for j := k; j < mat.Cols(); j++ {
+		ret[j] = big.NewInt(0)
+	}
+
+	// use the upper triangular form to obtain the solution
+	for i := h - 1; i >= 0; i-- {
+		for j := k - 1; j >= 0; j-- {
+			if ret[j] == nil {
+				tmpSum, _ := m[i][j+1:].Dot(ret[j+1:])
+				ret[j] = new(big.Int).Sub(u[i], tmpSum)
+				mHKInv := new(big.Int).ModInverse(m[i][j], p)
+				ret[j].Mul(ret[j], mHKInv)
+				ret[j].Mod(ret[j], p)
+				break
+			}
+		}
+	}
+
+	return ret, nil
 }

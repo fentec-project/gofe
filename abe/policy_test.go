@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,7 +43,7 @@ func TestBooleanToMsp(t *testing.T) {
 	m[1] = msp.Mat[2]
 	m[2] = msp.Mat[4]
 
-	x, err := gaussianElimination(m.Transpose(), v, p)
+	x, err := data.GaussianEliminationSolver(m.Transpose(), v, p)
 	if err != nil {
 		t.Fatalf("Error finding a vector: %v", err)
 	}
@@ -52,56 +51,5 @@ func TestBooleanToMsp(t *testing.T) {
 
 	// check if an error is generated if the boolean expression is not in a correct form
 	_, err = BooleanToMSP("1 AND ((6 OR 7) AND (8 OR 9)) OR ((2 AND 3) OR (4 AND 5)))", true)
-	assert.Error(t, err)
-
-}
-
-func TestGaussianElimintaion(t *testing.T) {
-	// create instances mat, xTest and v for which mat * xTest = v
-	// as a matrix vector multiplication over Z_p
-
-	p := big.NewInt(17)
-	sampler := sample.NewUniform(p)
-	mat, err := data.NewRandomMatrix(100, 50, sampler)
-	if err != nil {
-		t.Fatalf("Error during matrix generation: %v", err)
-	}
-
-	xTest, err := data.NewRandomVector(50, sampler)
-	if err != nil {
-		t.Fatalf("Error during vector generation: %v", err)
-	}
-
-	v, err := mat.MulVec(xTest)
-	if err != nil {
-		t.Fatalf("Error in generating a test vector: %v", err)
-	}
-	v = v.Mod(p)
-
-	// test the Gaussian elimination algorithm that given v and mat
-	// finds x such that mat * x = v
-	x, err := gaussianElimination(mat, v, p)
-	if err != nil {
-		t.Fatalf("Error in Gaussian elimination: %v", err)
-	}
-
-	// test if the obtained x is correct
-	vCheck, err := mat.MulVec(x)
-	if err != nil {
-		t.Fatalf("Error obtainig a check value: %v", err)
-	}
-	vCheck = vCheck.Mod(p)
-	assert.Equal(t, v, vCheck)
-
-	// test if errors are returned if the inputs have a wrong form
-	vWrong, err := data.NewRandomVector(101, sampler)
-	if err != nil {
-		t.Fatalf("Error during vector generation: %v", err)
-	}
-	_, err = gaussianElimination(mat, vWrong, p)
-	assert.Error(t, err)
-
-	matWrong := make(data.Matrix, 0)
-	_, err = gaussianElimination(matWrong, v, p)
 	assert.Error(t, err)
 }
