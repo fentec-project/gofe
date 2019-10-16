@@ -21,10 +21,8 @@ import (
 
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/fentec-project/gofe/internal/dlog"
-	"time"
-	"fmt"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // L (int): The length of vectors to be encrypted.
@@ -34,8 +32,8 @@ type FHMultiIPEParams struct {
 	NumClients int
 	VecLen     int
 	SecLevel   int
-	BoundX *big.Int
-	BoundY *big.Int
+	BoundX     *big.Int
+	BoundY     *big.Int
 }
 
 // FHIPE represents a Function Hiding Inner Product Encryption scheme
@@ -51,14 +49,23 @@ type FHMultiIPE struct {
 }
 
 type FHMultiIPESecKey struct {
-	BHat     []data.MatrixG1
-	BStarHat []data.MatrixG2
+	BHat     []data.Matrix
+	BStarHat []data.Matrix
 }
 
 func NewFHMultiIPE(numClients, vecLen, secLevel int, boundX, boundY *big.Int) *FHMultiIPE {
 	params := &FHMultiIPEParams{NumClients: numClients, VecLen: vecLen,
-		SecLevel: secLevel, BoundX: boundX, BoundY:boundY}
+		SecLevel: secLevel, BoundX: boundX, BoundY: boundY}
 	return &FHMultiIPE{Params: params}
+}
+
+// NewFHMultiIPEFromParams takes configuration parameters of an existing
+// FHMultiIPE scheme instance, and reconstructs the scheme with same configuration
+// parameters. It returns a new FHMultiIPE instance.
+func NewFHMultiIPEFromParams(params *FHMultiIPEParams) *FHMultiIPE {
+	return &FHMultiIPE{
+		Params: params,
+	}
 }
 
 func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
@@ -69,25 +76,20 @@ func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
 	}
 	gTMu := new(bn256.GT).ScalarBaseMult(mu)
 
-	B := make([]data.MatrixG1, f.Params.NumClients)
-	BStar := make([]data.MatrixG2, f.Params.NumClients)
+	B := make([]data.Matrix, f.Params.NumClients)
+	BStar := make([]data.Matrix, f.Params.NumClients)
 	for i := 0; i < f.Params.NumClients; i++ {
-		start := time.Now()
-
 		B[i], BStar[i], err = randomOB(2*f.Params.VecLen+2*f.Params.SecLevel+1, mu)
-		t := time.Now()
-		elapsed := t.Sub(start)
-		fmt.Println(elapsed)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	BHat := make([]data.MatrixG1, f.Params.NumClients)
-	BStarHat := make([]data.MatrixG2, f.Params.NumClients)
+	BHat := make([]data.Matrix, f.Params.NumClients)
+	BStarHat := make([]data.Matrix, f.Params.NumClients)
 	for i := 0; i < f.Params.NumClients; i++ {
-		BHat[i] = make(data.MatrixG1, f.Params.VecLen+f.Params.SecLevel+1)
-		BStarHat[i] = make(data.MatrixG2, f.Params.VecLen+f.Params.SecLevel)
+		BHat[i] = make(data.Matrix, f.Params.VecLen+f.Params.SecLevel+1)
+		BStarHat[i] = make(data.Matrix, f.Params.VecLen+f.Params.SecLevel)
 		for j := 0; j < f.Params.VecLen+f.Params.SecLevel+1; j++ {
 			if j < f.Params.VecLen {
 				BHat[i][j] = B[i][j]
@@ -95,7 +97,7 @@ func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
 			} else if j == f.Params.VecLen {
 				BHat[i][j] = B[i][j+f.Params.VecLen]
 				BStarHat[i][j] = BStar[i][j+f.Params.VecLen]
-			} else if j < f.Params.VecLen+f.Params.SecLevel{
+			} else if j < f.Params.VecLen+f.Params.SecLevel {
 				BHat[i][j] = B[i][j-1+f.Params.VecLen+f.Params.SecLevel]
 				BStarHat[i][j] = BStar[i][j+f.Params.VecLen]
 			} else {
@@ -107,21 +109,14 @@ func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
 	return &FHMultiIPESecKey{BHat: BHat, BStarHat: BStarHat}, gTMu, nil
 }
 
-func randomOB(l int, mu *big.Int) (data.MatrixG1, data.MatrixG2, error) {
+func randomOB(l int, mu *big.Int) (data.Matrix, data.Matrix, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	BMat, err := data.NewRandomMatrix(l, l, sampler)
 	if err != nil {
 		return nil, nil, err
 	}
 
-
-	start := time.Now()
-
 	BStarMat, _, err := BMat.InverseModGauss(bn256.Order)
-
-
-
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,17 +124,7 @@ func randomOB(l int, mu *big.Int) (data.MatrixG1, data.MatrixG2, error) {
 	BStarMat = BStarMat.MulScalar(mu)
 	BStarMat = BStarMat.Mod(bn256.Order)
 
-
-
-	B := BMat.MulG1()
-
-	t := time.Now()
-	elapsed := t.Sub(start)
-	fmt.Println(elapsed)
-	BStar := BStarMat.MulG2()
-
-
-	return B, BStar, nil
+	return BMat, BStarMat, nil
 }
 
 func (f FHMultiIPE) DeriveKey(y data.Matrix, secKey *FHMultiIPESecKey) (data.MatrixG2, error) {
@@ -155,54 +140,52 @@ func (f FHMultiIPE) DeriveKey(y data.Matrix, secKey *FHMultiIPESecKey) (data.Mat
 	if err != nil {
 		return nil, err
 	}
-
 	sum.Neg(sum).Mod(sum, bn256.Order)
 	gamma[0][f.Params.NumClients-1] = sum
 
 	zeros := data.NewConstantVector(2*f.Params.VecLen+2*f.Params.SecLevel+1, big.NewInt(0))
-	key := make(data.MatrixG2, f.Params.NumClients)
+	keyMat := make(data.Matrix, f.Params.NumClients)
 	var s *big.Int
 	for i := 0; i < f.Params.NumClients; i++ {
-		key[i] = zeros.MulG2()
-		for j := 0; j < f.Params.VecLen + f.Params.SecLevel; j++ {
+		keyMat[i] = zeros.Copy()
+		for j := 0; j < f.Params.VecLen+f.Params.SecLevel; j++ {
 			if j < f.Params.VecLen {
 				s = y[i][j]
-
 			} else {
-				s = gamma[j - f.Params.VecLen][i]
+				s = gamma[j-f.Params.VecLen][i]
 			}
 
-			key[i] = key[i].Add(secKey.BStarHat[i][j].MulScalar(s))
+			keyMat[i] = keyMat[i].Add(secKey.BStarHat[i][j].MulScalar(s))
+			keyMat[i] = keyMat[i].Mod(bn256.Order)
 		}
 	}
 
-	return key, nil
+	return keyMat.MulG2(), nil
 }
 
-func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.MatrixG1) (data.VectorG1, error) {
+func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.Matrix) (data.VectorG1, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	phi, err := data.NewRandomVector(f.Params.SecLevel, sampler)
 	if err != nil {
 		return nil, err
 	}
 
-	zeros := data.NewConstantVector(2*f.Params.VecLen+2*f.Params.SecLevel+1, big.NewInt(0))
-	key := zeros.MulG1()
+	keyVec := data.NewConstantVector(2*f.Params.VecLen+2*f.Params.SecLevel+1, big.NewInt(0))
 	var s *big.Int
-	for j := 0; j < f.Params.VecLen + f.Params.SecLevel + 1; j++ {
+	for j := 0; j < f.Params.VecLen+f.Params.SecLevel+1; j++ {
 		if j < f.Params.VecLen {
 			s = x[j]
-
 		} else if j == f.Params.VecLen {
 			s = big.NewInt(1)
 		} else {
-			s = phi[j - f.Params.VecLen - 1]
+			s = phi[j-f.Params.VecLen-1]
 		}
 
-		key = key.Add(partSecKey[j].MulScalar(s))
+		keyVec = keyVec.Add(partSecKey[j].MulScalar(s))
+		keyVec = keyVec.Mod(bn256.Order)
 	}
 
-	return key, nil
+	return keyVec.MulG1(), nil
 }
 
 // Decrypt accepts the ciphertext and functional encryption key.
@@ -210,16 +193,15 @@ func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.MatrixG1) (data.Vecto
 // an error is returned.
 func (f *FHMultiIPE) Decrypt(cipher data.MatrixG1, key data.MatrixG2, pubKey *bn256.GT) (*big.Int, error) {
 	sum := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
-
 	for i := 0; i < f.Params.NumClients; i++ {
-		for j := 0; j < 2 * f.Params.VecLen + 2 *f.Params.SecLevel + 1; j++ {
+		for j := 0; j < 2*f.Params.VecLen+2*f.Params.SecLevel+1; j++ {
 			paired := bn256.Pair(cipher[i][j], key[i][j])
 			sum.Add(paired, sum)
 		}
 	}
 
 	boundXY := new(big.Int).Mul(f.Params.BoundX, f.Params.BoundY)
-	bound := new(big.Int).Mul(big.NewInt(int64(f.Params.NumClients * f.Params.VecLen)), boundXY)
+	bound := new(big.Int).Mul(big.NewInt(int64(f.Params.NumClients*f.Params.VecLen)), boundXY)
 
 	dec, err := dlog.NewCalc().InBN256().WithNeg().WithBound(bound).BabyStepGiantStep(sum, pubKey)
 

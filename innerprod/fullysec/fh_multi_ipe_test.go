@@ -29,20 +29,19 @@ import (
 func TestFH_Multi_IPE(t *testing.T) {
 	// choose the parameters for the encryption and build the scheme
 	secLevel := 2
-	vecLen := 1
-	numClient := 100
-	bound := big.NewInt(10)
-
+	vecLen := 10
+	numClient := 5
+	bound := big.NewInt(128)
 
 	fhmulti := fullysec.NewFHMultiIPE(numClient, vecLen, secLevel, bound, bound)
 
-	// generate master key
+	// generate master secret key and public key
 	masterSecKey, pubKey, err := fhmulti.GenerateKeys()
 	if err != nil {
-		t.Fatalf("Error during master key generation: %v", err)
+		t.Fatalf("Error during keys generation: %v", err)
 	}
 
-	// sample a vector that will be encrypted
+	// sample vectors that will be encrypted
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	x := make(data.Matrix, numClient)
 	for i := 0; i < numClient; i++ {
@@ -52,22 +51,19 @@ func TestFH_Multi_IPE(t *testing.T) {
 		}
 	}
 
-
-	//// simulate the instantiation of an encryptor (which should know the master key)
-	//encryptor := fullysec.NewFHIPEFromParams(fhipe.Params)
-	//// encrypt the vector
-	//ciphertext, err := encryptor.Encrypt(x, masterSecKey)
-	//if err != nil {
-	//	t.Fatalf("Error during encryption: %v", err)
-	//}
-
+	// simulate different clients (encryptors which should be given a part of the master key)
+	// and encrypt their vectors
 	cipher := make(data.MatrixG1, numClient)
+	clients := make([]*fullysec.FHMultiIPE, numClient)
 	for i := 0; i < numClient; i++ {
-		cipher[i], err = fhmulti.Encrypt(x[i], masterSecKey.BHat[i])
+		clients[i] = fullysec.NewFHMultiIPEFromParams(fhmulti.Params)
+		cipher[i], err = clients[i].Encrypt(x[i], masterSecKey.BHat[i])
+		if err != nil {
+			t.Fatalf("Error during encryption: %v", err)
+		}
 	}
 
-
-	// sample a inner product vector
+	// sample inner product vectors and put them in a matrix
 	y := make(data.Matrix, numClient)
 	for i := 0; i < numClient; i++ {
 		y[i], err = data.NewRandomVector(vecLen, sampler)
@@ -83,10 +79,11 @@ func TestFH_Multi_IPE(t *testing.T) {
 	}
 
 	// simulate a decryptor
-	//decryptor := fullysec.NewFHIPEFromParams(fhipe.Params)
+	decryptor := fullysec.NewFHMultiIPEFromParams(fhmulti.Params)
+
 	// decryptor decrypts the inner-product without knowing
 	// vectors x and y
-	xy, err := fhmulti.Decrypt(cipher, key, pubKey)
+	xy, err := decryptor.Decrypt(cipher, key, pubKey)
 	if err != nil {
 		t.Fatalf("Error during decryption: %v", err)
 	}
