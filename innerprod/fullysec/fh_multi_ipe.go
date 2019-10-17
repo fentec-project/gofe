@@ -31,8 +31,8 @@ import (
 // so called k-Lin assumption, where k is the specified SecLevel.
 // NumClients (int): The number of clients participating
 // VecLen (int): The length of vectors that clients encrypt.
-// BoundX (int): The value by which coordinates of encrypted vectors x are bounded.
-// BoundY (int): The value by which coordinates of inner product vectors y are bounded.
+// BoundX (int): The value by which the coordinates of encrypted vectors are bounded.
+// BoundY (int): The value by which the coordinates of inner product vectors are bounded.
 type FHMultiIPEParams struct {
 	SecLevel   int
 	NumClients int
@@ -45,7 +45,7 @@ type FHMultiIPEParams struct {
 // Encryption scheme based on the paper by P. Datta, T. Okamoto, and
 // J. Tomida:
 // "Full-Hiding (Unbounded) Multi-Input Inner Product Functional Encryption
-// from the𝒌-Linear Assumption".
+// from the 𝒌-Linear Assumption".
 // It allows clients to encrypt vectors {x_1,...,x_m} and derive a secret key
 // based on an inner product vectors {y_1,...,y_m} so that a decryptor can
 // decrypt the sum of inner products <x_1,y_2> + ... + <x_m, y_m> without
@@ -55,8 +55,8 @@ type FHMultiIPEParams struct {
 // of elliptic curve elements g_1^B, g_2^BStar. This replaces elliptic curves
 // operations with matrix multiplication.
 //
-// This struct contains the shared choice for
-// parameters on which the functionality of the scheme depend.
+// This struct contains the shared choice for parameters on which the
+// functionality of the scheme depend.
 type FHMultiIPE struct {
 	Params *FHMultiIPEParams
 }

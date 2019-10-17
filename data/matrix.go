@@ -424,7 +424,7 @@ func (m Matrix) MulG1() MatrixG1 {
 }
 
 // MulG2 calculates m * [bn256.G1] and returns the
-// result in a new MatrixG1 instance.
+// result in a new MatrixG2 instance.
 func (m Matrix) MulG2() MatrixG2 {
 	prod := make(MatrixG2, len(m))
 	for i := range prod {
