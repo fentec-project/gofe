@@ -25,49 +25,69 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// L (int): The length of vectors to be encrypted.
+// FHMultiIPEParams represents configuration parameters for the FHMultiIPE
+// scheme instance.
+// SecLevel (int): The parameter defines the security assumption of the scheme,
+// so called k-Lin assumption, where k is the specified SecLevel.
+// NumClients (int): The number of clients participating
+// VecLen (int): The length of vectors that clients encrypt.
 // BoundX (int): The value by which coordinates of encrypted vectors x are bounded.
 // BoundY (int): The value by which coordinates of inner product vectors y are bounded.
 type FHMultiIPEParams struct {
+	SecLevel   int
 	NumClients int
 	VecLen     int
-	SecLevel   int
 	BoundX     *big.Int
 	BoundY     *big.Int
 }
 
-// FHIPE represents a Function Hiding Inner Product Encryption scheme
-// based on the paper by Kim, Lewi, Mandal, Montgomery, Roy, Wu:
-// "Function-Hiding Inner Product Encryption is Practical".
-// It allows to encrypt a vector x and derive a secret key based
-// on an inner product vector y so that a deryptor can decrypt the
-// inner product <x,y> without revealing x or y.
-// The struct contains the shared choice for parameters on which
-// the functionality of the scheme depend.
+// FHMultiIPE represents a Function Hiding Multi-input Inner Product
+// Encryption scheme based on the paper by P. Datta, T. Okamoto, and
+// J. Tomida:
+// "Full-Hiding (Unbounded) Multi-Input Inner Product Functional Encryption
+// from the𝒌-Linear Assumption".
+// It allows clients to encrypt vectors {x_1,...,x_m} and derive a secret key
+// based on an inner product vectors {y_1,...,y_m} so that a decryptor can
+// decrypt the sum of inner products <x_1,y_2> + ... + <x_m, y_m> without
+// revealing vectors x_i or y_i. The scheme is slightly modified from the
+// original one to achieve a better performance. The difference is in
+// storing the secret master key as matrices B, BStar, instead of matrices
+// of elliptic curve elements g_1^B, g_2^BStar. This replaces elliptic curves
+// operations with matrix multiplication.
+//
+// This struct contains the shared choice for
+// parameters on which the functionality of the scheme depend.
 type FHMultiIPE struct {
 	Params *FHMultiIPEParams
 }
 
+// FHMultiIPESecKey represents a master secret key in FHMultiIPE scheme.
 type FHMultiIPESecKey struct {
 	BHat     []data.Matrix
 	BStarHat []data.Matrix
 }
 
-func NewFHMultiIPE(numClients, vecLen, secLevel int, boundX, boundY *big.Int) *FHMultiIPE {
-	params := &FHMultiIPEParams{NumClients: numClients, VecLen: vecLen,
-		SecLevel: secLevel, BoundX: boundX, BoundY: boundY}
+// NewFHMultiIPE configures a new instance of the scheme. See struct
+// FHMultiIPEParams for the description of the parameters. It returns
+// a new FHMultiIPE instance.
+func NewFHMultiIPE(secLevel, numClients, vecLen int, boundX, boundY *big.Int) *FHMultiIPE {
+	params := &FHMultiIPEParams{SecLevel: secLevel, NumClients: numClients,
+		VecLen: vecLen, BoundX: boundX, BoundY: boundY}
 	return &FHMultiIPE{Params: params}
 }
 
 // NewFHMultiIPEFromParams takes configuration parameters of an existing
-// FHMultiIPE scheme instance, and reconstructs the scheme with same configuration
-// parameters. It returns a new FHMultiIPE instance.
+// FHMultiIPE scheme instance, and reconstructs the scheme with the same
+// configuration parameters. It returns a new FHMultiIPE instance.
 func NewFHMultiIPEFromParams(params *FHMultiIPEParams) *FHMultiIPE {
 	return &FHMultiIPE{
 		Params: params,
 	}
 }
 
+// GenerateKeys generates a pair of master secret key and public key
+// for the scheme. It returns an error in case keys could not be
+// generated.
 func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
 	sampler := sample.NewUniformRange(big.NewInt(1), bn256.Order)
 	mu, err := sampler.Sample()
@@ -109,24 +129,31 @@ func (f FHMultiIPE) GenerateKeys() (*FHMultiIPESecKey, *bn256.GT, error) {
 	return &FHMultiIPESecKey{BHat: BHat, BStarHat: BStarHat}, gTMu, nil
 }
 
+// randomOB is a helping function that samples a random l x l matrix B
+// and calculates BStar = mu * (B^-1)^T
 func randomOB(l int, mu *big.Int) (data.Matrix, data.Matrix, error) {
 	sampler := sample.NewUniform(bn256.Order)
-	BMat, err := data.NewRandomMatrix(l, l, sampler)
+	B, err := data.NewRandomMatrix(l, l, sampler)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	BStarMat, _, err := BMat.InverseModGauss(bn256.Order)
+	BStar, _, err := B.InverseModGauss(bn256.Order)
 	if err != nil {
 		return nil, nil, err
 	}
-	BStarMat = BStarMat.Transpose()
-	BStarMat = BStarMat.MulScalar(mu)
-	BStarMat = BStarMat.Mod(bn256.Order)
+	BStar = BStar.Transpose()
+	BStar = BStar.MulScalar(mu)
+	BStar = BStar.Mod(bn256.Order)
 
-	return BMat, BStarMat, nil
+	return B, BStar, nil
 }
 
+// DeriveKey takes a matrix y whose rows are input vector y_1,...,y_m and
+// master secret key, and returns the functional encryption key. That is
+// a key that for encrypted x_1,...,x_m allows to calculate the sum of
+// inner products <x_1,y_2> + ... + <x_m, y_m>. In case the key could not
+// be derived, it returns an error.
 func (f FHMultiIPE) DeriveKey(y data.Matrix, secKey *FHMultiIPESecKey) (data.MatrixG2, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	gamma, err := data.NewRandomMatrix(f.Params.SecLevel, f.Params.NumClients, sampler)
@@ -163,6 +190,8 @@ func (f FHMultiIPE) DeriveKey(y data.Matrix, secKey *FHMultiIPESecKey) (data.Mat
 	return keyMat.MulG2(), nil
 }
 
+// Encrypt encrypts input vector x with the provided part of the master secret key.
+// It returns a ciphertext vector. If encryption failed, error is returned.
 func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.Matrix) (data.VectorG1, error) {
 	sampler := sample.NewUniform(bn256.Order)
 	phi, err := data.NewRandomVector(f.Params.SecLevel, sampler)
@@ -188,9 +217,10 @@ func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.Matrix) (data.VectorG
 	return keyVec.MulG1(), nil
 }
 
-// Decrypt accepts the ciphertext and functional encryption key.
-// It returns the inner product of x and y. If decryption failed,
-// an error is returned.
+// Decrypt accepts the ciphertext as a matrix whose rows are encryptions of vectors
+// x_1,...,x_m and a functional encryption key corresponding to vectors y_1,...,y_m.
+// It returns the sum of inner products <x_1,y_2> + ... + <x_m, y_m>. If decryption
+// failed, an error is returned.
 func (f *FHMultiIPE) Decrypt(cipher data.MatrixG1, key data.MatrixG2, pubKey *bn256.GT) (*big.Int, error) {
 	sum := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < f.Params.NumClients; i++ {

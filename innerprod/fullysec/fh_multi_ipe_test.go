@@ -27,13 +27,14 @@ import (
 )
 
 func TestFH_Multi_IPE(t *testing.T) {
-	// choose the parameters for the encryption and build the scheme
+	// choose the parameters for the scheme
 	secLevel := 2
 	vecLen := 10
 	numClient := 5
 	bound := big.NewInt(128)
 
-	fhmulti := fullysec.NewFHMultiIPE(numClient, vecLen, secLevel, bound, bound)
+	// build the scheme
+	fhmulti := fullysec.NewFHMultiIPE(secLevel, numClient, vecLen, bound, bound)
 
 	// generate master secret key and public key
 	masterSecKey, pubKey, err := fhmulti.GenerateKeys()
