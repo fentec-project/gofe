@@ -28,6 +28,7 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
+// FHIPEParams holds common parameters used in the scheme. These are:
 // L (int): The length of vectors to be encrypted.
 // BoundX (int): The value by which coordinates of encrypted vectors x are bounded.
 // BoundY (int): The value by which coordinates of inner product vectors y are bounded.
