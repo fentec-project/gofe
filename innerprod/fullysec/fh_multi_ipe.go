@@ -48,7 +48,7 @@ type FHMultiIPEParams struct {
 // from the 𝒌-Linear Assumption".
 // It allows clients to encrypt vectors {x_1,...,x_m} and derive a secret key
 // based on an inner product vectors {y_1,...,y_m} so that a decryptor can
-// decrypt the sum of inner products <x_1,y_2> + ... + <x_m, y_m> without
+// decrypt the sum of inner products <x_1,y_1> + ... + <x_m, y_m> without
 // revealing vectors x_i or y_i. The scheme is slightly modified from the
 // original one to achieve a better performance. The difference is in
 // storing the secret master key as matrices B, BStar, instead of matrices
@@ -152,7 +152,7 @@ func randomOB(l int, mu *big.Int) (data.Matrix, data.Matrix, error) {
 // DeriveKey takes a matrix y whose rows are input vector y_1,...,y_m and
 // master secret key, and returns the functional encryption key. That is
 // a key that for encrypted x_1,...,x_m allows to calculate the sum of
-// inner products <x_1,y_2> + ... + <x_m, y_m>. In case the key could not
+// inner products <x_1,y_1> + ... + <x_m, y_m>. In case the key could not
 // be derived, it returns an error.
 func (f FHMultiIPE) DeriveKey(y data.Matrix, secKey *FHMultiIPESecKey) (data.MatrixG2, error) {
 	sampler := sample.NewUniform(bn256.Order)
@@ -219,7 +219,7 @@ func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.Matrix) (data.VectorG
 
 // Decrypt accepts the ciphertext as a matrix whose rows are encryptions of vectors
 // x_1,...,x_m and a functional encryption key corresponding to vectors y_1,...,y_m.
-// It returns the sum of inner products <x_1,y_2> + ... + <x_m, y_m>. If decryption
+// It returns the sum of inner products <x_1,y_1> + ... + <x_m, y_m>. If decryption
 // failed, an error is returned.
 func (f *FHMultiIPE) Decrypt(cipher data.MatrixG1, key data.MatrixG2, pubKey *bn256.GT) (*big.Int, error) {
 	sum := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
