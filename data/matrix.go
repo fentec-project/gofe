@@ -523,27 +523,27 @@ func (m Matrix) MatMulVecG2(other VectorG2) (VectorG2, error) {
 
 // GaussianElimination uses Gaussian elimination to transform a matrix
 // into an equivalent upper triangular form
-func (mat Matrix) GaussianElimination(p *big.Int) (Matrix, error) {
-	if mat.Rows() == 0 || mat.Cols() == 0 {
+func (m Matrix) GaussianElimination(p *big.Int) (Matrix, error) {
+	if m.Rows() == 0 || m.Cols() == 0 {
 		return nil, fmt.Errorf("the matrix should not be empty")
 	}
 
-	// we copy matrix mat into m and v into u
-	m := make(Matrix, mat.Rows())
-	for i := 0; i < mat.Rows(); i++ {
-		m[i] = make(Vector, mat.Cols())
-		for j := 0; j < mat.Cols(); j++ {
-			m[i][j] = new(big.Int).Set(mat[i][j])
+	// we copy matrix m into res and v into u
+	res := make(Matrix, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		res[i] = make(Vector, m.Cols())
+		for j := 0; j < m.Cols(); j++ {
+			res[i][j] = new(big.Int).Set(m[i][j])
 		}
 	}
 
-	// m and u are transformed to be in the upper triangular form
+	// res and u are transformed to be in the upper triangular form
 	h, k := 0, 0
-	for h < mat.Rows() && k < m.Cols() {
+	for h < m.Rows() && k < res.Cols() {
 		zero := true
-		for i := h; i < mat.Rows(); i++ {
-			if m[i][k].Sign() != 0 {
-				m[h], m[i] = m[i], m[h]
+		for i := h; i < m.Rows(); i++ {
+			if res[i][k].Sign() != 0 {
+				res[h], res[i] = res[i], res[h]
 				zero = false
 				break
 			}
@@ -552,42 +552,42 @@ func (mat Matrix) GaussianElimination(p *big.Int) (Matrix, error) {
 			k++
 			continue
 		}
-		mHKInv := new(big.Int).ModInverse(m[h][k], p)
-		for i := h + 1; i < mat.Rows(); i++ {
-			f := new(big.Int).Mul(mHKInv, m[i][k])
-			m[i][k] = big.NewInt(0)
-			for j := k + 1; j < m.Cols(); j++ {
-				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
-				m[i][j].Mod(m[i][j], p)
+		mHKInv := new(big.Int).ModInverse(res[h][k], p)
+		for i := h + 1; i < m.Rows(); i++ {
+			f := new(big.Int).Mul(mHKInv, res[i][k])
+			res[i][k] = big.NewInt(0)
+			for j := k + 1; j < res.Cols(); j++ {
+				res[i][j].Sub(res[i][j], new(big.Int).Mul(f, res[h][j]))
+				res[i][j].Mod(res[i][j], p)
 			}
 		}
 		k++
 		h++
 	}
 
-	return m, nil
+	return res, nil
 }
 
 // InverseModGauss returns the inverse matrix of m in the group Z_p.
 // The algorithm uses Gaussian elimination. It returns the determinant
 // as well. In case the matrix is not invertible it returns an error.
-func (mat Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
-	if mat.Rows() == 0 || mat.Cols() == 0 {
+func (m Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
+	if m.Rows() == 0 || m.Cols() == 0 {
 		return nil, nil, fmt.Errorf("the matrix should not be empty")
 	}
-	if mat.Rows() != mat.Cols() {
+	if m.Rows() != m.Cols() {
 		return nil, nil, fmt.Errorf("the number of rows must equal the number of columns")
 	}
 
-	// we copy matrix mat into matExt and extend it with identity
-	matExt := make(Matrix, mat.Rows())
-	for i := 0; i < mat.Rows(); i++ {
-		matExt[i] = make(Vector, mat.Cols()*2)
-		for j := 0; j < mat.Cols(); j++ {
-			matExt[i][j] = new(big.Int).Set(mat[i][j])
+	// we copy matrix m into matExt and extend it with identity
+	matExt := make(Matrix, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		matExt[i] = make(Vector, m.Cols()*2)
+		for j := 0; j < m.Cols(); j++ {
+			matExt[i][j] = new(big.Int).Set(m[i][j])
 		}
-		for j := mat.Cols(); j < 2*mat.Cols(); j++ {
-			if i+mat.Cols() == j {
+		for j := m.Cols(); j < 2*m.Cols(); j++ {
+			if i+m.Cols() == j {
 				matExt[i][j] = big.NewInt(1)
 			} else {
 				matExt[i][j] = big.NewInt(0)
@@ -612,14 +612,14 @@ func (mat Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
 	}
 
 	// use the upper triangular form to obtain the solution
-	matInv := make(Matrix, mat.Rows())
-	for k := 0; k < mat.Rows(); k++ {
-		matInv[k] = make(Vector, mat.Cols())
-		for i := mat.Rows() - 1; i >= 0; i-- {
-			for j := mat.Rows() - 1; j >= 0; j-- {
+	matInv := make(Matrix, m.Rows())
+	for k := 0; k < m.Rows(); k++ {
+		matInv[k] = make(Vector, m.Cols())
+		for i := m.Rows() - 1; i >= 0; i-- {
+			for j := m.Rows() - 1; j >= 0; j-- {
 				if matInv[k][j] == nil {
-					tmpSum, _ := triang[i][j+1 : mat.Cols()].Dot(matInv[k][j+1:])
-					matInv[k][j] = new(big.Int).Sub(triang[i][mat.Cols()+k], tmpSum)
+					tmpSum, _ := triang[i][j+1 : m.Cols()].Dot(matInv[k][j+1:])
+					matInv[k][j] = new(big.Int).Sub(triang[i][m.Cols()+k], tmpSum)
 					mHKInv := new(big.Int).ModInverse(triang[i][j], p)
 					matInv[k][j].Mul(matInv[k][j], mHKInv)
 					matInv[k][j].Mod(matInv[k][j], p)
