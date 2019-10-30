@@ -60,6 +60,7 @@ security):
 procedure for decentralization of an inner product scheme, in particular the decentralization of a Damgard DDH scheme (`fullysec.DamgardDecMultiClient`).
     * Function hiding multi-input scheme based on paper by _Datta, Okamoto, Tomida_ ([paper](https://eprint.iacr.org/2018/061.pdf)). This scheme allows clients to encrypt vectors and derive 
 functional key that allows a decrytor to decrypt an inner product without revealing the ciphertext or the function (`fullysec.FHMultiIPE`).
+
 * Schemes with **simulation based security** (SIM-Security for IPE):
     * Function hiding inner product scheme by _Kim, Lewi, Mandal, Montgomery, Roy, Wu_ ([paper](https://eprint.iacr.org/2016/440.pdf)). The scheme allows the decryptor to
 decrypt the inner product of x and y without reveling (ciphertext) x or (function) y (`fullysec.fhipe`).
