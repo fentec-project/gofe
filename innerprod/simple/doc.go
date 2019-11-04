@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package innerprod includes simple schemes for functional encryption of
+// Package simple includes simple schemes for functional encryption of
 // inner products.
 //
 // All implementations in this package are based on the reference

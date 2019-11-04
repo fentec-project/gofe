@@ -27,6 +27,8 @@ import (
 	emmy "github.com/xlab-si/emmy/crypto/common"
 )
 
+// DamgardParams includes public parameters for the Damgard inner
+// product scheme.
 // L (int): The length of vectors to be encrypted.
 // Bound (int): The value by which coordinates of vectors x and y are bounded.
 // G (int): Generator of a cyclic group Z_P: G**(Q) = 1 (mod P).

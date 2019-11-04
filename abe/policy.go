@@ -170,25 +170,24 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 		rowToAttrib := make([]int, 1)
 		rowToAttrib[0] = attrib
 		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, c, nil
-	} else {
-		// otherwise we join the two msp structures into one
-		mat := make(data.Matrix, len(msp1.Mat)+len(msp2.Mat))
-		for i := 0; i < len(msp1.Mat); i++ {
-			mat[i] = make(data.Vector, cOut)
-			for j := 0; j < len(msp1.Mat[0]); j++ {
-				mat[i][j] = msp1.Mat[i][j]
-			}
-			for j := len(msp1.Mat[0]); j < cOut; j++ {
-				mat[i][j] = big.NewInt(0)
-			}
-		}
-		for i := 0; i < len(msp2.Mat); i++ {
-			mat[i+len(msp1.Mat)] = msp2.Mat[i]
-		}
-		rowToAttrib := append(msp1.RowToAttrib, msp2.RowToAttrib...)
-
-		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, cOut, nil
 	}
+	// otherwise we join the two msp structures into one
+	mat := make(data.Matrix, len(msp1.Mat)+len(msp2.Mat))
+	for i := 0; i < len(msp1.Mat); i++ {
+		mat[i] = make(data.Vector, cOut)
+		for j := 0; j < len(msp1.Mat[0]); j++ {
+			mat[i][j] = msp1.Mat[i][j]
+		}
+		for j := len(msp1.Mat[0]); j < cOut; j++ {
+			mat[i][j] = big.NewInt(0)
+		}
+	}
+	for i := 0; i < len(msp2.Mat); i++ {
+		mat[i+len(msp1.Mat)] = msp2.Mat[i]
+	}
+	rowToAttrib := append(msp1.RowToAttrib, msp2.RowToAttrib...)
+
+	return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, cOut, nil
 }
 
 // makeAndVecs is a helping structure that given a vector and and counter

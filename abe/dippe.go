@@ -59,7 +59,7 @@ type DIPPESecKey struct {
 
 // DIPPEAuth represents an authority in DIPPE scheme
 type DIPPEAuth struct {
-	Id int
+	ID int
 	Sk DIPPESecKey
 	Pk DIPPEPubKey
 }
@@ -147,7 +147,7 @@ func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 
 	pk := DIPPEPubKey{G1ToWtA: g1ToWtA, GToAlphaA: gtToAlphaA, G2ToSigma: g2ToSigma}
 
-	return &DIPPEAuth{Id: id, Sk: sk, Pk: pk}, nil
+	return &DIPPEAuth{ID: id, Sk: sk, Pk: pk}, nil
 }
 
 // Encrypt takes as an input a string message msg, a vector x representing a
@@ -232,7 +232,7 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 
 	var err error
 	for j := 0; j < len(pubKeys); j++ {
-		if j == a.Id {
+		if j == a.ID {
 			continue
 		}
 
@@ -243,7 +243,7 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 				return nil, err
 			}
 
-			if j > a.Id {
+			if j > a.ID {
 				hashed.Neg(hashed)
 			}
 			g2ToMu[i] = g2ToMu[i].Add(hashed, g2ToMu[i])
@@ -262,7 +262,7 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 	if err != nil {
 		return nil, err
 	}
-	g2ToViWH := g2ToWH.MulScalar(v[a.Id]).Neg()
+	g2ToViWH := g2ToWH.MulScalar(v[a.ID]).Neg()
 
 	return g2ToAlpha.Add(g2ToViWH).Add(g2ToMu), nil
 }
@@ -283,13 +283,13 @@ func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector
 	gTToAlphaAS := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 
 	ones := data.NewConstantMatrix(1, len(keys), big.NewInt(1))
-	kSum, err := ones.MatMulMatG2(data.MatrixG2(keys))
+	sum, err := ones.MatMulMatG2(data.MatrixG2(keys))
 	if err != nil {
 		return "", err
 	}
 
 	for i, e := range cipher.C0 {
-		tmpGT := bn256.Pair(e, kSum[0][i])
+		tmpGT := bn256.Pair(e, sum[0][i])
 		gTToAlphaAS.Add(gTToAlphaAS, tmpGT)
 	}
 

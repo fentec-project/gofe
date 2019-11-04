@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-// Fully secure schemes for functional encryption of inner products.
+// Package fullysec includes fully secure schemes for functional encryption
+// of inner products.
 //
 // All implementations in this package are based on the reference
 // paper by  Agrawal, Libert and Stehlé (see https://eprint.iacr.org/2015/608.pdf),

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-// Functional encryption schemes for inner products.
+// Package innerprod includes functional encryption schemes for inner
+// products.
 //
 // Based on security assumptions, the schemes are organized into
 // subpackages simple (s-IND-CPA security), and fullysec

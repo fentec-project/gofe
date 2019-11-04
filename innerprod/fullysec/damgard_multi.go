@@ -38,7 +38,7 @@ import (
 // given key_y and the ciphertext the decryptor can compute value
 // Σ_i <x_i, y_i> (sum of dot products).
 
-// DamgardMultiClient is a struct in DamgardMulti scheme, that holds
+// DamgardMulti is a struct in DamgardMulti scheme, that holds
 // all the shared parameters, and can represent the central authority
 // or the decryptor.
 type DamgardMulti struct {

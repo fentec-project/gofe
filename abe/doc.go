@@ -14,15 +14,5 @@
  * limitations under the License.
  */
 
-// package sample includes samplers for sampling random values
-// from different probability distributions.
-//
-// Package sample provides the Sampler interface
-// along with different implementations of this interface.
-// Its primary purpose is support choosing random *big.Int values
-// from selected probability distributions.
-//
-// Implementations of the Sampler interface can be used,
-// for instance, to fill vector or matrix structures with
-// the desired random data.
-package sample
+// Package abe includes schemes allowing attribute based encryption.
+package abe
