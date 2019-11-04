@@ -28,11 +28,11 @@ import (
 
 func TestSimple_DDH(t *testing.T) {
 	l := 3
-	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(20), big.NewInt(0))
+	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(10), nil)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
-	modulusLength := 128
+	modulusLength := 2048
 
-	simpleDDH, err := simple.NewDDH(l, modulusLength, bound)
+	simpleDDH, err := simple.NewDDHPrecomp(l, modulusLength, bound)
 
 	if err != nil {
 		t.Fatalf("Error during simple inner product creation: %v", err)

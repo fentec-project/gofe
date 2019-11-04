@@ -27,12 +27,12 @@ import (
 )
 
 func TestFullySec_DamgardDDH(t *testing.T) {
-	l := 3
-	bound := big.NewInt(1000)
-	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
-	modulusLength := 64
+	l := 16
+	bound := big.NewInt(1024)
+	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound),big.NewInt(1)), bound)
+	modulusLength := 2048
 
-	damgard, err := fullysec.NewDamgard(l, modulusLength, bound)
+	damgard, err := fullysec.NewDamgardPrecomp(l, modulusLength, bound)
 
 	if err != nil {
 		t.Fatalf("Error during simple inner product creation: %v", err)

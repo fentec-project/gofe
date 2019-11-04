@@ -28,15 +28,15 @@ import (
 
 func TestFullySec_DamgardMultiDDH(t *testing.T) {
 	// choose meta-parameters for the scheme
-	numClients := 10
+	numClients := 6
 	l := 5
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	// this parameter defines the security of the scheme, the higher the better
-	modulusLength := 512
+	modulusLength := 2048
 
 	// build the central authority for the scheme
-	damgardMulti, err := fullysec.NewDamgardMulti(numClients, l, modulusLength, bound)
+	damgardMulti, err := fullysec.NewDamgardMultiPrecomp(numClients, l, modulusLength, bound)
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}

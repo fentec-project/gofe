@@ -31,9 +31,9 @@ func TestSimple_MultiDDH(t *testing.T) {
 	l := 3
 	bound := big.NewInt(1000)
 	sampler := sample.NewUniform(bound)
-	modulusLength := 64
+	modulusLength := 2048
 
-	multiDDH, err := simple.NewDDHMulti(numOfSlots, l, modulusLength, bound)
+	multiDDH, err := simple.NewDDHMultiPrecomp(numOfSlots, l, modulusLength, bound)
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}

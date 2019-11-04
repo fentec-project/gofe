@@ -28,16 +28,16 @@ import (
 
 func TestFullySec_DamgardDecMulti(t *testing.T) {
 	// choose parameters
-	numOfClients := 20
+	numOfClients := 10
 	l := 2
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	// security parameter
-	modulusLength := 512
+	modulusLength := 2048
 
 	// create a (non-decentralized) multi-input scheme as the underlying scheme
 	// for the decentralization
-	damgardMulti, err := fullysec.NewDamgardMulti(numOfClients, l, modulusLength, bound)
+	damgardMulti, err := fullysec.NewDamgardMultiPrecomp(numOfClients, l, modulusLength, bound)
 	assert.NoError(t, err)
 
 	// we simulate different independent, decentralized clients and

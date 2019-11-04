@@ -64,6 +64,28 @@ func NewDDHMulti(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error)
 	}, nil
 }
 
+// NewDDHMultiPrecomp configures a new instance of the scheme based on
+// precomputed prime numbers and generators..
+// It accepts the number of slots (encryptors), the length of
+// input vectors l, the bit length of the modulus (we are
+// operating in the Z_p group), and a bound by which coordinates
+// of input vectors are bounded. The modulus length should
+// be one of values 1024, 1536, 2048, 2560, 3072, or 4096.
+//
+// It returns an error in case the underlying DDH scheme instances could
+// not be properly instantiated.
+func NewDDHMultiPrecomp(slots, l, modulusLength int, bound *big.Int) (*DDHMulti, error) {
+	ddh, err := NewDDHPrecomp(l, modulusLength, bound)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DDHMulti{
+		Slots: slots,
+		DDH:   ddh,
+	}, nil
+}
+
 // NewDDHMultiFromParams takes the number of slots and configuration
 // parameters of an existing DDH scheme instance, and reconstructs
 // the scheme with same configuration parameters.
