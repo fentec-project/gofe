@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-// Package sgp includes functional encryption schemes for quadratic
+// Package quadratic includes functional encryption schemes for quadratic
 // multi-variate polynomials.
 package quadratic
