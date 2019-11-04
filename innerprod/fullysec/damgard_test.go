@@ -29,7 +29,7 @@ import (
 func TestFullySec_DamgardDDH(t *testing.T) {
 	l := 16
 	bound := big.NewInt(1024)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound),big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 	modulusLength := 2048
 
 	damgard, err := fullysec.NewDamgardPrecomp(l, modulusLength, bound)

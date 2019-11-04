@@ -88,7 +88,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	K := new(big.Int).Mul(boundX, boundY)
 	K.Mul(K, big.NewInt(int64(l*2)))
 	kF := new(big.Float).SetInt(K)
-	kSquaredF := new(big.Float).Mul(kF, kF)
+	SquaredF := new(big.Float).Mul(kF, kF)
 
 	nF := float64(n)
 
@@ -105,10 +105,10 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		sqrtNLogM := math.Sqrt(nF * log2M)
 
 		max := new(big.Float)
-		if kSquaredF.Cmp(big.NewFloat(boundMF)) == 1 {
+		if SquaredF.Cmp(big.NewFloat(boundMF)) == 1 {
 			max.SetFloat64(boundMF)
 		} else {
-			max.Set(kSquaredF)
+			max.Set(SquaredF)
 		}
 
 		sqrtMax := new(big.Float).Sqrt(max)
@@ -135,7 +135,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		bound2.Sqrt(bound2)
 		bound2.Mul(bound2, big.NewFloat(math.Sqrt(nF)))
 
-		sigma = new(big.Float).Quo(big.NewFloat(1), kSquaredF)
+		sigma = new(big.Float).Quo(big.NewFloat(1), SquaredF)
 		sigma.Quo(sigma, bound2)
 		sigma.Quo(sigma, big.NewFloat(math.Log2(nF)))
 
@@ -240,7 +240,7 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 // In case of a malformed secret key the function returns an error.
 func (s *LWE) GeneratePublicKey(Z data.Matrix) (data.Matrix, error) {
 	if !Z.CheckDims(s.Params.L, s.Params.M) {
-		return nil, gofe.MalformedSecKey
+		return nil, gofe.ErrMalformedSecKey
 	}
 	// public key is obtained by multiplying secret key Z by a random matrix A.
 	U, _ := Z.Mul(s.Params.A)
@@ -258,12 +258,12 @@ func (s *LWE) DeriveKey(y data.Vector, Z data.Matrix) (data.Vector, error) {
 		return nil, err
 	}
 	if !Z.CheckDims(s.Params.L, s.Params.M) {
-		return nil, gofe.MalformedSecKey
+		return nil, gofe.ErrMalformedSecKey
 	}
 	// Secret key is a linear combination of input vector x and master secret key Z.
 	zY, err := Z.Transpose().MulVec(y)
 	if err != nil {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 	zY = zY.Mod(s.Params.Q)
 
@@ -279,10 +279,10 @@ func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
 		return nil, err
 	}
 	if !U.CheckDims(s.Params.L, s.Params.N) {
-		return nil, gofe.MalformedPubKey
+		return nil, gofe.ErrMalformedPubKey
 	}
 	if len(x) != s.Params.L {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 
 	// Create a random vector
@@ -328,14 +328,14 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 		return nil, err
 	}
 	if len(zY) != s.Params.M {
-		return nil, gofe.MalformedDecKey
+		return nil, gofe.ErrMalformedDecKey
 	}
 	if len(y) != s.Params.L {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 
 	if len(cipher) != s.Params.M+s.Params.L {
-		return nil, gofe.MalformedCipher
+		return nil, gofe.ErrMalformedCipher
 	}
 	c0 := cipher[:s.Params.M]
 	c1 := cipher[s.Params.M:]
@@ -348,9 +348,9 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 		mu1.Sub(mu1, s.Params.Q)
 	}
 	// TODO Improve!
-	kTimes2 := new(big.Int).Lsh(s.Params.K, 1)
+	paramsKTimes2 := new(big.Int).Lsh(s.Params.K, 1)
 	qDivK := new(big.Int).Div(s.Params.Q, s.Params.K)
-	qDivKTimes2 := new(big.Int).Div(s.Params.Q, kTimes2)
+	qDivKTimes2 := new(big.Int).Div(s.Params.Q, paramsKTimes2)
 
 	mu := new(big.Int).Add(mu1, qDivKTimes2)
 	mu.Div(mu, qDivK)

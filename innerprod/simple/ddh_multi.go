@@ -35,7 +35,7 @@ type DDHMulti struct {
 	*DDH
 }
 
-// DDHMulti represents a multi input variant of the
+// DDHMultiClient represents a multi input variant of the
 // underlying DDH scheme based on
 // Abdalla, Catalano, Fiore, Gay, and Ursu:
 // "Multi-Input Functional Encryption for Inner Products:
@@ -98,7 +98,7 @@ func NewDDHMultiFromParams(slots int, params *DDHParams) *DDHMulti {
 	}
 }
 
-// NewDDHMulti configures a new instance of the scheme.
+// NewDDHMultiClient configures a new instance of the scheme.
 // It accepts the number of slots (encryptors), the length of
 // input vectors l, the bit length of the modulus (we are
 // operating in the Z_p group), and a bound by which coordinates

@@ -37,7 +37,7 @@ func NewUniformRange(min, max *big.Int) *UniformRange {
 	}
 }
 
-// UniformRange samples random values from the interval [min, max).
+// Sample samples random values from the interval [min, max).
 func (u *UniformRange) Sample() (*big.Int, error) {
 	return emmy.GetRandomIntFromRange(u.min, u.max)
 }
@@ -53,6 +53,7 @@ func NewUniform(max *big.Int) *UniformRange {
 	return NewUniformRange(big.NewInt(0), max)
 }
 
+// Sample samples random values from the interval [0, max).
 func (u *Uniform) Sample() (*big.Int, error) {
 	return emmy.GetRandomInt(u.max), nil
 }

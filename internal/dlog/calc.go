@@ -91,6 +91,7 @@ func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 	}
 	return c
 }
+
 // WithNeg sets that the result should be searched also among
 // negative integers.
 func (c *CalcZp) WithNeg() *CalcZp {
@@ -257,6 +258,7 @@ func (*Calc) InBN256() *CalcBN256 {
 	}
 }
 
+// WithBound sets a bound for the calculator of the discrete logarithm.
 func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 	if bound != nil && bound.Cmp(MaxBound) < 0 {
 		m := new(big.Int).Sqrt(bound)
@@ -272,6 +274,8 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 	return c
 }
 
+// WithNeg sets that the result should be searched also among
+// negative integers.
 func (c *CalcBN256) WithNeg() *CalcBN256 {
 	return &CalcBN256{
 		bound:   c.bound,
