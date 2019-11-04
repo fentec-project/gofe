@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-// Defines basic mathematical structures used
+// Package data defines basic mathematical structures used
 // throughout the library.
 package data

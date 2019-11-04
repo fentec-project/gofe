@@ -28,7 +28,7 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// PaillerParams represents parameters for the fully secure Paillier scheme.
+// PaillierParams represents parameters for the fully secure Paillier scheme.
 type PaillierParams struct {
 	L       int        // Length of data vectors for inner product
 	N       *big.Int   // a big integer, a product of two safe primes

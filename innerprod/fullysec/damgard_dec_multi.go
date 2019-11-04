@@ -25,7 +25,7 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// DamgardMultiClient represents a client in a decentralized
+// DamgardDecMultiClient represents a client in a decentralized
 // multi client variant of the underlying multi client (dmagard_multi)
 // scheme based. The decentralization is based on
 // Abdalla, Benhamouda, Kohlweiss,and Waldner:
@@ -146,7 +146,7 @@ func (c *DamgardDecMultiClient) Encrypt(x data.Vector, key *DamgardDecMultiSecKe
 	return c.Damgard.Encrypt(otpModulo, key.pk)
 }
 
-// DamgardDecMultiDerivedKey is functional encryption key for decentralized
+// DamgardDecMultiDerivedKeyPart is functional encryption key for decentralized
 // Damgrad Scheme.
 type DamgardDecMultiDerivedKeyPart struct {
 	KeyPart    *DamgardDerivedKey

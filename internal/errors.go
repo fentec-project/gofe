@@ -22,8 +22,8 @@ import (
 
 var malformedStr = "is not of the proper form"
 
-var MalformedPubKey = fmt.Errorf("public key %s", malformedStr)
-var MalformedSecKey = fmt.Errorf("secret key %s", malformedStr)
-var MalformedDecKey = fmt.Errorf("decryption key %s", malformedStr)
-var MalformedCipher = fmt.Errorf("ciphertext %s", malformedStr)
-var MalformedInput = fmt.Errorf("input data %s", malformedStr)
+var MalformedPubKey = fmt.Errorf("public key %s", malformedStr) // error for public key
+var MalformedSecKey = fmt.Errorf("secret key %s", malformedStr) // error for secret key
+var MalformedDecKey = fmt.Errorf("decryption key %s", malformedStr) // error for derived key
+var MalformedCipher = fmt.Errorf("ciphertext %s", malformedStr) // error for ciphertext
+var MalformedInput = fmt.Errorf("input data %s", malformedStr) // error for input data
