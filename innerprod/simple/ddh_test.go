@@ -27,12 +27,12 @@ import (
 )
 
 type dDHTestParam struct {
-	name string
+	name          string
 	modulusLength int
-	precomputed bool
+	precomputed   bool
 }
 
-func testSimple_DDHFromParam(t *testing.T, param dDHTestParam) {
+func testSimpleDDHFromParam(t *testing.T, param dDHTestParam) {
 	l := 3
 	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(10), nil)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
@@ -96,12 +96,12 @@ func testSimple_DDHFromParam(t *testing.T, param dDHTestParam) {
 }
 
 func TestSimple_DDH(t *testing.T) {
-	params := []dDHTestParam{{"random", 512, false},
-		{"precomputed", 2048, true}}
+	params := []dDHTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {
-			testSimple_DDHFromParam(t, param)
+			testSimpleDDHFromParam(t, param)
 		})
 	}
 }

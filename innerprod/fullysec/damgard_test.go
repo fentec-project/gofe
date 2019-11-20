@@ -27,12 +27,12 @@ import (
 )
 
 type damgardTestParam struct {
-	name string
+	name          string
 	modulusLength int
-	precomputed bool
+	precomputed   bool
 }
 
-func testFullySec_DamgardDDHFromParam(t *testing.T, param damgardTestParam) {
+func testFullySecDamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 	l := 16
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
@@ -96,12 +96,12 @@ func testFullySec_DamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 }
 
 func TestFullySec_DamgardDDH(t *testing.T) {
-	params := []damgardTestParam{{"random", 512, false},
-								 {"precomputed", 2048, true}}
+	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {
-			testFullySec_DamgardDDHFromParam(t, param)
+			testFullySecDamgardDDHFromParam(t, param)
 		})
 	}
 }

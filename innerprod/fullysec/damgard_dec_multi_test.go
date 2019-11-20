@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testFullySec_DamgardDecMultiFromParam(t *testing.T, param damgardTestParam) {
+func testFullySecDamgardDecMultiFromParam(t *testing.T, param damgardTestParam) {
 	// choose parameters
 	numOfClients := 10
 	l := 2
@@ -111,12 +111,12 @@ func testFullySec_DamgardDecMultiFromParam(t *testing.T, param damgardTestParam)
 }
 
 func TestFullySec_DamgardDecMulti(t *testing.T) {
-	params := []damgardTestParam{{"random", 512, false},
-		{"precomputed", 2048, true}}
+	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {
-			testFullySec_DamgardDecMultiFromParam(t, param)
+			testFullySecDamgardDecMultiFromParam(t, param)
 		})
 	}
 }

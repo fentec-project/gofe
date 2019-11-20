@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testSimple_MultiDDHFromParam(t *testing.T, param dDHTestParam) {
+func testSimpleMultiDDHFromParam(t *testing.T, param dDHTestParam) {
 	// choose meta-parameters for the scheme
 	numOfSlots := 2
 	l := 3
@@ -115,12 +115,12 @@ func testSimple_MultiDDHFromParam(t *testing.T, param dDHTestParam) {
 }
 
 func TestSimple_MultiDDH(t *testing.T) {
-	params := []dDHTestParam{{"random", 512, false},
-		{"precomputed", 2048, true}}
+	params := []dDHTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {
-			testSimple_MultiDDHFromParam(t, param)
+			testSimpleMultiDDHFromParam(t, param)
 		})
 	}
 }

@@ -26,13 +26,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testFullySec_DamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) {
+func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) {
 	// choose meta-parameters for the scheme
 	numClients := 6
 	l := 5
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
-
 
 	// build the central authority for the scheme
 	var damgardMulti *fullysec.DamgardMulti
@@ -106,12 +105,12 @@ func testFullySec_DamgardMultiDDHFromParam(t *testing.T, param damgardTestParam)
 }
 
 func TestFullySec_DamgardMultiDDH(t *testing.T) {
-	params := []damgardTestParam{{"random", 512, false},
-		{"precomputed", 2048, true}}
+	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {
-			testFullySec_DamgardMultiDDHFromParam(t, param)
+			testFullySecDamgardMultiDDHFromParam(t, param)
 		})
 	}
 }
