@@ -26,20 +26,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple_MultiDDH(t *testing.T) {
+func testSimple_MultiDDHFromParam(t *testing.T, param dDHTestParam) {
+	// choose meta-parameters for the scheme
 	numOfSlots := 2
 	l := 3
 	bound := big.NewInt(1000)
 	sampler := sample.NewUniform(bound)
-	modulusLength := 2048
 
-	multiDDH, err := simple.NewDDHMultiPrecomp(numOfSlots, l, modulusLength, bound)
+	// build the central authority for the scheme
+	var multiDDH *simple.DDHMulti
+	var err error
+	if param.precomputed {
+		// modulusLength defines the security of the scheme, the higher the better
+		multiDDH, err = simple.NewDDHMultiPrecomp(numOfSlots, l, param.modulusLength, bound)
+	} else {
+		multiDDH, err = simple.NewDDHMulti(numOfSlots, l, param.modulusLength, bound)
+	}
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}
 
+	// the central authority generates keys for all the clients
 	pubKey, secKey, err := multiDDH.GenerateMasterKeys()
 
+	// pick a matrix that represent the collection of inner-product vectors y_i
 	y, err := data.NewRandomMatrix(numOfSlots, l, sampler)
 	if err != nil {
 		t.Fatalf("Error during matrix generation: %v", err)
@@ -52,15 +62,17 @@ func TestSimple_MultiDDH(t *testing.T) {
 		clients[i] = simple.NewDDHMultiClient(multiDDH.Params)
 	}
 
+	// central authority derives the key for the decryptor
 	derivedKey, err := multiDDH.DeriveKey(secKey, y)
 	if err != nil {
 		t.Fatalf("Error during key derivation: %v", err)
 	}
 
+	// each client encrypts its vector x_i
 	collectedX := make([]data.Vector, numOfSlots) // for checking whether encrypt/decrypt works properly
 	ciphertexts := make([]data.Vector, numOfSlots)
 	for i := 0; i < numOfSlots; i++ {
-		x, err := data.NewRandomVector(l, sampler) // x possessed and chosen by encryptors[i]
+		x, err := data.NewRandomVector(l, sampler) // x possessed and chosen by clients[i]
 		if err != nil {
 			t.Fatalf("Error during random vector generation: %v", err)
 		}
@@ -84,6 +96,7 @@ func TestSimple_MultiDDH(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 
+	// we simulate the decryptor
 	decryptor := simple.NewDDHMultiFromParams(numOfSlots, multiDDH.Params)
 
 	ciphertextMatrix, err := data.NewMatrix(ciphertexts)
@@ -91,10 +104,23 @@ func TestSimple_MultiDDH(t *testing.T) {
 		t.Fatalf("Error during collection of ciphertexts: %v", err)
 	}
 
+	// decryptor decrypts the value
 	xy, err := decryptor.Decrypt(ciphertextMatrix, derivedKey, y)
 	if err != nil {
 		t.Fatalf("Error during decryption: %v", err)
 	}
 
+	// we check if the decrypted value is correct
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
+}
+
+func TestSimple_MultiDDH(t *testing.T) {
+	params := []dDHTestParam{{"random", 512, false},
+		{"precomputed", 2048, true}}
+
+	for _, param := range params {
+		t.Run(param.name, func(t *testing.T) {
+			testSimple_MultiDDHFromParam(t, param)
+		})
+	}
 }

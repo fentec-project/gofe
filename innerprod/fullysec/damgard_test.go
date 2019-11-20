@@ -26,14 +26,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFullySec_DamgardDDH(t *testing.T) {
+type damgardTestParam struct {
+	name string
+	modulusLength int
+	precomputed bool
+}
+
+func testFullySec_DamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 	l := 16
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
-	modulusLength := 2048
 
-	damgard, err := fullysec.NewDamgardPrecomp(l, modulusLength, bound)
-
+	var damgard *fullysec.Damgard
+	var err error
+	if param.precomputed {
+		damgard, err = fullysec.NewDamgardPrecomp(l, param.modulusLength, bound)
+	} else {
+		damgard, err = fullysec.NewDamgard(l, param.modulusLength, bound)
+	}
 	if err != nil {
 		t.Fatalf("Error during simple inner product creation: %v", err)
 	}
@@ -83,4 +93,15 @@ func TestFullySec_DamgardDDH(t *testing.T) {
 	}
 
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
+}
+
+func TestFullySec_DamgardDDH(t *testing.T) {
+	params := []damgardTestParam{{"random", 512, false},
+								 {"precomputed", 2048, true}}
+
+	for _, param := range params {
+		t.Run(param.name, func(t *testing.T) {
+			testFullySec_DamgardDDHFromParam(t, param)
+		})
+	}
 }
