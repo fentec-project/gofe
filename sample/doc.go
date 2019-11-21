@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// Samplers for sampling random values from different probability
-// distributions.
+// Package sample includes samplers for sampling random values
+// from different probability distributions.
 //
 // Package sample provides the Sampler interface
 // along with different implementations of this interface.

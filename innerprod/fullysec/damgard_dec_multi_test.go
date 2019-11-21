@@ -26,18 +26,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFullySec_DamgardDecMulti(t *testing.T) {
+func testFullySecDamgardDecMultiFromParam(t *testing.T, param damgardTestParam) {
 	// choose parameters
-	numOfClients := 20
+	numOfClients := 10
 	l := 2
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
-	// security parameter
-	modulusLength := 512
 
 	// create a (non-decentralized) multi-input scheme as the underlying scheme
 	// for the decentralization
-	damgardMulti, err := fullysec.NewDamgardMulti(numOfClients, l, modulusLength, bound)
+	var damgardMulti *fullysec.DamgardMulti
+	var err error
+	if param.precomputed {
+		// modulusLength defines the security of the scheme, the higher the better
+		damgardMulti, err = fullysec.NewDamgardMultiPrecomp(numOfClients, l, param.modulusLength, bound)
+	} else {
+		damgardMulti, err = fullysec.NewDamgardMulti(numOfClients, l, param.modulusLength, bound)
+	}
 	assert.NoError(t, err)
 
 	// we simulate different independent, decentralized clients and
@@ -103,4 +108,15 @@ func TestFullySec_DamgardDecMulti(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
+}
+
+func TestFullySec_DamgardDecMulti(t *testing.T) {
+	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+
+	for _, param := range params {
+		t.Run(param.name, func(t *testing.T) {
+			testFullySecDamgardDecMultiFromParam(t, param)
+		})
+	}
 }

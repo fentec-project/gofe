@@ -62,7 +62,6 @@ func NewDMCFEClient(idx int) (*DMCFEClient, error) {
 	}, nil
 }
 
-// TODO: make hashing functions random
 // SetShare sets a shared key for client c, based on the public keys of all the
 // clients involved in the scheme. It assumes that Idx of a client indicates
 // which is the corresponding public key in pubKeys. Shared keys are such that

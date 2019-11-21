@@ -24,6 +24,7 @@ import (
 	emmy "github.com/xlab-si/emmy/crypto/common"
 )
 
+// ElGamal holds paramenters for ElGamal scheme.
 type ElGamal struct {
 	Y *big.Int // public key
 	G *big.Int // generator
@@ -31,7 +32,8 @@ type ElGamal struct {
 	Q *big.Int // (P - 1) / 2, i.e. order of G
 }
 
-// adapted from https://github.com/dlitz/pycrypto/blob/master/lib/Crypto/PublicKey/ElGamal.py
+// NewElGamal creates parameters for ElGamal scheme. Implementation is
+// adapted from https://github.com/dlitz/pycrypto/blob/master/lib/Crypto/PublicKey/ElGamal.py.
 func NewElGamal(modulusLength int) (*ElGamal, error) {
 	p, err := emmy.GetSafePrime(modulusLength)
 	if err != nil {

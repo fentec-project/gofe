@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-// Simple schemes for functional encryption of inner products.
+// Package simple includes simple schemes for functional encryption of
+// inner products.
 //
 // All implementations in this package are based on the reference
 // paper by  Abdalla et. al (see https://eprint.iacr.org/2015/017.pdf).

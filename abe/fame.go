@@ -295,7 +295,7 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 	}
 	gSigmaPrime := new(bn256.G1).ScalarBaseMult(sigmaPrime)
 
-	kPrime := [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
+	k2 := [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
 	for t := 0; t < 2; t++ {
 		hs0, err := bn256.HashG1("0 0 0 " + strconv.Itoa(t))
 		if err != nil {
@@ -313,18 +313,18 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		}
 		hs2.ScalarMult(hs2, pow2)
 
-		kPrime[t].Add(hs0, hs1)
-		kPrime[t].Add(kPrime[t], hs2)
-		kPrime[t].Add(kPrime[t], gSigmaPrime)
-		kPrime[t].ScalarMult(kPrime[t], aInv[t])
-		kPrime[t].Add(kPrime[t], sk.PartG1[t])
+		k2[t].Add(hs0, hs1)
+		k2[t].Add(k2[t], hs2)
+		k2[t].Add(k2[t], gSigmaPrime)
+		k2[t].ScalarMult(k2[t], aInv[t])
+		k2[t].Add(k2[t], sk.PartG1[t])
 
 	}
-	kPrime[2].ScalarBaseMult(sigmaPrime)
-	kPrime[2].Neg(kPrime[2])
-	kPrime[2].Add(kPrime[2], sk.PartG1[2])
+	k2[2].ScalarBaseMult(sigmaPrime)
+	k2[2].Neg(k2[2])
+	k2[2].Add(k2[2], sk.PartG1[2])
 
-	return &FAMEAttribKeys{K0: k0, K: k, KPrime: kPrime, AttribToI: attribToI}, nil
+	return &FAMEAttribKeys{K0: k0, K: k, KPrime: k2, AttribToI: attribToI}, nil
 }
 
 // Decrypt takes as an input a cipher and an FAMEAttribKeys and tries to decrypt

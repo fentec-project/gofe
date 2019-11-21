@@ -155,7 +155,7 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 // In case of a malformed secret key the function returns an error.
 func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 	if !SK.CheckDims(s.Params.N, s.Params.L) {
-		return nil, gofe.MalformedSecKey
+		return nil, gofe.ErrMalformedSecKey
 	}
 
 	// Initialize and fill noise matrix E with m*l samples
@@ -190,13 +190,13 @@ func (s *LWE) DeriveKey(y data.Vector, SK data.Matrix) (data.Vector, error) {
 		return nil, err
 	}
 	if !SK.CheckDims(s.Params.N, s.Params.L) {
-		return nil, gofe.MalformedSecKey
+		return nil, gofe.ErrMalformedSecKey
 	}
 	// Secret key is a linear combination of input vector y
 	// and master secret key SK.
 	skY, err := SK.MulVec(y)
 	if err != nil {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 	skY = skY.Mod(s.Params.Q)
 
@@ -212,10 +212,10 @@ func (s *LWE) Encrypt(x data.Vector, PK data.Matrix) (data.Vector, error) {
 		return nil, err
 	}
 	if !PK.CheckDims(s.Params.M, s.Params.L) {
-		return nil, gofe.MalformedPubKey
+		return nil, gofe.ErrMalformedPubKey
 	}
 	if len(x) != s.Params.L {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 
 	// Create a random vector comprised of m 0s and 1s
@@ -267,17 +267,17 @@ func (s *LWE) Decrypt(ct, skY, y data.Vector) (*big.Int, error) {
 		return nil, err
 	}
 	if len(skY) != s.Params.N {
-		return nil, gofe.MalformedDecKey
+		return nil, gofe.ErrMalformedDecKey
 	}
 	if len(y) != s.Params.L {
-		return nil, gofe.MalformedInput
+		return nil, gofe.ErrMalformedInput
 	}
 
 	// Break down the ciphertext vector into
 	// ct0     which holds first n elements of the cipher, and
 	// ctLast  which holds last n elements of the cipher
 	if len(ct) != s.Params.N+s.Params.L {
-		return nil, gofe.MalformedCipher
+		return nil, gofe.ErrMalformedCipher
 	}
 	ct0 := ct[:s.Params.N]
 	ctLast := ct[s.Params.N:]

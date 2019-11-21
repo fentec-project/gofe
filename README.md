@@ -1,4 +1,4 @@
-# GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe)
+# GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6d709aa7ba424dafbbca7dc13627eb04)](https://www.codacy.com/manual/tilenmarc/gofe_2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
 
 GoFE is a cryptographic library offering different state-of-the-art
 implementations of functional encryption schemes, specifically FE
@@ -182,7 +182,7 @@ You will see that three `DDH` structs are instantiated to simulate the
 l := 2 // length of input vectors
 bound := big.NewInt(10) // upper bound for input vector coordinates
 modulusLength := 2048 // bit length of prime modulus p 
-trustedEnt, _ := simple.NewDDH(l, modulusLength, bound)
+trustedEnt, _ := simple.NewDDHPrecomp(l, modulusLength, bound)
 msk, mpk, _ := trustedEnt.GenerateMasterKeys()
 
 y := data.NewVector([]*big.Int{big.NewInt(1), big.NewInt(2)})
@@ -233,7 +233,7 @@ Y, _ := data.NewRandomMatrix(numClients, l, sampler)
 // master keys for all the encryptors. It also derives the FE
 // key derivedKey for the decryptor.
 modulusLength := 2048
-multiDDH, _ := simple.NewDDHMulti(numClients, l, modulusLength, bound)
+multiDDH, _ := simple.NewDDHMultiPrecomp(numClients, l, modulusLength, bound)
 pubKey, secKey, _ := multiDDH.GenerateMasterKeys()
 derivedKey, _ := multiDDH.DeriveKey(secKey, Y)
 

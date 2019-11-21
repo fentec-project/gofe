@@ -26,14 +26,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple_DDH(t *testing.T) {
+type ddhTestParam struct {
+	name          string
+	modulusLength int
+	precomputed   bool
+}
+
+func testSimpleDDHFromParam(t *testing.T, param ddhTestParam) {
 	l := 3
-	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(20), big.NewInt(0))
+	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(10), nil)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
-	modulusLength := 128
 
-	simpleDDH, err := simple.NewDDH(l, modulusLength, bound)
-
+	var simpleDDH *simple.DDH
+	var err error
+	if param.precomputed {
+		simpleDDH, err = simple.NewDDHPrecomp(l, param.modulusLength, bound)
+	} else {
+		simpleDDH, err = simple.NewDDH(l, param.modulusLength, bound)
+	}
 	if err != nil {
 		t.Fatalf("Error during simple inner product creation: %v", err)
 	}
@@ -83,4 +93,15 @@ func TestSimple_DDH(t *testing.T) {
 	}
 
 	assert.Equal(t, xy, xyCheck, "Original and decrypted values should match")
+}
+
+func TestSimple_DDH(t *testing.T) {
+	params := []ddhTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+
+	for _, param := range params {
+		t.Run(param.name, func(t *testing.T) {
+			testSimpleDDHFromParam(t, param)
+		})
+	}
 }

@@ -33,6 +33,7 @@ var MaxBound = big.NewInt(15000000000)
 // Calc represents a discrete logarithm calculator.
 type Calc struct{}
 
+// NewCalc generates a new discrete logarithm calculator.
 func NewCalc() *Calc {
 	return &Calc{}
 }
@@ -46,6 +47,8 @@ type CalcZp struct {
 	neg   bool
 }
 
+// InZp builds parameters needed to calculate a discrete
+// logarithm in Z_p group.
 func (*Calc) InZp(p, order *big.Int) (*CalcZp, error) {
 	one := big.NewInt(1)
 	var bound *big.Int
@@ -73,6 +76,7 @@ func (*Calc) InZp(p, order *big.Int) (*CalcZp, error) {
 	}, nil
 }
 
+// WithBound sets a bound for the calculator of the discrete logarithm.
 func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 	if bound != nil { // TODO && bound.Cmp(MaxBound) < 0
 		m := new(big.Int).Sqrt(bound)
@@ -88,6 +92,8 @@ func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
 	return c
 }
 
+// WithNeg sets that the result should be searched also among
+// negative integers.
 func (c *CalcZp) WithNeg() *CalcZp {
 	return &CalcZp{
 		bound: c.bound,
@@ -240,6 +246,8 @@ type CalcBN256 struct {
 	neg     bool
 }
 
+// InBN256 builds parameters needed to calculate a discrete
+// logarithm in a pairing BN256 group.
 func (*Calc) InBN256() *CalcBN256 {
 	m := new(big.Int).Sqrt(MaxBound)
 	m.Add(m, big.NewInt(1))
@@ -250,6 +258,7 @@ func (*Calc) InBN256() *CalcBN256 {
 	}
 }
 
+// WithBound sets a bound for the calculator of the discrete logarithm.
 func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 	if bound != nil && bound.Cmp(MaxBound) < 0 {
 		m := new(big.Int).Sqrt(bound)
@@ -265,6 +274,8 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 	return c
 }
 
+// WithNeg sets that the result should be searched also among
+// negative integers.
 func (c *CalcBN256) WithNeg() *CalcBN256 {
 	return &CalcBN256{
 		bound:   c.bound,

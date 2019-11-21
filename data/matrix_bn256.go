@@ -6,7 +6,7 @@ import (
 	"github.com/fentec-project/bn256"
 )
 
-// Matrix wraps a slice of VectorG1 elements. It represents a row-major.
+// MatrixG1 wraps a slice of VectorG1 elements. It represents a row-major.
 // order matrix.
 //
 // The j-th element from the i-th vector of the matrix can be obtained
@@ -71,7 +71,7 @@ func (m MatrixG1) MulVector(v Vector) VectorG1 {
 	return out
 }
 
-// Matrix wraps a slice of VectorG2 elements. It represents a row-major.
+// MatrixG2 wraps a slice of VectorG2 elements. It represents a row-major.
 // order matrix.
 //
 // The j-th element from the i-th vector of the matrix can be obtained

@@ -14,9 +14,5 @@
  * limitations under the License.
  */
 
-// Package dlog includes algorithms for computing discrete logarithms.
-//
-// FE schemes instantiated from the Discrete Diffie-Hellman assumption
-// (DDH) all rely on efficient algorithms for calculating discrete
-// logarithms.
-package dlog
+// Package abe includes schemes allowing attribute based encryption.
+package abe

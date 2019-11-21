@@ -53,6 +53,8 @@ func NewNormalNegative(sigma *big.Float, n uint) *NormalNegative {
 	return s
 }
 
+// Sample samples a value from discrete Gaussian distribution based on
+// negative (rejection) sampling.
 func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF := new(big.Float)
 	uF.SetPrec(c.n)

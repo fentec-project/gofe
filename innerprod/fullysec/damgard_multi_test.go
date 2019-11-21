@@ -26,17 +26,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFullySec_DamgardMultiDDH(t *testing.T) {
+func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) {
 	// choose meta-parameters for the scheme
-	numClients := 10
+	numClients := 6
 	l := 5
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
-	// this parameter defines the security of the scheme, the higher the better
-	modulusLength := 512
 
 	// build the central authority for the scheme
-	damgardMulti, err := fullysec.NewDamgardMulti(numClients, l, modulusLength, bound)
+	var damgardMulti *fullysec.DamgardMulti
+	var err error
+	if param.precomputed {
+		// modulusLength defines the security of the scheme, the higher the better
+		damgardMulti, err = fullysec.NewDamgardMultiPrecomp(numClients, l, param.modulusLength, bound)
+	} else {
+		damgardMulti, err = fullysec.NewDamgardMulti(numClients, l, param.modulusLength, bound)
+	}
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}
@@ -97,4 +102,15 @@ func TestFullySec_DamgardMultiDDH(t *testing.T) {
 		t.Fatalf("Error during inner product calculation: %v", err)
 	}
 	assert.Equal(t, xy.Cmp(xyCheck), 0, "obtained incorrect inner product")
+}
+
+func TestFullySec_DamgardMultiDDH(t *testing.T) {
+	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+
+	for _, param := range params {
+		t.Run(param.name, func(t *testing.T) {
+			testFullySecDamgardMultiDDHFromParam(t, param)
+		})
+	}
 }

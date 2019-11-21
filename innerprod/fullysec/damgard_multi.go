@@ -38,7 +38,7 @@ import (
 // given key_y and the ciphertext the decryptor can compute value
 // Σ_i <x_i, y_i> (sum of dot products).
 
-// DamgardMultiClient is a struct in DamgardMulti scheme, that holds
+// DamgardMulti is a struct in DamgardMulti scheme, that holds
 // all the shared parameters, and can represent the central authority
 // or the decryptor.
 type DamgardMulti struct {
@@ -68,6 +68,42 @@ func NewDamgardMulti(numClients, l, modulusLength int, bound *big.Int) (*Damgard
 	prod := new(big.Int).Mul(big.NewInt(int64(l*numClients*2)), bSquared)
 
 	damgard, err := NewDamgard(l, modulusLength, bound)
+	if err != nil {
+		return nil, err
+	}
+	if prod.Cmp(damgard.Params.Q) > 0 {
+		return nil, fmt.Errorf("2 * l * numClients * bound^2 should be smaller than group order")
+	}
+	// the bound of the underlying Damgard scheme is set to
+	// the maximum value since the scheme will be used to encrypt
+	// values summed with one time pad, thus arbitrary big
+	damgard.Params.Bound = damgard.Params.Q
+
+	return &DamgardMulti{
+		NumClients: numClients,
+		Bound:      bound,
+		Damgard:    damgard,
+	}, nil
+}
+
+// NewDamgardMultiPrecomp configures a new instance of the scheme
+// based on precomputed prime numbers and generators.
+// It accepts the number of clients, the length of
+// input vectors l, the bit length of the modulus (we are
+// operating in the Z_p group), and a bound by which coordinates
+// of input vectors are bounded. It generates all the remaining
+// parameters to be shared. The modulus length should
+// be one of values 1024, 1536, 2048, 2560, 3072, or 4096. The precomputed
+// prime numbers and generators were simply obtained by running NewDamgard
+// function.
+//
+// It returns an error in case the underlying Damgard scheme
+// instances could not be properly instantiated.
+func NewDamgardMultiPrecomp(numClients, l, modulusLength int, bound *big.Int) (*DamgardMulti, error) {
+	bSquared := new(big.Int).Exp(bound, big.NewInt(2), nil)
+	prod := new(big.Int).Mul(big.NewInt(int64(l*numClients*2)), bSquared)
+
+	damgard, err := NewDamgardPrecomp(l, modulusLength, bound)
 	if err != nil {
 		return nil, err
 	}
