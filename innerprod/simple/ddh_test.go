@@ -26,13 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type dDHTestParam struct {
+type ddhTestParam struct {
 	name          string
 	modulusLength int
 	precomputed   bool
 }
 
-func testSimpleDDHFromParam(t *testing.T, param dDHTestParam) {
+func testSimpleDDHFromParam(t *testing.T, param ddhTestParam) {
 	l := 3
 	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(10), nil)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
@@ -96,7 +96,7 @@ func testSimpleDDHFromParam(t *testing.T, param dDHTestParam) {
 }
 
 func TestSimple_DDH(t *testing.T) {
-	params := []dDHTestParam{{name: "random", modulusLength: 512, precomputed: false},
+	params := []ddhTestParam{{name: "random", modulusLength: 512, precomputed: false},
 		{name: "precomputed", modulusLength: 2048, precomputed: true}}
 
 	for _, param := range params {
