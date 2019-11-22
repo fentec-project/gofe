@@ -24,7 +24,7 @@ import (
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/internal/keygen"
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // DDHParams represents configuration parameters for the DDH scheme instance.
@@ -155,9 +155,10 @@ func NewDDHFromParams(params *DDHParams) *DDH {
 func (d *DDH) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 	masterSecKey := make(data.Vector, d.Params.L)
 	masterPubKey := make(data.Vector, d.Params.L)
+	sampler := sample.NewUniformRange(big.NewInt(2), d.Params.Q)
 
 	for i := 0; i < d.Params.L; i++ {
-		x, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+		x, err := sampler.Sample()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -191,7 +192,8 @@ func (d *DDH) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+	sampler := sample.NewUniformRange(big.NewInt(2), d.Params.Q)
+	r, err := sampler.Sample()
 	if err != nil {
 		return nil, err
 	}
