@@ -51,8 +51,8 @@ attacks** (s-IND-CPA security):
     * Experimental Ring-LWE scheme whose security will be argued in a future paper (`simple.RingLWE`)
     * Multi-input scheme based on paper by _Abdalla, Catalano, Fiore, Gay, Ursu_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point (`simple.DDHMulti`).
 
-* Schemes with **adaptive security under chosen-plaintext attacks** (IND-CPA
-security):
+* Schemes with stronger **adaptive security under chosen-plaintext attacks** (IND-CPA
+security) or **simulation based security** (SIM-Security for IPE):
     * Scheme based on paper by _Agrawal, Libert and Stehlé_ ([paper](https://eprint.iacr.org/2015/608.pdf)). It can be instantiated from Damgard DDH (`fullysec.Damgard` - similar to `simple.DDH`, but uses one more group element to achieve full security, similar to how Damgård's encryption scheme is obtained from ElGamal scheme ([paper](https://link.springer.com/chapter/10.1007/3-540-46766-1_36)), LWE (`fullysec.LWE`) and Paillier (`fullysec.Paillier`) primitives.
     * Multi-input scheme based on paper by _Abdalla, Catalano, Fiore, Gay, Ursu_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point (`fullysec.DamgardMulti`).
     * Decentralized scheme based on paper by _Chotard, Dufour Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings (`fullysec.DMCFEClient`).
@@ -60,8 +60,6 @@ security):
 procedure for decentralization of an inner product scheme, in particular the decentralization of a Damgard DDH scheme (`fullysec.DamgardDecMultiClient`).
     * Function hiding multi-input scheme based on paper by _Datta, Okamoto, Tomida_ ([paper](https://eprint.iacr.org/2018/061.pdf)). This scheme allows clients to encrypt vectors and derive 
 functional key that allows a decrytor to decrypt an inner product without revealing the ciphertext or the function (`fullysec.FHMultiIPE`).
-
-* Schemes with **simulation based security** (SIM-Security for IPE):
     * Function hiding inner product scheme by _Kim, Lewi, Mandal, Montgomery, Roy, Wu_ ([paper](https://eprint.iacr.org/2016/440.pdf)). The scheme allows the decryptor to
 decrypt the inner product of x and y without reveling (ciphertext) x or (function) y (`fullysec.fhipe`).
 
