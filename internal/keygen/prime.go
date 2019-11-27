@@ -30,12 +30,12 @@ func GetSafePrime(bits int) (p *big.Int, err error) {
 	p.Mul(p1, big.NewInt(2))
 	p.Add(p, big.NewInt(1))
 
-	if p.BitLen() == bits {
-		return p, nil
-	} else {
+	if p.BitLen() != bits {
 		err := fmt.Errorf("bit length not correct")
 		return nil, err
 	}
+
+	return p, nil
 }
 
 // GetGermainPrime returns a prime number p for which 2*p + 1 is also prime. Note that
@@ -43,8 +43,8 @@ func GetSafePrime(bits int) (p *big.Int, err error) {
 func GetGermainPrime(bits int) (p *big.Int) {
 	// multiple germainPrime goroutines are called and we assume at least one will compute a
 	// safe prime and send it to the channel, thus we do not handle errors in germainPrime
-	var c chan *big.Int = make(chan *big.Int)
-	var quit chan int = make(chan int)
+	c := make(chan *big.Int)
+	quit := make(chan int)
 	for j := int(0); j < 8; j++ {
 		go germainPrime(bits, c, quit)
 	}
