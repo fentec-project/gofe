@@ -38,8 +38,8 @@ func GetSafePrime(bits int) (p *big.Int, err error) {
 	}
 }
 
-// GetGermainPrime returns a prime number p for which 2*p + 1 is also prime. Note that conversely p
-// is called safe prime.
+// GetGermainPrime returns a prime number p for which 2*p + 1 is also prime. Note that
+// conversely 2*p + 1 is called a safe prime.
 func GetGermainPrime(bits int) (p *big.Int) {
 	// multiple germainPrime goroutines are called and we assume at least one will compute a
 	// safe prime and send it to the channel, thus we do not handle errors in germainPrime
@@ -51,7 +51,7 @@ func GetGermainPrime(bits int) (p *big.Int) {
 	msg := <-c
 	// for small values for parameter bits (which should be small only for testing) it sometimes
 	// happen "send on closed channel" - so we leave the channel c to a garbage collector
-	//close(c)
+	// close(c)
 	close(quit)
 	return msg
 }

@@ -18,9 +18,7 @@ package fullysec
 
 import (
 	"math/big"
-
 	"math"
-
 	"crypto/rand"
 
 	"github.com/fentec-project/gofe/data"
@@ -162,8 +160,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// get q
 	q, err := rand.Prime(rand.Reader, nBitsQ)
 	if err != nil {
-		return nil, errors.Wrap(err,
-			"cannot generate parameters, generating a prime number failed")
+		return nil, err
 	}
 
 	m := int(1.01 * nF * float64(nBitsQ))
@@ -177,8 +174,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
 	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
-		return nil, errors.Wrap(err,
-			"cannot generate parameters, generating a random matrix failed")
+		return nil, err
 	}
 	return &LWE{
 		Params: &LWEParams{
@@ -206,11 +202,11 @@ func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 
 	sampler1, err := sample.NewNormalDouble(s.Params.Sigma1, uint(s.Params.N), big.NewFloat(1))
 	if err != nil {
-		return nil, errors.Wrap(err, "error generating secret key")
+		return nil, err
 	}
 	sampler2, err := sample.NewNormalDouble(s.Params.Sigma2, uint(s.Params.N), big.NewFloat(1))
 	if err != nil {
-		return nil, errors.Wrap(err, "error generating secret key")
+		return nil, err
 	}
 
 	Z := make(data.Matrix, s.Params.L)
