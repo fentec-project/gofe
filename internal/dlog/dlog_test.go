@@ -19,12 +19,9 @@ package dlog
 import (
 	"math/big"
 	"testing"
-	"time"
-
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
-	emmy "github.com/xlab-si/emmy/crypto/common"
-	"github.com/xlab-si/emmy/crypto/schnorr"
+	"github.com/fentec-project/gofe/sample"
 )
 
 type params struct {
@@ -50,7 +47,8 @@ func TestDLog(t *testing.T) {
 		t.Fatalf("Error during parameters generation: %v", err)
 	}
 
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
+	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
+	xCheck, err := sampler.Sample()
 
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
@@ -72,49 +70,5 @@ func TestDLog(t *testing.T) {
 
 	assert.Equal(t, xCheck.Cmp(x1), 0, "BabyStepGiantStep result is wrong")
 	assert.Equal(t, xCheck.Cmp(x2), 0, "pollardRho result is wrong")
-	//fmt.Printf("BabyStepGiantStep time: %.5f s, pollardRho time: %.5f s\n", elapsed1.Seconds(), elapsed2.Seconds())
-	//fmt.Printf("BabyStepGiantStep speedup: %.3f\n", elapsed2.Seconds()/elapsed1.Seconds())
 }
 
-//TODO
-func BenchmarkDLog(b *testing.B) {
-	modulusLength := 32
-	times := 100
-	tm := time.Now()
-
-	t1 := 0.0
-	t2 := 0.0
-	t3 := 0.0
-
-	for i := 0; i < times; i++ {
-		key, _ := schnorr.NewGroup(modulusLength)
-		order := key.Q
-		xCheck, _ := emmy.GetRandomIntFromRange(big.NewInt(2), order)
-		h := new(big.Int).Exp(key.G, xCheck, key.P)
-
-		calc, _ := NewCalc().InZp(key.P, nil)
-		tm = time.Now()
-		_, _ = calc.WithBound(nil).BabyStepGiantStep(h, key.G)
-		t1 += time.Since(tm).Seconds()
-
-		calc, _ = NewCalc().InZp(key.P, order)
-		tm = time.Now()
-		_, _ = calc.WithBound(nil).BabyStepGiantStep(h, key.G)
-		t2 += time.Since(tm).Seconds()
-
-		tm = time.Now()
-		_, _ = pollardRhoParallel(h, key.G, key.P, order)
-		t3 += time.Since(tm).Seconds()
-
-		//if i%10 == 0 {
-		//	fmt.Printf("Ran %d times.\n", i)
-		//}
-	}
-
-	fl := float64(times)
-	t1 /= fl
-	t2 /= fl
-	t3 /= fl
-
-	//fmt.Printf("%.5f s\n%.5f s\n%.5f s\n", t1, t2, t3)
-}

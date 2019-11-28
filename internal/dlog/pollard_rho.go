@@ -20,8 +20,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // Pollard's rho algorithm - simple, non-parallel version.
@@ -29,8 +28,15 @@ func pollardRho(h, g, p, order *big.Int) (*big.Int, error) {
 	n := new(big.Int).Set(order)
 
 	// a, b random from [1, n]
-	a1 := new(big.Int).Add(emmy.GetRandomInt(n), big.NewInt(1))
-	b1 := new(big.Int).Add(emmy.GetRandomInt(n), big.NewInt(1))
+	sampler := sample.NewUniformRange(big.NewInt(1), new(big.Int).Add(n, big.NewInt(1)))
+	a1, err := sampler.Sample()
+	if err != nil {
+		return nil, err
+	}
+	b1, err := sampler.Sample()
+	if err != nil {
+		return nil, err
+	}
 
 	// x = ((g ^ a mod p) * (h ^ b mod p ) mod p
 	x1 := new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Exp(g, a1, p), new(big.Int).Exp(h, b1, p)), p)
@@ -147,9 +153,18 @@ func pollardRhoParallel(h, g, p, order *big.Int) (*big.Int, error) {
 
 	r, q, t := new(big.Int), new(big.Int), new(big.Int)
 
+	sampler := sample.NewUniformRange(big.NewInt(1), new(big.Int).Add(n, big.NewInt(1)))
 	for i := 0; i < 8; i++ {
-		a0 := new(big.Int).Add(emmy.GetRandomInt(n), big.NewInt(1))
-		b0 := new(big.Int).Add(emmy.GetRandomInt(n), big.NewInt(1))
+		a0, err := sampler.Sample()
+		if err != nil {
+			return nil, err
+		}
+
+		b0, err := sampler.Sample()
+		if err != nil {
+			return nil, err
+		}
+
 		x0 := new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Exp(g, a0, p), new(big.Int).Exp(h, b0, p)), p)
 
 		go process(x0, a0, b0, iterate, c, quit)
@@ -246,7 +261,10 @@ func pollardRhoFactorization(n, B *big.Int) (map[string]int, error) {
 		}
 
 		// calculate a new divisor
-		factor := pollardRhoCycle(i)
+		factor, err := pollardRhoCycle(i)
+		if err != nil {
+			return nil, err
+		}
 
 		// continue factoring the divisor and number/divisor
 		queue = append(queue, factor)
@@ -263,17 +281,22 @@ func pollardRhoFactorization(n, B *big.Int) (map[string]int, error) {
 }
 
 // Returns a divisor of n. It runs the cycle of Pollard Rho until it encounters a non-trivial divisor.
-func pollardRhoCycle(n *big.Int) *big.Int {
+func pollardRhoCycle(n *big.Int) (*big.Int, error) {
 	factor := big.NewInt(1)
 
+	sampler := sample.NewUniform(n)
 	// run until the returned value is > 1
 	for factor.Cmp(big.NewInt(1)) < 1 {
 		// random starting values
-		r := emmy.GetRandomInt(n)
+		r, err := sampler.Sample()
+		if err != nil {
+			return nil, err
+		}
+
 		factor = runCycle(n, r)
 	}
 
-	return factor
+	return factor, nil
 }
 
 // Runs one cycle of the Pollard Rho algorithm. It may fail to find a divisor and may need to be restarted with

@@ -24,7 +24,7 @@ import (
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/internal/keygen"
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // DamgardParams includes public parameters for the Damgard inner
@@ -78,7 +78,8 @@ func NewDamgard(l, modulusLength int, bound *big.Int) (*Damgard, error) {
 
 	h := new(big.Int)
 	for {
-		r, err := emmy.GetRandomIntFromRange(two, key.Q)
+		sampler := sample.NewUniformRange(two, key.Q)
+		r, err := sampler.Sample()
 		if err != nil {
 			return nil, err
 		}
@@ -201,15 +202,16 @@ func (d *Damgard) GenerateMasterKeys() (*DamgardSecKey, data.Vector, error) {
 	mskT := make(data.Vector, d.Params.L)
 
 	masterPubKey := make([]*big.Int, d.Params.L)
+	sampler := sample.NewUniformRange(big.NewInt(2), d.Params.Q)
 
 	for i := 0; i < d.Params.L; i++ {
-		s, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+		s, err := sampler.Sample()
 		if err != nil {
 			return nil, nil, err
 		}
 		mskS[i] = s
 
-		t, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+		t, err := sampler.Sample()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -262,7 +264,8 @@ func (d *Damgard) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 		return nil, err
 	}
 
-	r, err := emmy.GetRandomIntFromRange(big.NewInt(2), d.Params.Q)
+	sampler := sample.NewUniformRange(big.NewInt(2), d.Params.Q)
+	r, err := sampler.Sample()
 	if err != nil {
 		return nil, err
 	}

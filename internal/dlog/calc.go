@@ -78,7 +78,7 @@ func (*Calc) InZp(p, order *big.Int) (*CalcZp, error) {
 
 // WithBound sets a bound for the calculator of the discrete logarithm.
 func (c *CalcZp) WithBound(bound *big.Int) *CalcZp {
-	if bound != nil { // TODO && bound.Cmp(MaxBound) < 0
+	if bound != nil && bound.Cmp(MaxBound) < 0 && bound.Sign() > 0 {
 		m := new(big.Int).Sqrt(bound)
 		m.Add(m, big.NewInt(1))
 
@@ -176,7 +176,7 @@ func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errC
 		x = new(big.Int).Mod(new(big.Int).Mul(x, z), c.p)
 	}
 	retChan <- nil
-	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound")
+	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound " + c.bound.String())
 }
 
 // runBabyStepGiantStepIterative implements the baby-step giant-step method to
@@ -252,7 +252,7 @@ func (*Calc) InBN256() *CalcBN256 {
 	m := new(big.Int).Sqrt(MaxBound)
 	m.Add(m, big.NewInt(1))
 	return &CalcBN256{
-		bound: MaxBound, // TODO bn256.Order, MaxBound
+		bound: MaxBound,
 		m:     m,
 		neg:   false,
 	}

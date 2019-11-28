@@ -24,7 +24,7 @@ import (
 
 	"github.com/fentec-project/gofe/internal/keygen"
 	"github.com/stretchr/testify/assert"
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/sample"
 )
 
 func TestPollardRho(t *testing.T) {
@@ -33,7 +33,8 @@ func TestPollardRho(t *testing.T) {
 		t.Fatalf("Error during parameters generation: %v", err)
 	}
 
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
+	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
+	xCheck, err := sampler.Sample()
 
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
@@ -56,7 +57,8 @@ func TestPollardRhoParallel(t *testing.T) {
 		t.Fatalf("Error during parameters generation: %v", err)
 	}
 
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), params.order)
+	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
+	xCheck, err := sampler.Sample()
 
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
@@ -73,7 +75,12 @@ func TestPollardRhoParallel(t *testing.T) {
 }
 
 func TestPollardRhoFactorization(t *testing.T) {
-	n := emmy.GetRandomIntOfLength(32)
+	sampler := sample.NewUniform(new(big.Int).Exp(big.NewInt(2), big.NewInt(32), nil))
+	n, err := sampler.Sample()
+	if err != nil {
+		t.Fatalf("Error during random int generation: %v", err)
+	}
+
 	factorization, err := pollardRhoFactorization(n, nil)
 
 	if err != nil {
@@ -93,7 +100,8 @@ func TestPollardRhoElGamal(t *testing.T) {
 	}
 
 	order := key.Q
-	xCheck, err := emmy.GetRandomIntFromRange(big.NewInt(2), order)
+	sampler := sample.NewUniform(new(big.Int).Exp(big.NewInt(2), big.NewInt(30), nil))
+	xCheck, err := sampler.Sample()
 
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
@@ -127,8 +135,8 @@ func checkFactorization(factorization map[string]int, n *big.Int, t *testing.T) 
 
 // Hard factorization problem - the number is a product of two large primes
 func TestPollardRhoFactorizationHard(t *testing.T) {
-	p := emmy.GetGermainPrime(35)
-	q := emmy.GetGermainPrime(35)
+	p := keygen.GetGermainPrime(35)
+	q := keygen.GetGermainPrime(35)
 
 	n := new(big.Int).Mul(p, q)
 

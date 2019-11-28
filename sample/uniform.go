@@ -18,8 +18,7 @@ package sample
 
 import (
 	"math/big"
-
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"crypto/rand"
 )
 
 // UniformRange samples random values from the interval [min, max).
@@ -39,7 +38,15 @@ func NewUniformRange(min, max *big.Int) *UniformRange {
 
 // Sample samples random values from the interval [min, max).
 func (u *UniformRange) Sample() (*big.Int, error) {
-	return emmy.GetRandomIntFromRange(u.min, u.max)
+	maxMinusMin := new(big.Int).Sub(u.max, u.min)
+	res, err := rand.Int(rand.Reader, maxMinusMin)
+	if err != nil {
+		return nil, err
+	}
+
+	res.Add(res, u.min)
+
+	return res, err
 }
 
 // Uniform samples random values from the interval [0, max).
@@ -55,7 +62,7 @@ func NewUniform(max *big.Int) *UniformRange {
 
 // Sample samples random values from the interval [0, max).
 func (u *Uniform) Sample() (*big.Int, error) {
-	return emmy.GetRandomInt(u.max), nil
+	return rand.Int(rand.Reader, u.max)
 }
 
 // Bit samples a single random bit (value 0 or 1).

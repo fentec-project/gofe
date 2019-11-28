@@ -18,10 +18,8 @@ package keygen
 
 import (
 	"math/big"
-
 	"fmt"
-
-	emmy "github.com/xlab-si/emmy/crypto/common"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // ElGamal holds paramenters for ElGamal scheme.
@@ -35,7 +33,7 @@ type ElGamal struct {
 // NewElGamal creates parameters for ElGamal scheme. Implementation is
 // adapted from https://github.com/dlitz/pycrypto/blob/master/lib/Crypto/PublicKey/ElGamal.py.
 func NewElGamal(modulusLength int) (*ElGamal, error) {
-	p, err := emmy.GetSafePrime(modulusLength)
+	p, err := GetSafePrime(modulusLength)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate safe prime")
 	}
@@ -49,9 +47,10 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 	q := new(big.Int).Sub(p, one)
 	q.Div(q, two)
 	g := new(big.Int)
+	sampler := sample.NewUniformRange(three, p)
 
 	for {
-		g, err = emmy.GetRandomIntFromRange(three, p)
+		g, err = sampler.Sample()
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +70,7 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 		break
 	}
 
-	x, err := emmy.GetRandomIntFromRange(two, q)
+	x, err := sampler.Sample()
 	if err != nil {
 		return nil, err
 	}

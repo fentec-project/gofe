@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"math/big"
 
-	emmy "github.com/xlab-si/emmy/crypto/common"
-
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/fentec-project/gofe/internal/keygen"
 )
 
 // PaillierParams represents parameters for the fully secure Paillier scheme.
@@ -60,12 +59,12 @@ type Paillier struct {
 // is not satisfied.
 func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, error) {
 	// generate two safe primes
-	p, err := emmy.GetSafePrime(bitLen)
+	p, err := keygen.GetSafePrime(bitLen)
 	if err != nil {
 		return nil, err
 	}
 
-	q, err := emmy.GetSafePrime(bitLen)
+	q, err := keygen.GetSafePrime(bitLen)
 	if err != nil {
 		return nil, err
 	}
