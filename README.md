@@ -26,7 +26,8 @@ implementations. It **should not be used in production**.
 
 ## Building GoFE
 First, download and build the library by running
- `go get -u -t github.com/fentec-project/gofe` from the terminal. 
+ `go get -u -t github.com/fentec-project/gofe/...` from the terminal (note that this also
+ downloads and builds all the dependencies of the library). 
  
 To make sure the library works as expected, navigate to your `$GOPATH/src/github.com/fentec-project/gofe` 
 directory and run `go test -v ./...` . 
