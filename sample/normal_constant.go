@@ -20,14 +20,16 @@ import (
 	"math/rand"
 	"time"
 	"math"
-	"fmt"
+	"math/big"
+	cran "crypto/rand"
+	"encoding/binary"
 )
 
 // NormalCumulative samples random values from the
 // cumulative Normal (Gaussian) probability distribution, centered on 0.
 // This sampler is the fastest, but is limited only to cases when sigma
 // is not too big, due to the sizes of the precomputed tables.
-type NormalCDT struct {
+type NormalCDT2 struct {
 	*normal
 }
 
@@ -51,7 +53,7 @@ var CDT_LOW_MASK uint64 = 0x7fffffffffffffff
 
 // Sample samples discrete cumulative distribution with
 // precomputed values.
-func (c *NormalCDT) Sample2() (uint64) {
+func (c *NormalCDT2) Sample2() (uint64) {
 	//uint64_t x = 0;
 	//uint64_t r1, r2;
 	//uint32_t i;
@@ -112,13 +114,22 @@ var BERNOULLI_ENTRY_SIZE = uint64(9)
 var EXP_MANTISSA_PRECISION = uint64(52)
 var R_MANTISSA_PRECISION = (EXP_MANTISSA_PRECISION + 1)
 var EXP_MANTISSA_MASK = (uint64(1) << EXP_MANTISSA_PRECISION) - 1
-var R_EXPONENT_L = (8 * BERNOULLI_ENTRY_SIZE - R_MANTISSA_PRECISION)
+var bitLenForSample = uint64(19)
+var maxExp = uint64(1023)
 
-func (c *NormalCDT) Bernoulli(t uint64, k uint64) (uint64) {
+func (c *NormalCDT2) Bernoulli2(t uint64, k uint64) (uint64) {
+	//randBytes := make([]byte, 1)
+	//cran.Read(randBytes)
+
+	//cc := binary.LittleEndian.Uint64(randBytes)
+	//fmt.Println(cc)
+
+
+
 	a := -float64(t)/float64(k * k)
 
-	floorA := math.Floor(a)
-	z := a - floorA
+	negfloorA := -math.Floor(a)
+	z := a + negfloorA
 
 	zSum := z * expCoef[0] + expCoef[1]
 	for i:=2; i < 10; i++ {
@@ -126,20 +137,43 @@ func (c *NormalCDT) Bernoulli(t uint64, k uint64) (uint64) {
 		zSum = zSum * z + expCoef[i]
 	}
 
-	fmt.Println(z, zSum, math.Pow(2, z), uint64(zSum))
+	//zSum = zSum * math.Pow(2, floorA)
 
-	zSum = 1
+	//fmt.Println(z, zSum, math.Pow(2, z), uint64(zSum))
 
-	fmt.Println("zsum", zSum)
+	//fmt.Println("zsum", zSum)
+	//fmt.Println("floora", floorA)
 
 	//res_mantissa := (math.Float64bits(zSum) & EXP_MANTISSA_MASK) | (uint64(1) << EXP_MANTISSA_PRECISION);
 	res_mantissa := (math.Float64bits(zSum) & EXP_MANTISSA_MASK)
-	res_exponent :=  (math.Float64bits(zSum) >> EXP_MANTISSA_PRECISION);
+	res_exponent :=  (math.Float64bits(zSum) >> EXP_MANTISSA_PRECISION) - uint64(negfloorA);
 
-	fmt.Println("mantissa, exp, mant*2^mindel", res_mantissa, res_exponent, float64(res_mantissa) / math.Pow(float64(2), float64(53)))
+	//fmt.Println("mantissa, exp, mant*2^mindel", res_mantissa, res_exponent, float64(res_mantissa) / math.Pow(float64(2), float64(53)))
 
-	fmt.Println("res", (1 +(float64(res_mantissa) / math.Pow(float64(2), float64(52)))) * math.Pow(float64(2), float64(res_exponent) - 1023))
+	//fmt.Println("res", (1 +(float64(res_mantissa) / math.Pow(float64(2), float64(52)))) * math.Pow(float64(2), float64(res_exponent) - 1023))
 
+	rand.Seed(time.Now().UnixNano())
+
+
+	r1 := rand.Uint64()
+	r1 = r1 >> (64 - (EXP_MANTISSA_PRECISION +1))
+	r2 := rand.Uint64()
+	r2 = r2 >> (64 - (bitLenForSample))
+
+	//fmt.Println(r1, r2)
+
+	//fmt.Println("exp", res_exponent)
+
+	check1 := res_mantissa | (uint64(1) << EXP_MANTISSA_PRECISION);
+	check2 := uint64(1) << (19 + res_exponent + 1 -1023)
+	//fmt.Println(r1, check1, r2, check2)
+
+	if r1 < check1 && r2 < check2 {
+		return 1
+	}
+
+	return 0
+	//fmt.Println(uint64(10) - uint64(11))
 
 	//
 	//
@@ -165,14 +199,43 @@ func (c *NormalCDT) Bernoulli(t uint64, k uint64) (uint64) {
 	//fmt.Println(math.Float64bits(te), math.Float64bits(te + 1))
 	//
 	//fmt.Println(math.Float64frombits(0x3e833b70ffa2c5d4), EXP_MANTISSA_MASK, uint64(1) << 2)
-
-	return 1
 }
 
 
 
+func (c *NormalCDT) Bernoulli(t *big.Int, kSquareInv *big.Float) (bool) {
+	aBig := new(big.Float).SetInt(t)
+	aBig.Mul(aBig, kSquareInv)
+	a, _ := aBig.Float64()
+	a = -a
 
+	negFloorA := -math.Floor(a)
+	z := a + negFloorA
 
+	powOfZ := expCoef[0]
+	for i := 1; i < 10; i++ {
+		powOfZ = powOfZ*z + expCoef[i]
+	}
+
+	powOfAMantissa := math.Float64bits(powOfZ) & EXP_MANTISSA_MASK
+	powOfAExponent := (math.Float64bits(powOfZ) >> EXP_MANTISSA_PRECISION) - uint64(negFloorA)
+
+	randBytes := make([]byte, 16)
+	cran.Read(randBytes)
+
+	r1 := binary.LittleEndian.Uint64(randBytes[0:8])
+	r1 = r1 >> (64 - (EXP_MANTISSA_PRECISION + 1))
+	r2 := binary.LittleEndian.Uint64(randBytes[8:16])
+	r2 = r2 >> (64 - bitLenForSample)
+
+	check1 := powOfAMantissa | (uint64(1) << EXP_MANTISSA_PRECISION)
+	check2 := uint64(1) << (bitLenForSample + powOfAExponent + 1 - maxExp)
+	if r1 < check1 && r2 < check2 {
+		return true
+	}
+
+	return false
+}
 
 
 

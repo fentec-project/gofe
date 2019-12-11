@@ -36,7 +36,7 @@ func variance2(vec []uint64) (float64, float64) {
 }
 
 func TestNormalConstant(t *testing.T) {
-	r := sample.NormalCDT{}
+	r := sample.NormalCDT2{}
 
 	vec := make([]uint64, 100000)
 	for i := 0; i < len(vec); i++ {
@@ -47,5 +47,15 @@ func TestNormalConstant(t *testing.T) {
 
 	fmt.Println(ve, me)
 
-	r.Bernoulli(10, 4)
+	count := float64(0)
+	//u := big.NewInt(10)
+	//kInv := big.NewFloat(float64(1) / 16)
+	for i := 0; i < 100000000; i++ {
+		//if r.Bernoulli2(u, kInv) {
+		//	count++
+		//}
+		count += float64(r.Bernoulli2(10, 4))
+	}
+
+	fmt.Println("ber", count/100000000)
 }
