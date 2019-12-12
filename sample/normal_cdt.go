@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"math/big"
 	"encoding/binary"
-	"fmt"
 )
 
 /* CDT table */
@@ -38,6 +37,8 @@ var cdtLen = 9 /* [0..tau*sigma]=[0..9] */
 
 var cdtLowMask uint64 = 0x7fffffffffffffff
 
+// SigmaCDT is a constant 1/(2ln(2))
+var SigmaCDT, _ = new(big.Float).SetString("0.84932180028801904272150283410")
 
 // NormalCumulative samples random values from the
 // cumulative Normal (Gaussian) probability distribution, centered on 0.
@@ -73,7 +74,7 @@ func (c *NormalCDT) Sample() (*big.Int, error) {
 		x += (((r1 - cdtTable[i][0]) & ((uint64(1) << 63) ^ ((r2 - cdtTable[i][1]) | (cdtTable[i][1] - r2)))) | (r2 - cdtTable[i][1])) >> 63
 	}
 
-	fmt.Println(x)
+	//fmt.Println(x)
 	return big.NewInt(int64(x)), nil
 }
 

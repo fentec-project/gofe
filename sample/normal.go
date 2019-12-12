@@ -19,6 +19,8 @@ package sample
 import (
 	"math"
 	"math/big"
+	"encoding/binary"
+	"crypto/rand"
 )
 
 // Normal samples random values from the Normal (Gaussian)
@@ -51,6 +53,62 @@ func newNormal(sigma *big.Float, n uint) *normal {
 		powNF:  powNF,
 	}
 }
+
+
+var expCoef  = []float64{1.43291003789439094275872613876154915146798884961754e-7,
+						 1.2303944375555413249736938854916878938183799618855e-6,
+						 1.5359914219462011698283041005730353845137869939208e-5,
+						 1.5396043210538638053991311593904356413986533880234e-4,
+						 1.3333877552501097445841748978523355617653578519821e-3,
+						 9.6181209331756452318717975913386908359825611114502e-3,
+						 5.5504109841318247098307381293125217780470848083496e-2,
+						 0.24022650687652774559310842050763312727212905883789,
+						 0.69314718056193380668617010087473317980766296386719,
+						 1}
+
+var mantissaPrecision = uint64(52)
+var mantissaMask = (uint64(1) << mantissaPrecision) - 1
+var bitLenForSample = uint64(19)
+var maxExp = uint64(1023)
+
+
+func Bernoulli(t *big.Int, kSquareInv *big.Float) (bool) {
+	aBig := new(big.Float).SetInt(t)
+	aBig.Mul(aBig, kSquareInv)
+	a, _ := aBig.Float64()
+	a = -a
+
+	negFloorA := -math.Floor(a)
+	z := a + negFloorA
+
+	powOfZ := expCoef[0]
+	for i := 1; i < 10; i++ {
+		powOfZ = powOfZ*z + expCoef[i]
+	}
+
+	powOfAMantissa := math.Float64bits(powOfZ) & mantissaMask
+	powOfAExponent := (math.Float64bits(powOfZ) >> mantissaPrecision) - uint64(negFloorA)
+
+	randBytes := make([]byte, 16)
+	rand.Read(randBytes)
+
+	r1 := binary.LittleEndian.Uint64(randBytes[0:8])
+	r1 = r1 >> (64 - (mantissaPrecision + 1))
+	r2 := binary.LittleEndian.Uint64(randBytes[8:16])
+	r2 = r2 >> (64 - bitLenForSample)
+
+	check1 := powOfAMantissa | (uint64(1) << mantissaPrecision)
+	check2 := uint64(1) << (bitLenForSample + powOfAExponent + 1 - maxExp)
+
+	if r1 < check1 && r2 < check2 {
+		return true
+	}
+
+	return false
+}
+
+
+
 
 // precompExp precomputes tje values of exp(-2^i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma

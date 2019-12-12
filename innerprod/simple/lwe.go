@@ -44,7 +44,8 @@ type LWEParams struct {
 	P *big.Int // Modulus for message space
 	Q *big.Int // Modulus for ciphertext and keys
 
-	SigmaQ *big.Float
+	SigmaQ *big.Float // standard deviation for the noise terms LWE
+	KSigma *big.Int // precomputed KSigma = SigmaQ / (1/2log(2)) needed for sampling
 
 	// Matrix A of dimensions M*N is a public parameter of the scheme
 	A data.Matrix
@@ -108,10 +109,15 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	sigma.Quo(sigma, boundYF)
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
-	// make it an integer for faster sampling using NormalDouble
-	sigmaQI, _ := sigmaQ.Int(nil)
-	sigmaQ.SetInt(sigmaQI)
-	sigmaQ.Add(sigmaQ, big.NewFloat(1))
+
+	// to sample with normal_double_constant the sigmaQ must be
+	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+	// it such
+	kSigmaF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
+	kSigma, _ := kSigmaF.Int(nil)
+	kSigma.Add(kSigma, big.NewInt(1))
+	kSigmaF.SetInt(kSigma)
+	sigmaQ.Mul(sample.SigmaCDT, kSigmaF)
 
 	// sanity check if the parameters satisfy theoretical bounds
 	val.Quo(sigmaQ, val)
@@ -135,6 +141,7 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 			Q:      q,
 			A:      A,
 			SigmaQ: sigmaQ,
+			KSigma: kSigma,
 		},
 	}, nil
 }
@@ -159,10 +166,7 @@ func (s *LWE) GeneratePublicKey(SK data.Matrix) (data.Matrix, error) {
 	}
 
 	// Initialize and fill noise matrix E with m*l samples
-	sampler, err := sample.NewNormalDouble(s.Params.SigmaQ, uint(s.Params.N), big.NewFloat(1))
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating public key")
-	}
+	sampler := sample.NewNormalDoubleConstant(s.Params.KSigma)
 
 	E, err := data.NewRandomMatrix(s.Params.M, s.Params.L, sampler)
 	if err != nil {
