@@ -23,8 +23,8 @@ import (
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/fentec-project/gofe/internal/keygen"
+	"github.com/fentec-project/gofe/sample"
 )
 
 // PaillierParams represents parameters for the fully secure Paillier scheme.
@@ -118,6 +118,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	// it such
 	kSigmaF := new(big.Float).Quo(sigma, sample.SigmaCDT)
 	kSigma, _ := kSigmaF.Int(nil)
+	kSigma.Add(kSigma, big.NewInt(1))
 	sigma.Mul(sample.SigmaCDT, kSigmaF)
 
 	return &Paillier{

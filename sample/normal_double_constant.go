@@ -30,7 +30,7 @@ import (
 // probability. The sampler algorithm is constant time in the
 // sense that the sampled value is independent of the time needed.
 // The implementation is based on paper:
-// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian Sampler
+// "FACCT: FAst, Compact, and Constant-Time Discrete Gaussian Sampler
 // over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad,
 // see https://eprint.iacr.org/2018/1234.pdf.
 // See the above paper for the argumentation of the choice of
@@ -43,13 +43,13 @@ type NormalDoubleConstant struct {
 	k *big.Int
 	// precomputed values for faster sampling
 	kSquareInv *big.Float
-	twiceK *big.Int
+	twiceK     *big.Int
 }
 
 // NewNormalDoubleConstant returns an instance of NormalDoubleConstant
 // sampler. It assumes mean = 0. Parameter k needs to be given, such
 // that sigma = k * 1/2ln(2).
-func NewNormalDoubleConstant(k *big.Int) (*NormalDoubleConstant) {
+func NewNormalDoubleConstant(k *big.Int) *NormalDoubleConstant {
 	kSquare := new(big.Float).SetInt(k)
 	kSquare.Mul(kSquare, kSquare)
 	kSquareInv := new(big.Float).Quo(big.NewFloat(1), kSquare)
@@ -57,11 +57,11 @@ func NewNormalDoubleConstant(k *big.Int) (*NormalDoubleConstant) {
 	twiceK := new(big.Int).Mul(k, big.NewInt(2))
 
 	s := &NormalDoubleConstant{
-		normal:      &normal{},
-		samplerCDT:  NewNormalCDT(),
-		k:           new(big.Int).Set(k),
-		kSquareInv:  kSquareInv,
-		twiceK:      twiceK,
+		normal:     &normal{},
+		samplerCDT: NewNormalCDT(),
+		k:          new(big.Int).Set(k),
+		kSquareInv: kSquareInv,
+		twiceK:     twiceK,
 	}
 
 	return s
@@ -110,5 +110,4 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 			return res, err
 		}
 	}
-
 }

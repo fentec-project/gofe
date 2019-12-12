@@ -17,8 +17,9 @@
 package keygen
 
 import (
-	"math/big"
 	"fmt"
+	"math/big"
+
 	"github.com/fentec-project/gofe/sample"
 )
 

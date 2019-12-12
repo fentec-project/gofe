@@ -24,11 +24,11 @@ import (
 
 func TestNormalCDT(t *testing.T) {
 	var tests = []struct {
-		name     string
-		expect   paramBounds
+		name   string
+		expect paramBounds
 	}{
 		{
-			name:     "CDT",
+			name: "CDT",
 			expect: paramBounds{
 				meanLow:  0.39,
 				meanHigh: 0.41,

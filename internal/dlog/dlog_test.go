@@ -19,9 +19,10 @@ package dlog
 import (
 	"math/big"
 	"testing"
+
 	"github.com/fentec-project/gofe/internal/keygen"
-	"github.com/stretchr/testify/assert"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
 )
 
 type params struct {
@@ -71,4 +72,3 @@ func TestDLog(t *testing.T) {
 	assert.Equal(t, xCheck.Cmp(x1), 0, "BabyStepGiantStep result is wrong")
 	assert.Equal(t, xCheck.Cmp(x2), 0, "pollardRho result is wrong")
 }
-

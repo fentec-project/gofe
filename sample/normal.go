@@ -17,10 +17,10 @@
 package sample
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"math"
 	"math/big"
-	"encoding/binary"
-	"crypto/rand"
 )
 
 // Normal samples random values from the Normal (Gaussian)
@@ -56,16 +56,16 @@ func newNormal(sigma *big.Float, n uint) *normal {
 
 // expCoef are coefficients of a polynomial approximating an exponential
 // function.
-var expCoef  = []float64{1.43291003789439094275872613876154915146798884961754e-7,
-						 1.2303944375555413249736938854916878938183799618855e-6,
-						 1.5359914219462011698283041005730353845137869939208e-5,
-						 1.5396043210538638053991311593904356413986533880234e-4,
-						 1.3333877552501097445841748978523355617653578519821e-3,
-						 9.6181209331756452318717975913386908359825611114502e-3,
-						 5.5504109841318247098307381293125217780470848083496e-2,
-						 0.24022650687652774559310842050763312727212905883789,
-						 0.69314718056193380668617010087473317980766296386719,
-						 1}
+var expCoef = []float64{1.43291003789439094275872613876154915146798884961754e-7,
+	1.2303944375555413249736938854916878938183799618855e-6,
+	1.5359914219462011698283041005730353845137869939208e-5,
+	1.5396043210538638053991311593904356413986533880234e-4,
+	1.3333877552501097445841748978523355617653578519821e-3,
+	9.6181209331756452318717975913386908359825611114502e-3,
+	5.5504109841318247098307381293125217780470848083496e-2,
+	0.24022650687652774559310842050763312727212905883789,
+	0.69314718056193380668617010087473317980766296386719,
+	1}
 
 var mantissaPrecision = uint64(52)
 var mantissaMask = (uint64(1) << mantissaPrecision) - 1
@@ -75,12 +75,12 @@ var maxExp = uint64(1023)
 // Bernoulli returns true with probability proportional to
 // 2^{-t/k^2}. A polynomial approximation is used to evaluate
 // the exponential function. The implementation is based on paper:
-// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian
+// "FACCT: FAst, Compact, and Constant-Time Discrete Gaussian
 // Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad
 // (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
 // it is argued that such a sampling achieves a relative error at most
 // 2^{-45} with the chosen parameters.
-func Bernoulli(t *big.Int, kSquareInv *big.Float) (bool) {
+func Bernoulli(t *big.Int, kSquareInv *big.Float) bool {
 	aBig := new(big.Float).SetInt(t)
 	aBig.Mul(aBig, kSquareInv)
 	a, _ := aBig.Float64()

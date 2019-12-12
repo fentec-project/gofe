@@ -18,11 +18,11 @@ package sample
 
 import (
 	"crypto/rand"
-	"math/big"
 	"encoding/binary"
+	"math/big"
 )
 
-// cdtTable consist of a precomputed table of values
+// cdtTable consists of a precomputed table of values
 // using which one can create a constant time half-Gaussian
 // sampler with sigma = 1/2ln(2)
 var cdtTable = [][2]uint64{{2200310400551559144, 3327841033070651387},
@@ -47,7 +47,7 @@ var SigmaCDT, _ = new(big.Float).SetString("0.84932180028801904272150283410")
 // In particular each value x from Z^+ is sampled with probability proportional to
 // exp(-x^2/sigma^2) where sigma = 1/2ln(2).
 // The implementation is based on paper:
-// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian
+// "FACCT: FAst, Compact, and Constant-Time Discrete Gaussian
 // Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad
 // (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
 // it is argued that such a sampling achieves a relative error at most
@@ -67,7 +67,7 @@ func NewNormalCDT() *NormalCDT {
 func (c *NormalCDT) Sample() (*big.Int, error) {
 	randBytes := make([]byte, 16)
 	_, err := rand.Read(randBytes)
-	if err!=nil {
+	if err != nil {
 		return nil, err
 	}
 	r1 := binary.LittleEndian.Uint64(randBytes[0:8])

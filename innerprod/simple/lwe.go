@@ -45,7 +45,7 @@ type LWEParams struct {
 	Q *big.Int // Modulus for ciphertext and keys
 
 	SigmaQ *big.Float // standard deviation for the noise terms LWE
-	KSigma *big.Int // precomputed KSigma = SigmaQ / (1/2log(2)) needed for sampling
+	KSigma *big.Int   // precomputed KSigma = SigmaQ / (1/2log(2)) needed for sampling
 
 	// Matrix A of dimensions M*N is a public parameter of the scheme
 	A data.Matrix
@@ -110,7 +110,7 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
 
-	// to sample with normal_double_constant the sigmaQ must be
+	// to sample with NormalDoubleConstant sigmaQ must be
 	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 	// it such
 	kSigmaF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)

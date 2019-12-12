@@ -27,13 +27,13 @@ func TestNormalDoubleConstant(t *testing.T) {
 	sigmaCDTSquare := 0.84932180028801904272150283410
 	sigmaCDTSquare *= sigmaCDTSquare
 	var tests = []struct {
-		k		   *big.Int
-		name       string
-		expect     paramBounds
+		k      *big.Int
+		name   string
+		expect paramBounds
 	}{
 		{
-			name:   "sigma= 1 * sqrt(1/(2*ln(2)))",
-			k:      big.NewInt(1),
+			name: "sigma= 1 * sqrt(1/(2*ln(2)))",
+			k:    big.NewInt(1),
 			expect: paramBounds{
 				meanLow:  -0.2,
 				meanHigh: 0.2,
@@ -42,8 +42,8 @@ func TestNormalDoubleConstant(t *testing.T) {
 			},
 		},
 		{
-			name:   "sigma= 10 * sqrt(1/(2*ln(2)))",
-			k:      big.NewInt(10),
+			name: "sigma= 10 * sqrt(1/(2*ln(2)))",
+			k:    big.NewInt(10),
 			expect: paramBounds{
 				meanLow:  -2,
 				meanHigh: 2,
@@ -52,8 +52,8 @@ func TestNormalDoubleConstant(t *testing.T) {
 			},
 		},
 		{
-			name:   "sigma= 1000 * sqrt(1/(2*ln(2)))",
-			k:      big.NewInt(1000),
+			name: "sigma= 1000 * sqrt(1/(2*ln(2)))",
+			k:    big.NewInt(1000),
 			expect: paramBounds{
 				meanLow:  -20,
 				meanHigh: 20,

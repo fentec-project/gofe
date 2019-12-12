@@ -17,9 +17,9 @@
 package fullysec
 
 import (
-	"math/big"
-	"math"
 	"crypto/rand"
+	"math"
+	"math/big"
 
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
@@ -117,7 +117,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		sqrtMax := new(big.Float).Sqrt(max)
 
 		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
-		// to sample with normal_double_constant the sigmaQ must be
+		// to sample with NormalDoubleConstant sigmaQ must be
 		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 		// it such
 		kSigma1F := new(big.Float).Quo(sigma1, sample.SigmaCDT)
@@ -129,7 +129,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
 		mulVal := math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)
 		sigma2 = new(big.Float).Mul(big.NewFloat(mulVal), max)
-		// to sample with normal_double_constant the sigmaQ must be
+		// to sample with NormalDoubleConstant sigmaQ must be
 		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 		// it such
 		kSigma2F := new(big.Float).Quo(sigma2, sample.SigmaCDT)
@@ -179,7 +179,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// get sigmaQ
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
-	// to sample with normal_double_constant the sigmaQ must be
+	// to sample with NormalDoubleConstant sigmaQ must be
 	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 	// it such
 	kSigmaQF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
@@ -192,20 +192,20 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	}
 	return &LWE{
 		Params: &LWEParams{
-			L:      l,
-			N:      n,
-			M:      m,
-			BoundX: boundX,
-			BoundY: boundY,
-			Q:      q,
-			K:      K,
-			SigmaQ: sigmaQ,
-			KSigmaQ:kSigmaQ,
-			Sigma1: sigma1,
-			KSigma1:kSigma1,
-			Sigma2: sigma2,
-			KSigma2:kSigma2,
-			A:      randMat,
+			L:       l,
+			N:       n,
+			M:       m,
+			BoundX:  boundX,
+			BoundY:  boundY,
+			Q:       q,
+			K:       K,
+			SigmaQ:  sigmaQ,
+			KSigmaQ: kSigmaQ,
+			Sigma1:  sigma1,
+			KSigma1: kSigma1,
+			Sigma2:  sigma2,
+			KSigma2: kSigma2,
+			A:       randMat,
 		},
 	}, nil
 }
