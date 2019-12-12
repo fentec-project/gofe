@@ -30,10 +30,10 @@ func TestNormalCDT(t *testing.T) {
 		{
 			name:     "CDT",
 			expect: paramBounds{
-				meanLow:  0,
-				meanHigh: 2,
-				varLow:   0,
-				varHigh:  2,
+				meanLow:  0.39,
+				meanHigh: 0.41,
+				varLow:   0.48,
+				varHigh:  0.5,
 			},
 		},
 	}

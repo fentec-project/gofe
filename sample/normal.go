@@ -54,7 +54,8 @@ func newNormal(sigma *big.Float, n uint) *normal {
 	}
 }
 
-
+// expCoef are coefficients of a polynomial approximating an exponential
+// function.
 var expCoef  = []float64{1.43291003789439094275872613876154915146798884961754e-7,
 						 1.2303944375555413249736938854916878938183799618855e-6,
 						 1.5359914219462011698283041005730353845137869939208e-5,
@@ -71,7 +72,14 @@ var mantissaMask = (uint64(1) << mantissaPrecision) - 1
 var bitLenForSample = uint64(19)
 var maxExp = uint64(1023)
 
-
+// Bernoulli returns true with probability proportional to
+// 2^{-t/k^2}. A polynomial approximation is used to evaluate
+// the exponential function. The implementation is based on paper:
+// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian
+// Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad
+// (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
+// it is argued that such a sampling achieves a relative error at most
+// 2^{-45} with the chosen parameters.
 func Bernoulli(t *big.Int, kSquareInv *big.Float) (bool) {
 	aBig := new(big.Float).SetInt(t)
 	aBig.Mul(aBig, kSquareInv)
@@ -106,9 +114,6 @@ func Bernoulli(t *big.Int, kSquareInv *big.Float) (bool) {
 
 	return false
 }
-
-
-
 
 // precompExp precomputes tje values of exp(-2^i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma

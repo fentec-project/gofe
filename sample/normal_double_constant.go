@@ -21,28 +21,34 @@ import (
 	"math/big"
 )
 
-// NormalDouble samples random values from the
+// NormalDoubleConstant samples random values from the
 // normal (Gaussian) probability distribution, centered on 0.
-// This sampler works in a way that it first samples from a
-// NormalCumulative with some small sigma and then using
+// This sampler works by double sampling: it first samples from a
+// fixed Gaussian distribution with NormalCDT and then using
 // another sampling from uniform distribution creates a candidate
 // for the output, which is accepted or rejected with certain
-// probability.
+// probability. The sampler algorithm is constant time in the
+// sense that the sampled value is independent of the time needed.
+// The implementation is based on paper:
+// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian Sampler
+// over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad,
+// see https://eprint.iacr.org/2018/1234.pdf.
+// See the above paper for the argumentation of the choice of
+// parameters and proof of precision and security.
 type NormalDoubleConstant struct {
 	*normal
-	// NormalCumulative sampler used in the first part
+	// NormalCDT sampler used in the first part
 	samplerCDT *NormalCDT
-	// precomputed parameters used for sampling
-	k      *big.Int
+	// sigma = k * 1/2ln(2)
+	k *big.Int
+	// precomputed values for faster sampling
 	kSquareInv *big.Float
 	twiceK *big.Int
 }
 
-// NewNormalDouble returns an instance of NormalDouble sampler.
-// It assumes mean = 0. Values are precomputed when this function is
-// called, so that Sample merely samples a value.
-// sigma should be a multiple of firstSigma. Increasing firstSigma a bit speeds
-// up the algorithm but increases the number of precomputed values
+// NewNormalDoubleConstant returns an instance of NormalDoubleConstant
+// sampler. It assumes mean = 0. Parameter k needs to be given, such
+// that sigma = k * 1/2ln(2).
 func NewNormalDoubleConstant(k *big.Int) (*NormalDoubleConstant) {
 	kSquare := new(big.Float).SetInt(k)
 	kSquare.Mul(kSquare, kSquare)
@@ -62,7 +68,7 @@ func NewNormalDoubleConstant(k *big.Int) (*NormalDoubleConstant) {
 }
 
 // Sample samples according to discrete Gauss distribution using
-// NormalCumulative and second sampling.
+// NormalDoubleConstant and second sampling.
 func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 	// prepare values
 	var sign int64
@@ -83,7 +89,7 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 		if err != nil {
 			return nil, err
 		}
-		// use the last sampling to decide the sign of the output
+		// use one bit of sampling to decide the sign of the output
 		if y.Cmp(s.k) != -1 {
 			sign = -1
 			y.Sub(y, s.k)

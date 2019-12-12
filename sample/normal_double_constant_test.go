@@ -21,42 +21,11 @@ import (
 	"testing"
 
 	"github.com/fentec-project/gofe/sample"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestNewNormalDoubleConstant(t *testing.T) {
-	var tests = []struct {
-		name       string
-		sigma      *big.Float
-		sigmaFirst *big.Float
-		n          uint
-		expect     paramBounds
-	}{
-		{
-			name:       "SigmaFirst=1, sigma=1.5",
-			sigmaFirst: big.NewFloat(1),
-			sigma:      big.NewFloat(1.5),
-			n:          256,
-			expect: paramBounds{
-				meanLow:  -0.5,
-				meanHigh: 0.5,
-				varLow:   90,
-				varHigh:  110,
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := sample.NewNormalDouble(test.sigma, test.n, test.sigmaFirst)
-			assert.Error(t, err)
-		})
-	}
-}
-
 func TestNormalDoubleConstant(t *testing.T) {
-	//sigmaCDT, _ := new(big.Float).SetString("0.84932180028801904272150283410")
-
+	sigmaCDTSquare := 0.84932180028801904272150283410
+	sigmaCDTSquare *= sigmaCDTSquare
 	var tests = []struct {
 		k		   *big.Int
 		name       string
@@ -68,8 +37,8 @@ func TestNormalDoubleConstant(t *testing.T) {
 			expect: paramBounds{
 				meanLow:  -0.2,
 				meanHigh: 0.2,
-				varLow:   0.5,
-				varHigh:  1.5,
+				varLow:   sigmaCDTSquare - 0.02,
+				varHigh:  sigmaCDTSquare + 0.02,
 			},
 		},
 		{
@@ -78,26 +47,25 @@ func TestNormalDoubleConstant(t *testing.T) {
 			expect: paramBounds{
 				meanLow:  -2,
 				meanHigh: 2,
-				varLow:   64,
-				varHigh:  81,
+				varLow:   100 * (sigmaCDTSquare - 0.02),
+				varHigh:  100 * (sigmaCDTSquare + 0.02),
 			},
 		},
-		//{
-		//	name:   "sigma= 1000 * sqrt(1/(2*ln(2)))",
-		//	k:      big.NewInt(1000),
-		//	expect: paramBounds{
-		//		meanLow:  -20,
-		//		meanHigh: 20,
-		//		varLow:   640000,
-		//		varHigh:  810000,
-		//	},
-		//},
+		{
+			name:   "sigma= 1000 * sqrt(1/(2*ln(2)))",
+			k:      big.NewInt(1000),
+			expect: paramBounds{
+				meanLow:  -20,
+				meanHigh: 20,
+				varLow:   1000000 * (sigmaCDTSquare - 0.02),
+				varHigh:  1000000 * (sigmaCDTSquare + 0.02),
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sampler, err := sample.NewNormalDoubleConstant(test.k)
-			assert.NoError(t, err)
+			sampler := sample.NewNormalDoubleConstant(test.k)
 			testNormalSampler(
 				t,
 				sampler,

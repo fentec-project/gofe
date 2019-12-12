@@ -22,7 +22,9 @@ import (
 	"encoding/binary"
 )
 
-/* CDT table */
+// cdtTable consist of a precomputed table of values
+// using which one can create a constant time half-Gaussian
+// sampler with sigma = 1/2ln(2)
 var cdtTable = [][2]uint64{{2200310400551559144, 3327841033070651387},
 	{7912151619254726620, 380075531178589176},
 	{5167367257772081627, 11604843442081400},
@@ -33,31 +35,35 @@ var cdtTable = [][2]uint64{{2200310400551559144, 3327841033070651387},
 	{2947787991558061753, 0},
 	{22489665999543, 0}}
 
-var cdtLen = 9 /* [0..tau*sigma]=[0..9] */
+var cdtLen = 9 // upper bound on sample values
 
 var cdtLowMask uint64 = 0x7fffffffffffffff
 
 // SigmaCDT is a constant 1/(2ln(2))
 var SigmaCDT, _ = new(big.Float).SetString("0.84932180028801904272150283410")
 
-// NormalCumulative samples random values from the
-// cumulative Normal (Gaussian) probability distribution, centered on 0.
-// This sampler is the fastest, but is limited only to cases when sigma
-// is not too big, due to the sizes of the precomputed tables.
+// NormalCDT samples random values from the discrete Normal (Gaussian)
+// probability distribution, limited to non-negative values (half-Gaussian).
+// In particular each value x from Z^+ is sampled with probability proportional to
+// exp(-x^2/sigma^2) where sigma = 1/2ln(2).
+// The implementation is based on paper:
+// "FACCT: FAst, Compact, and Constant-TimeDiscrete Gaussian
+// Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad
+// (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
+// it is argued that such a sampling achieves a relative error at most
+// 2^{-46} with the chosen parameters.
 type NormalCDT struct {
 	*normal
 }
 
-// NewNormalCumulative returns an instance of NormalCumulative sampler.
-// It assumes mean = 0. Values are precomputed when this function is
-// called, so that Sample merely returns a precomputed value.
+// NewNormalCDT returns an instance of NormalCDT sampler.
 func NewNormalCDT() *NormalCDT {
 	s := &NormalCDT{}
 	return s
 }
 
-// Sample samples discrete cumulative distribution with
-// precomputed values.
+// Sample samples discrete non-negative values with Gaussian
+// distribution.
 func (c *NormalCDT) Sample() (*big.Int, error) {
 	randBytes := make([]byte, 16)
 	_, err := rand.Read(randBytes)
@@ -74,8 +80,5 @@ func (c *NormalCDT) Sample() (*big.Int, error) {
 		x += (((r1 - cdtTable[i][0]) & ((uint64(1) << 63) ^ ((r2 - cdtTable[i][1]) | (cdtTable[i][1] - r2)))) | (r2 - cdtTable[i][1])) >> 63
 	}
 
-	//fmt.Println(x)
 	return big.NewInt(int64(x)), nil
 }
-
-
