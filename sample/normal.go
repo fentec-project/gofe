@@ -71,6 +71,7 @@ var mantissaPrecision = uint64(52)
 var mantissaMask = (uint64(1) << mantissaPrecision) - 1
 var bitLenForSample = uint64(19)
 var maxExp = uint64(1023)
+var cmpMask = uint64(1) << 61
 
 // Bernoulli returns true with probability proportional to
 // 2^{-t/l^2}. A polynomial approximation is used to evaluate
@@ -107,8 +108,8 @@ func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
 
 	check1 := powOfAMantissa | (uint64(1) << mantissaPrecision)
 	check2 := uint64(1) << (bitLenForSample + powOfAExponent + 1 - maxExp)
-
-	if r1 < check1 && r2 < check2 {
+	// constant time check if r1 < check1 && r2 < check2
+	if (cmpMask & (r1 - check1) & (r2 - check2)) > 0  {
 		return true
 	}
 

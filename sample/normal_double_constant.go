@@ -102,8 +102,10 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 		checkVal.Mul(checkVal, y)
 		res.Add(res, y)
 
+		// zeroCheck == 1 if and only if sign == 1 and res.Sign() == 0
+		zeroCheck := int64(res.Sign()) + sign
 		// sample from Bernoulli to decide if accept
-		if Bernoulli(checkVal, s.lSquareInv) && !(res.Sign() == 0 && sign == -1) {
+		if Bernoulli(checkVal, s.lSquareInv) && zeroCheck != 1 {
 			// calculate the final value that we accepted
 			res.Mul(res, big.NewInt(sign))
 
