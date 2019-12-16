@@ -39,29 +39,29 @@ type NormalDoubleConstant struct {
 	*normal
 	// NormalCDT sampler used in the first part
 	samplerCDT *NormalCDT
-	// sigma = k * 1/2ln(2)
-	k *big.Int
+	// sigma = l * 1/2ln(2)
+	l *big.Int
 	// precomputed values for faster sampling
-	kSquareInv *big.Float
-	twiceK     *big.Int
+	lSquareInv *big.Float
+	twiceL     *big.Int
 }
 
 // NewNormalDoubleConstant returns an instance of NormalDoubleConstant
 // sampler. It assumes mean = 0. Parameter k needs to be given, such
 // that sigma = k * 1/2ln(2).
-func NewNormalDoubleConstant(k *big.Int) *NormalDoubleConstant {
-	kSquare := new(big.Float).SetInt(k)
+func NewNormalDoubleConstant(l *big.Int) *NormalDoubleConstant {
+	kSquare := new(big.Float).SetInt(l)
 	kSquare.Mul(kSquare, kSquare)
 	kSquareInv := new(big.Float).Quo(big.NewFloat(1), kSquare)
 
-	twiceK := new(big.Int).Mul(k, big.NewInt(2))
+	twiceL := new(big.Int).Mul(l, big.NewInt(2))
 
 	s := &NormalDoubleConstant{
 		normal:     &normal{},
 		samplerCDT: NewNormalCDT(),
-		k:          new(big.Int).Set(k),
-		kSquareInv: kSquareInv,
-		twiceK:     twiceK,
+		l:          new(big.Int).Set(l),
+		lSquareInv: kSquareInv,
+		twiceL:     twiceL,
 	}
 
 	return s
@@ -85,25 +85,25 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 			return nil, err
 		}
 		// sample uniformly from an interval
-		y, err := rand.Int(rand.Reader, s.twiceK)
+		y, err := rand.Int(rand.Reader, s.twiceL)
 		if err != nil {
 			return nil, err
 		}
 		// use one bit of sampling to decide the sign of the output
-		if y.Cmp(s.k) != -1 {
+		if y.Cmp(s.l) != -1 {
 			sign = -1
-			y.Sub(y, s.k)
+			y.Sub(y, s.l)
 		}
 
 		// partially calculate the result and the probability of accepting the result
-		res.Mul(s.k, x)
+		res.Mul(s.l, x)
 		checkVal.Mul(res, big.NewInt(2))
 		checkVal.Add(checkVal, y)
 		checkVal.Mul(checkVal, y)
 		res.Add(res, y)
 
 		// sample from Bernoulli to decide if accept
-		if Bernoulli(checkVal, s.kSquareInv) && !(res.Sign() == 0 && sign == -1) {
+		if Bernoulli(checkVal, s.lSquareInv) && !(res.Sign() == 0 && sign == -1) {
 			// calculate the final value that we accepted
 			res.Mul(res, big.NewInt(sign))
 

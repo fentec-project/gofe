@@ -73,16 +73,16 @@ var bitLenForSample = uint64(19)
 var maxExp = uint64(1023)
 
 // Bernoulli returns true with probability proportional to
-// 2^{-t/k^2}. A polynomial approximation is used to evaluate
+// 2^{-t/l^2}. A polynomial approximation is used to evaluate
 // the exponential function. The implementation is based on paper:
 // "FACCT: FAst, Compact, and Constant-Time Discrete Gaussian
 // Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad
 // (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
 // it is argued that such a sampling achieves a relative error at most
 // 2^{-45} with the chosen parameters.
-func Bernoulli(t *big.Int, kSquareInv *big.Float) bool {
+func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
 	aBig := new(big.Float).SetInt(t)
-	aBig.Mul(aBig, kSquareInv)
+	aBig.Mul(aBig, lSquareInv)
 	a, _ := aBig.Float64()
 	a = -a
 
