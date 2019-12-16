@@ -47,12 +47,12 @@ type NormalDoubleConstant struct {
 }
 
 // NewNormalDoubleConstant returns an instance of NormalDoubleConstant
-// sampler. It assumes mean = 0. Parameter k needs to be given, such
-// that sigma = k * 1/2ln(2).
+// sampler. It assumes mean = 0. Parameter l needs to be given, such
+// that sigma = l * 1/2ln(2).
 func NewNormalDoubleConstant(l *big.Int) *NormalDoubleConstant {
-	kSquare := new(big.Float).SetInt(l)
-	kSquare.Mul(kSquare, kSquare)
-	kSquareInv := new(big.Float).Quo(big.NewFloat(1), kSquare)
+	lSquare := new(big.Float).SetInt(l)
+	lSquare.Mul(lSquare, lSquare)
+	lSquareInv := new(big.Float).Quo(big.NewFloat(1), lSquare)
 
 	twiceL := new(big.Int).Mul(l, big.NewInt(2))
 
@@ -60,7 +60,7 @@ func NewNormalDoubleConstant(l *big.Int) *NormalDoubleConstant {
 		normal:     &normal{},
 		samplerCDT: NewNormalCDT(),
 		l:          new(big.Int).Set(l),
-		lSquareInv: kSquareInv,
+		lSquareInv: lSquareInv,
 		twiceL:     twiceL,
 	}
 

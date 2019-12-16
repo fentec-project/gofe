@@ -109,7 +109,7 @@ func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
 	check1 := powOfAMantissa | (uint64(1) << mantissaPrecision)
 	check2 := uint64(1) << (bitLenForSample + powOfAExponent + 1 - maxExp)
 	// constant time check if r1 < check1 && r2 < check2
-	if (cmpMask & (r1 - check1) & (r2 - check2)) > 0  {
+	if (cmpMask & (r1 - check1) & (r2 - check2)) > 0 {
 		return true
 	}
 
