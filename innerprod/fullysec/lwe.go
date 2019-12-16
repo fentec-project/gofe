@@ -48,16 +48,16 @@ type LWEParams struct {
 
 	// standard deviation for the noise terms in the encryption process
 	SigmaQ *big.Float
-	// precomputed KSigmaQ = SigmaQ / (1/2log(2)) needed for sampling
-	KSigmaQ *big.Int
+	// precomputed TSigmaQ = SigmaQ / (1/2log(2)) needed for sampling
+	TSigmaQ *big.Int
 	// standard deviation for first half of the matrix for sampling private key
 	Sigma1 *big.Float
-	// precomputed KSigma1 = Sigma1 / (1/2log(2)) needed for sampling
-	KSigma1 *big.Int
+	// precomputed TSigma1 = Sigma1 / (1/2log(2)) needed for sampling
+	TSigma1 *big.Int
 	// standard deviation for second half of the matrix for sampling private key
 	Sigma2 *big.Float
-	// precomputed KSigma2 = Sigma2 / (1/2log(2)) needed for sampling
-	KSigma2 *big.Int
+	// precomputed TSigma2 = Sigma2 / (1/2log(2)) needed for sampling
+	TSigma2 *big.Int
 	// Matrix A of dimensions M*N is a public parameter of the scheme
 	A data.Matrix
 }
@@ -97,7 +97,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
 	nBitsQ := 1
 	var sigma, sigma1, sigma2 *big.Float
-	var kSigma1, kSigma2 *big.Int
+	var tSigma1, tSigma2 *big.Int
 	// parameters for the scheme are given as a set of requirements in the paper
 	// hence we search for such parameters iteratively
 	for i := 1; true; i++ {
@@ -120,9 +120,9 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		// to sample with NormalDoubleConstant sigmaQ must be
 		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 		// it such
-		kSigma1F := new(big.Float).Quo(sigma1, sample.SigmaCDT)
-		kSigma1, _ = kSigma1F.Int(nil)
-		sigma1.Mul(sample.SigmaCDT, kSigma1F)
+		tSigma1F := new(big.Float).Quo(sigma1, sample.SigmaCDT)
+		tSigma1, _ = tSigma1F.Int(nil)
+		sigma1.Mul(sample.SigmaCDT, tSigma1F)
 
 		// tmp values
 		nPow3 := math.Pow(nF, 3)
@@ -132,9 +132,9 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		// to sample with NormalDoubleConstant sigmaQ must be
 		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 		// it such
-		kSigma2F := new(big.Float).Quo(sigma2, sample.SigmaCDT)
-		kSigma2, _ = kSigma2F.Int(nil)
-		sigma2.Mul(sample.SigmaCDT, kSigma2F)
+		tSigma2F := new(big.Float).Quo(sigma2, sample.SigmaCDT)
+		tSigma2, _ = tSigma2F.Int(nil)
+		sigma2.Mul(sample.SigmaCDT, tSigma2F)
 
 		// tmp value
 		sigma1Square := new(big.Float).Mul(sigma1, sigma1)
@@ -182,9 +182,9 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// to sample with NormalDoubleConstant sigmaQ must be
 	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 	// it such
-	kSigmaQF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
-	kSigmaQ, _ := kSigmaQF.Int(nil)
-	sigmaQ.Mul(sample.SigmaCDT, kSigmaQF)
+	tSigmaQF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
+	tSigmaQ, _ := tSigmaQF.Int(nil)
+	sigmaQ.Mul(sample.SigmaCDT, tSigmaQF)
 
 	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
@@ -200,11 +200,11 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 			Q:       q,
 			K:       K,
 			SigmaQ:  sigmaQ,
-			KSigmaQ: kSigmaQ,
+			TSigmaQ: tSigmaQ,
 			Sigma1:  sigma1,
-			KSigma1: kSigma1,
+			TSigma1: tSigma1,
 			Sigma2:  sigma2,
-			KSigma2: kSigma2,
+			TSigma2: tSigma2,
 			A:       randMat,
 		},
 	}, nil
@@ -217,8 +217,8 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	var val *big.Int
 
-	sampler1 := sample.NewNormalDoubleConstant(s.Params.KSigma1)
-	sampler2 := sample.NewNormalDoubleConstant(s.Params.KSigma2)
+	sampler1 := sample.NewNormalDoubleConstant(s.Params.TSigma1)
+	sampler2 := sample.NewNormalDoubleConstant(s.Params.TSigma2)
 
 	Z := make(data.Matrix, s.Params.L)
 	halfRows := Z.Rows() / 2
@@ -299,7 +299,7 @@ func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	sampler := sample.NewNormalDoubleConstant(s.Params.KSigmaQ)
+	sampler := sample.NewNormalDoubleConstant(s.Params.TSigmaQ)
 
 	e0, err0 := data.NewRandomVector(s.Params.M, sampler)
 	e1, err1 := data.NewRandomVector(s.Params.L, sampler)
@@ -352,7 +352,7 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 	if mu1.Cmp(new(big.Int).Quo(s.Params.Q, big.NewInt(2))) == 1 {
 		mu1.Sub(mu1, s.Params.Q)
 	}
-	// TODO Improve!
+
 	paramsKTimes2 := new(big.Int).Lsh(s.Params.K, 1)
 	qDivK := new(big.Int).Div(s.Params.Q, s.Params.K)
 	qDivKTimes2 := new(big.Int).Div(s.Params.Q, paramsKTimes2)

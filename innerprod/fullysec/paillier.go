@@ -35,7 +35,7 @@ type PaillierParams struct {
 	BoundX  *big.Int   // a bound on the entries of the input vector
 	BoundY  *big.Int   // a bound on the entries of the inner product vector
 	Sigma   *big.Float // the standard deviation for the sampling a secret key
-	KSigma  *big.Int   // precomputed Sigma/(1/2log(2)) needed for sampling
+	TSigma  *big.Int   // precomputed Sigma/(1/2log(2)) needed for sampling
 	Lambda  int        // security parameter
 	G       *big.Int   // generator of the 2n-th residues subgroup of Z_N^2*
 }
@@ -116,10 +116,10 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	// to sample with NormalDoubleConstant sigma must be
 	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
 	// it such
-	kSigmaF := new(big.Float).Quo(sigma, sample.SigmaCDT)
-	kSigma, _ := kSigmaF.Int(nil)
-	kSigma.Add(kSigma, big.NewInt(1))
-	sigma.Mul(sample.SigmaCDT, kSigmaF)
+	tSigmaF := new(big.Float).Quo(sigma, sample.SigmaCDT)
+	tSigma, _ := tSigmaF.Int(nil)
+	tSigma.Add(tSigma, big.NewInt(1))
+	sigma.Mul(sample.SigmaCDT, tSigmaF)
 
 	return &Paillier{
 		Params: &PaillierParams{
@@ -129,7 +129,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 			BoundX:  boundX,
 			BoundY:  boundY,
 			Sigma:   sigma,
-			KSigma:  kSigma,
+			TSigma:  tSigma,
 			Lambda:  lambda,
 			G:       g,
 		},
@@ -150,7 +150,7 @@ func NewPaillierFromParams(params *PaillierParams) *Paillier {
 // could not be generated.
 func (s *Paillier) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 	// sampler for sampling a secret key
-	sampler := sample.NewNormalDoubleConstant(s.Params.KSigma)
+	sampler := sample.NewNormalDoubleConstant(s.Params.TSigma)
 
 	// generate a secret key
 	secKey, err := data.NewRandomVector(s.Params.L, sampler)
