@@ -28,7 +28,8 @@ import (
 // NormalCumulative with some small sigma and then using
 // another sampling from uniform distribution creates a candidate
 // for the output, which is accepted or rejected with certain
-// probability.
+// probability. Note that the sampler offers arbitrary precision
+// but the implementation is not constant time.
 type NormalDouble struct {
 	*normal
 	// NormalCumulative sampler used in the first part

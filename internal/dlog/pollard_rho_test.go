@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/fentec-project/gofe/internal/keygen"
-	"github.com/stretchr/testify/assert"
 	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPollardRho(t *testing.T) {

@@ -17,9 +17,9 @@
 package fullysec
 
 import (
-	"math/big"
-	"math"
 	"crypto/rand"
+	"math"
+	"math/big"
 
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"
@@ -48,11 +48,16 @@ type LWEParams struct {
 
 	// standard deviation for the noise terms in the encryption process
 	SigmaQ *big.Float
+	// precomputed LSigmaQ = SigmaQ / (1/2log(2)) needed for sampling
+	LSigmaQ *big.Int
 	// standard deviation for first half of the matrix for sampling private key
 	Sigma1 *big.Float
+	// precomputed LSigma1 = Sigma1 / (1/2log(2)) needed for sampling
+	LSigma1 *big.Int
 	// standard deviation for second half of the matrix for sampling private key
 	Sigma2 *big.Float
-
+	// precomputed LSigma2 = Sigma2 / (1/2log(2)) needed for sampling
+	LSigma2 *big.Int
 	// Matrix A of dimensions M*N is a public parameter of the scheme
 	A data.Matrix
 }
@@ -92,7 +97,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
 	nBitsQ := 1
 	var sigma, sigma1, sigma2 *big.Float
-
+	var lSigma1, lSigma2 *big.Int
 	// parameters for the scheme are given as a set of requirements in the paper
 	// hence we search for such parameters iteratively
 	for i := 1; true; i++ {
@@ -112,18 +117,24 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		sqrtMax := new(big.Float).Sqrt(max)
 
 		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
-		// make it an integer for faster sampling using NormalDouble
-		sigma1I, _ := sigma1.Int(nil)
-		sigma1.SetInt(sigma1I)
+		// to sample with NormalDoubleConstant sigmaQ must be
+		// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
+		// it such
+		lSigma1F := new(big.Float).Quo(sigma1, sample.SigmaCDT)
+		lSigma1, _ = lSigma1F.Int(nil)
+		sigma1.Mul(sample.SigmaCDT, lSigma1F)
 
 		// tmp values
 		nPow3 := math.Pow(nF, 3)
 		powSqrtLogM5 := math.Pow(math.Sqrt(log2M), 5)
 		mulVal := math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)
 		sigma2 = new(big.Float).Mul(big.NewFloat(mulVal), max)
-		// make it an integer for faster sampling using NormalDouble
-		sigma2I, _ := sigma2.Int(nil)
-		sigma2.SetInt(sigma2I)
+		// to sample with NormalDoubleConstant sigmaQ must be
+		// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
+		// it such
+		lSigma2F := new(big.Float).Quo(sigma2, sample.SigmaCDT)
+		lSigma2, _ = lSigma2F.Int(nil)
+		sigma2.Mul(sample.SigmaCDT, lSigma2F)
 
 		// tmp value
 		sigma1Square := new(big.Float).Mul(sigma1, sigma1)
@@ -168,9 +179,12 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// get sigmaQ
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
-	// make it an integer for faster sampling using NormalDouble
-	sigmaQI, _ := sigmaQ.Int(nil)
-	sigmaQ.SetInt(sigmaQI)
+	// to sample with NormalDoubleConstant sigmaQ must be
+	// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
+	// it such
+	lSigmaQF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
+	lSigmaQ, _ := lSigmaQF.Int(nil)
+	sigmaQ.Mul(sample.SigmaCDT, lSigmaQF)
 
 	randMat, err := data.NewRandomMatrix(m, n, sample.NewUniform(q))
 	if err != nil {
@@ -178,17 +192,20 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	}
 	return &LWE{
 		Params: &LWEParams{
-			L:      l,
-			N:      n,
-			M:      m,
-			BoundX: boundX,
-			BoundY: boundY,
-			Q:      q,
-			K:      K,
-			SigmaQ: sigmaQ,
-			Sigma1: sigma1,
-			Sigma2: sigma2,
-			A:      randMat,
+			L:       l,
+			N:       n,
+			M:       m,
+			BoundX:  boundX,
+			BoundY:  boundY,
+			Q:       q,
+			K:       K,
+			SigmaQ:  sigmaQ,
+			LSigmaQ: lSigmaQ,
+			Sigma1:  sigma1,
+			LSigma1: lSigma1,
+			Sigma2:  sigma2,
+			LSigma2: lSigma2,
+			A:       randMat,
 		},
 	}, nil
 }
@@ -200,14 +217,8 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 func (s *LWE) GenerateSecretKey() (data.Matrix, error) {
 	var val *big.Int
 
-	sampler1, err := sample.NewNormalDouble(s.Params.Sigma1, uint(s.Params.N), big.NewFloat(1))
-	if err != nil {
-		return nil, err
-	}
-	sampler2, err := sample.NewNormalDouble(s.Params.Sigma2, uint(s.Params.N), big.NewFloat(1))
-	if err != nil {
-		return nil, err
-	}
+	sampler1 := sample.NewNormalDoubleConstant(s.Params.LSigma1)
+	sampler2 := sample.NewNormalDoubleConstant(s.Params.LSigma2)
 
 	Z := make(data.Matrix, s.Params.L)
 	halfRows := Z.Rows() / 2
@@ -288,10 +299,8 @@ func (s *LWE) Encrypt(x data.Vector, U data.Matrix) (data.Vector, error) {
 	}
 
 	// calculate the standard distribution and sample vectors e0, e1
-	sampler, err := sample.NewNormalDouble(s.Params.SigmaQ, uint(s.Params.N), big.NewFloat(1))
-	if err != nil {
-		return nil, errors.Wrap(err, "error in encrypt")
-	}
+	sampler := sample.NewNormalDoubleConstant(s.Params.LSigmaQ)
+
 	e0, err0 := data.NewRandomVector(s.Params.M, sampler)
 	e1, err1 := data.NewRandomVector(s.Params.L, sampler)
 	if err0 != nil || err1 != nil {
@@ -343,7 +352,7 @@ func (s *LWE) Decrypt(cipher, zY, y data.Vector) (*big.Int, error) {
 	if mu1.Cmp(new(big.Int).Quo(s.Params.Q, big.NewInt(2))) == 1 {
 		mu1.Sub(mu1, s.Params.Q)
 	}
-	// TODO Improve!
+
 	paramsKTimes2 := new(big.Int).Lsh(s.Params.K, 1)
 	qDivK := new(big.Int).Div(s.Params.Q, s.Params.K)
 	qDivKTimes2 := new(big.Int).Div(s.Params.Q, paramsKTimes2)

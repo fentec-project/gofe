@@ -57,7 +57,7 @@ type paramBounds struct {
 // it is producing expected results - such that mean and variance
 // of a series of samples are within acceptable bounds.
 func testNormalSampler(t *testing.T, s sample.Sampler, bounds paramBounds) {
-	vec := make([]*big.Int, 10000)
+	vec := make([]*big.Int, 100000)
 	for i := 0; i < len(vec); i++ {
 		vec[i], _ = s.Sample()
 	}

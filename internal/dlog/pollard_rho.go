@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
 	"github.com/fentec-project/gofe/sample"
 )
 

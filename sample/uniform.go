@@ -17,8 +17,8 @@
 package sample
 
 import (
-	"math/big"
 	"crypto/rand"
+	"math/big"
 )
 
 // UniformRange samples random values from the interval [min, max).
