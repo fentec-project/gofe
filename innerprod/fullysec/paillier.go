@@ -114,7 +114,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	sigma.Sqrt(sigma)
 	sigma.Add(sigma, big.NewFloat(2))
 	// to sample with NormalDoubleConstant sigma must be
-	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+	// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
 	// it such
 	lSigmaF := new(big.Float).Quo(sigma, sample.SigmaCDT)
 	lSigma, _ := lSigmaF.Int(nil)

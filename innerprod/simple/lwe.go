@@ -111,7 +111,7 @@ func NewLWE(l int, boundX, boundY *big.Int, n int) (*LWE, error) {
 	sigmaQ := new(big.Float).Mul(sigma, qF)
 
 	// to sample with NormalDoubleConstant sigmaQ must be
-	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+	// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
 	// it such
 	lSigmaF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
 	lSigma, _ := lSigmaF.Int(nil)

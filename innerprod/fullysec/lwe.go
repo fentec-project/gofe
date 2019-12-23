@@ -118,7 +118,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
 		sigma1 = new(big.Float).Mul(big.NewFloat(sqrtNLogM), sqrtMax)
 		// to sample with NormalDoubleConstant sigmaQ must be
-		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+		// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
 		// it such
 		lSigma1F := new(big.Float).Quo(sigma1, sample.SigmaCDT)
 		lSigma1, _ = lSigma1F.Int(nil)
@@ -130,7 +130,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		mulVal := math.Sqrt(nF) * nPow3 * powSqrtLogM5 * math.Sqrt(boundMF)
 		sigma2 = new(big.Float).Mul(big.NewFloat(mulVal), max)
 		// to sample with NormalDoubleConstant sigmaQ must be
-		// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+		// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
 		// it such
 		lSigma2F := new(big.Float).Quo(sigma2, sample.SigmaCDT)
 		lSigma2, _ = lSigma2F.Int(nil)
@@ -180,7 +180,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	qF := new(big.Float).SetInt(q)
 	sigmaQ := new(big.Float).Mul(sigma, qF)
 	// to sample with NormalDoubleConstant sigmaQ must be
-	// a multiple of sample.SigmaCDT = 1/(2ln(2)), hence we make
+	// a multiple of sample.SigmaCDT = sqrt(1/2ln(2)), hence we make
 	// it such
 	lSigmaQF := new(big.Float).Quo(sigmaQ, sample.SigmaCDT)
 	lSigmaQ, _ := lSigmaQF.Int(nil)

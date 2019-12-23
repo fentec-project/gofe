@@ -24,7 +24,7 @@ import (
 
 // cdtTable consists of a precomputed table of values
 // using which one can create a constant time half-Gaussian
-// sampler with sigma = 1/2ln(2)
+// sampler with sigma = sqrt(1/2ln(2))
 var cdtTable = [][2]uint64{{2200310400551559144, 3327841033070651387},
 	{7912151619254726620, 380075531178589176},
 	{5167367257772081627, 11604843442081400},
@@ -39,13 +39,13 @@ var cdtLen = 9 // upper bound on sample values
 
 var cdtLowMask uint64 = 0x7fffffffffffffff
 
-// SigmaCDT is a constant 1/(2ln(2))
+// SigmaCDT is a constant sqrt(1/(2ln(2)))
 var SigmaCDT, _ = new(big.Float).SetString("0.84932180028801904272150283410")
 
 // NormalCDT samples random values from the discrete Normal (Gaussian)
 // probability distribution, limited to non-negative values (half-Gaussian).
 // In particular each value x from Z^+ is sampled with probability proportional to
-// exp(-x^2/sigma^2) where sigma = 1/2ln(2).
+// exp(-x^2/sigma^2) where sigma = sqrt(1/2ln(2)).
 // The implementation is based on paper:
 // "FACCT: FAst, Compact, and Constant-Time Discrete Gaussian
 // Sampler over Integers" by R. K. Zhao, R. Steinfeld, and A. Sakzad

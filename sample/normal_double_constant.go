@@ -39,7 +39,7 @@ type NormalDoubleConstant struct {
 	*normal
 	// NormalCDT sampler used in the first part
 	samplerCDT *NormalCDT
-	// sigma = l * 1/2ln(2)
+	// sigma = l * sqrt(1/2ln(2))
 	l *big.Int
 	// precomputed values for faster sampling
 	lSquareInv *big.Float
@@ -48,7 +48,7 @@ type NormalDoubleConstant struct {
 
 // NewNormalDoubleConstant returns an instance of NormalDoubleConstant
 // sampler. It assumes mean = 0. Parameter l needs to be given, such
-// that sigma = l * 1/2ln(2).
+// that sigma = l * sqrt(1/2ln(2)).
 func NewNormalDoubleConstant(l *big.Int) *NormalDoubleConstant {
 	lSquare := new(big.Float).SetInt(l)
 	lSquare.Mul(lSquare, lSquare)
@@ -74,8 +74,6 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 	var sign int64
 	checkVal := new(big.Int)
 	res := new(big.Int)
-	uF := new(big.Float)
-	uF.SetPrec(s.n)
 	for {
 		sign = 1
 		// first sample according to discrete gauss with smaller
