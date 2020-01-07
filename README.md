@@ -1,5 +1,9 @@
 # GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6d709aa7ba424dafbbca7dc13627eb04)](https://www.codacy.com/manual/tilenmarc/gofe_2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
 
+<p align="center">
+        <img src="GoFE_logo.png" width="160" />
+</p>
+
 GoFE is a cryptographic library offering different state-of-the-art
 implementations of functional encryption schemes, specifically FE
 schemes for _linear_ (e.g. _inner products_) and _quadratic polynomials_.
