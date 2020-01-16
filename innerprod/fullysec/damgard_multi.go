@@ -274,5 +274,6 @@ func (dm *DamgardMulti) Decrypt(cipher []data.Vector, key *DamgardMultiDerivedKe
 	bound := new(big.Int).Mul(dm.Bound, dm.Bound)
 	bound.Mul(bound, big.NewInt(int64(dm.Params.L*dm.NumClients)))
 	res, err := calc.WithBound(bound).BabyStepGiantStep(r, dm.Params.G)
-	return res, nil
+
+	return res, err
 }

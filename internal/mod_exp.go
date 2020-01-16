@@ -21,12 +21,13 @@ import "math/big"
 // ModExp calculates g^x in Z_m*, even if x < 0.
 func ModExp(g, x, m *big.Int) *big.Int {
 	ret := new(big.Int)
-	if x.Cmp(big.NewInt(0)) == -1 {
+	if x.Sign() == -1 {
 		xNeg := new(big.Int).Neg(x)
 		ret.Exp(g, xNeg, m)
 		ret.ModInverse(ret, m)
 	} else {
 		ret.Exp(g, x, m)
 	}
+
 	return ret
 }

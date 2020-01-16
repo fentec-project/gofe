@@ -54,6 +54,9 @@ func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) 
 
 	// the central authority generates keys for all the clients
 	secKeys, err := damgardMulti.GenerateMasterKeys()
+	if err != nil {
+		t.Fatalf("Error during keys generation: %v", err)
+	}
 
 	// pick a matrix that represent the collection of inner-product vectors y_i
 	y, err := data.NewRandomMatrix(numClients, l, sampler)

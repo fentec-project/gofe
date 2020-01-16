@@ -48,6 +48,9 @@ func testSimpleMultiDDHFromParam(t *testing.T, param ddhTestParam) {
 
 	// the central authority generates keys for all the clients
 	pubKey, secKey, err := multiDDH.GenerateMasterKeys()
+	if err != nil {
+		t.Fatalf("Error during keys generation: %v", err)
+	}
 
 	// pick a matrix that represent the collection of inner-product vectors y_i
 	y, err := data.NewRandomMatrix(numOfSlots, l, sampler)

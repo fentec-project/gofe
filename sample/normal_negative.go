@@ -78,7 +78,7 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 		}
 		uF.SetInt(u)
 		uF.Quo(uF, c.powNF)
-		if c.isExpGreater(uF, nSquare) == false {
+		if !c.isExpGreater(uF, nSquare) {
 			return n, nil
 		}
 	}

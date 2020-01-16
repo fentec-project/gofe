@@ -233,7 +233,7 @@ func pollardRhoFactorization(n, B *big.Int) (map[string]int, error) {
 	// use the queue to process numbers until they are factorized to primes
 	queue := make([]*big.Int, 0)
 	queue = append(queue, n)
-	i := new(big.Int)
+	var i *big.Int
 
 	for len(queue) > 0 {
 		i, queue = queue[0], queue[1:]

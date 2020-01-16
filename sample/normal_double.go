@@ -104,7 +104,7 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 		// decide if accept
 		uF.SetInt(u)
 		uF.Quo(uF, s.powNF)
-		if s.isExpGreater(uF, checkVal) == false {
+		if !s.isExpGreater(uF, checkVal) {
 			// calculate the value that we accepted
 			res := new(big.Int).Mul(s.k, x)
 			res.Add(res, y)
@@ -127,5 +127,4 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 			}
 		}
 	}
-
 }

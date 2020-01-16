@@ -54,5 +54,4 @@ func TestNormalCumulative(t *testing.T) {
 			)
 		})
 	}
-
 }

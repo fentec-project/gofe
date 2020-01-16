@@ -81,7 +81,7 @@ var cmpMask = uint64(1) << 61
 // (https://eprint.iacr.org/2018/1234.pdf). See the above paper where
 // it is argued that such a sampling achieves a relative error at most
 // 2^{-45} with the chosen parameters.
-func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
+func Bernoulli(t *big.Int, lSquareInv *big.Float) (bool, error) {
 	aBig := new(big.Float).SetInt(t)
 	aBig.Mul(aBig, lSquareInv)
 	a, _ := aBig.Float64()
@@ -99,7 +99,10 @@ func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
 	powOfAExponent := (math.Float64bits(powOfZ) >> mantissaPrecision) - uint64(negFloorA)
 
 	randBytes := make([]byte, 16)
-	rand.Read(randBytes)
+	_, err :=rand.Read(randBytes)
+	if err != nil {
+		return false, err
+	}
 
 	r1 := binary.LittleEndian.Uint64(randBytes[0:8])
 	r1 = r1 >> (64 - (mantissaPrecision + 1))
@@ -108,15 +111,12 @@ func Bernoulli(t *big.Int, lSquareInv *big.Float) bool {
 
 	check1 := powOfAMantissa | (uint64(1) << mantissaPrecision)
 	check2 := uint64(1) << (bitLenForSample + powOfAExponent + 1 - maxExp)
-	// constant time check if r1 < check1 && r2 < check2
-	if (cmpMask & (r1 - check1) & (r2 - check2)) > 0 {
-		return true
-	}
 
-	return false
+	// constant time check if r1 < check1 && r2 < check2
+	return (cmpMask & (r1 - check1) & (r2 - check2)) > 0, nil
 }
 
-// precompExp precomputes tje values of exp(-2^i / 2 * sigma^2) needed
+// precompExp precomputes the values of exp(-2^i / 2 * sigma^2) needed
 // for sampling discrete Gauss distribution wit standard deviation sigma
 // to arbitrary precision. This is needed since such computations present
 // one of the bottlenecks of the computation. Values are precomputed in the

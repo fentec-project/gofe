@@ -59,8 +59,15 @@ func testFullySecDamgardDecMultiFromParam(t *testing.T, param damgardTestParam) 
 	// create its own secret key for the encryption of a vector
 	secKeys := make([]*fullysec.DamgardDecMultiSecKey, numOfClients)
 	for i := 0; i < numOfClients; i++ {
-		clients[i].SetShare(pubKeys)
+		err = clients[i].SetShare(pubKeys)
+		if err != nil {
+			t.Fatalf("Error during share generation: %v", err)
+		}
+
 		secKeys[i], err = clients[i].GenerateKeys()
+		if err != nil {
+			t.Fatalf("Error during secret keys generation: %v", err)
+		}
 	}
 
 	// each client encrypts its own vector x_i
@@ -87,6 +94,9 @@ func testFullySecDamgardDecMultiFromParam(t *testing.T, param damgardTestParam) 
 	partKeys := make([]*fullysec.DamgardDecMultiDerivedKeyPart, numOfClients)
 	for i := 0; i < numOfClients; i++ {
 		partKeys[i], err = clients[i].DeriveKeyShare(secKeys[i], y)
+		if err != nil {
+			t.Fatalf("Error during derivation of key: %v", err)
+		}
 	}
 
 	// we simulate the decryptor
