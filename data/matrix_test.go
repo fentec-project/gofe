@@ -228,7 +228,6 @@ func TestMatrix_InverseMod(t *testing.T) {
 func TestMatrix_GaussianElimintaion(t *testing.T) {
 	// create instances mat, xTest and v for which mat * xTest = v
 	// as a matrix vector multiplication over Z_p
-
 	p := big.NewInt(17)
 	sampler := sample.NewUniform(p)
 	mat, err := NewRandomMatrix(100, 50, sampler)

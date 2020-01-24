@@ -99,7 +99,7 @@ func Bernoulli(t *big.Int, lSquareInv *big.Float) (bool, error) {
 	powOfAExponent := (math.Float64bits(powOfZ) >> mantissaPrecision) - uint64(negFloorA)
 
 	randBytes := make([]byte, 16)
-	_, err :=rand.Read(randBytes)
+	_, err := rand.Read(randBytes)
 	if err != nil {
 		return false, err
 	}

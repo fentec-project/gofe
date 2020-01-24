@@ -296,7 +296,7 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 	// remainders (r)
 	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
 		T[x.String()] = new(big.Int).Set(i)
-		x = new(bn256.GT).Add(x, g) // TODO
+		x = new(bn256.GT).Add(x, g)
 	}
 
 	c.Precomp = T
@@ -314,11 +314,13 @@ func (c *CalcBN256) precompute(g *bn256.GT) {
 func (c *CalcBN256) BabyStepGiantStepStd(h, g *bn256.GT) (*big.Int, error) {
 	one := big.NewInt(1)
 
+	// first part of the method can be reused so we
+	// precompute it and save it for later
 	if c.Precomp == nil {
 		c.precompute(g)
 	}
 
-	// TODO add explanataion
+	// if group is small, the list can be smaller
 	precompLen := big.NewInt(int64(len(c.Precomp)))
 	if c.m.Cmp(precompLen) != 0 {
 		c.m.Set(precompLen)

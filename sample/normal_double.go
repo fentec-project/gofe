@@ -119,7 +119,6 @@ func (s *NormalDouble) Sample() (*big.Int, error) {
 					return nil, err
 				}
 				if bit.Cmp(big.NewInt(0)) == 0 {
-
 					return res, err
 				}
 			} else {

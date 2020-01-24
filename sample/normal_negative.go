@@ -60,8 +60,6 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF.SetPrec(c.n)
 	nSquare := new(big.Int)
 
-	// TODO maybe add an exit condition later, resulting in an error
-	// to prevent infinite loop with unreasonable params
 	for {
 		// random sample from the interval
 		n, err := rand.Int(rand.Reader, c.twiceCutPlusOne)

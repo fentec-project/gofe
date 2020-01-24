@@ -69,7 +69,6 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 				} else {
 					invMat[i][j] = big.NewInt(0)
 				}
-
 			}
 		}
 		//change the msp matrix by multiplying with it the matrix invMat

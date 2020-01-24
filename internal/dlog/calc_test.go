@@ -77,7 +77,6 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
-
 	bound := big.NewInt(100000000)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
 

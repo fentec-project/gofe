@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/fentec-project/bn256"
-	"github.com/stretchr/testify/assert"
-	"github.com/fentec-project/gofe/sample"
 	"github.com/fentec-project/gofe/internal/keygen"
+	"github.com/fentec-project/gofe/sample"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBruteForceBN256(t *testing.T) {
