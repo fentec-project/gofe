@@ -69,7 +69,6 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 				} else {
 					invMat[i][j] = big.NewInt(0)
 				}
-
 			}
 		}
 		//change the msp matrix by multiplying with it the matrix invMat
@@ -147,7 +146,7 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 	// is only one attribute. It neither of both is true, then
 	// an error is returned while converting the expression into an
 	// attribute
-	if found == false {
+	if !found {
 		if boolExp[0] == '(' && boolExp[len(boolExp)-1] == ')' {
 			boolExp = boolExp[1:(len(boolExp) - 1)]
 			return booleanToMSPIterative(boolExp, vec, c)

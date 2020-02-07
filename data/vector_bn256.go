@@ -25,8 +25,6 @@ import (
 // VectorG1 wraps a slice of elements from elliptic curve BN256.G1 group.
 type VectorG1 []*bn256.G1
 
-// TODO add error handling
-
 // Add sums vectors v1 and v2 (also v1 * v2 in multiplicative notation).
 // It returns the result in a new VectorG1 instance.
 func (v VectorG1) Add(other VectorG1) VectorG1 {
@@ -77,8 +75,6 @@ func (v VectorG1) MulScalar(s *big.Int) VectorG1 {
 
 // VectorG2 wraps a slice of elements from elliptic curve BN256.G2 group.
 type VectorG2 []*bn256.G2
-
-// TODO add error handling
 
 // Add sums vectors v1 and v2 (also v1 * v2 in multiplicative notation).
 // It returns the result in a new VectorG2 instance.

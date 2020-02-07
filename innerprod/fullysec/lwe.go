@@ -43,7 +43,6 @@ type LWEParams struct {
 
 	// Modulus for ciphertext and keys.
 	// Must be significantly larger than K.
-	// TODO check appropriateness of this parameter in constructor!
 	Q *big.Int
 
 	// standard deviation for the noise terms in the encryption process

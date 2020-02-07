@@ -47,7 +47,7 @@ func NewElGamal(modulusLength int) (*ElGamal, error) {
 	// q = (p - 1) / 2
 	q := new(big.Int).Sub(p, one)
 	q.Div(q, two)
-	g := new(big.Int)
+	var g *big.Int
 	sampler := sample.NewUniformRange(three, p)
 
 	for {

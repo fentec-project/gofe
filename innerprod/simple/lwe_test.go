@@ -41,9 +41,9 @@ func TestSimple_LWE(t *testing.T) {
 	SK, err := simpleLWE.GenerateSecretKey()
 	assert.NoError(t, err)
 
-	PK, err := simpleLWE.GeneratePublicKey(emptyMat)
+	_, err = simpleLWE.GeneratePublicKey(emptyMat)
 	assert.Error(t, err)
-	PK, err = simpleLWE.GeneratePublicKey(SK)
+	PK, err := simpleLWE.GeneratePublicKey(SK)
 	assert.NoError(t, err)
 
 	_, err = simpleLWE.DeriveKey(emptyVec, SK)

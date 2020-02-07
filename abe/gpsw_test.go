@@ -89,6 +89,6 @@ func TestGPSW(t *testing.T) {
 	abeKeyInsuff := a.DelegateKeys(keys, msp, ownedAttribInsuff)
 
 	// try to decrypt the ciphertext with the set of delegated keys
-	msgCheck, err = a.Decrypt(cipher, abeKeyInsuff)
+	_, err = a.Decrypt(cipher, abeKeyInsuff)
 	assert.Error(t, err)
 }

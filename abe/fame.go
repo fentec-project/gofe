@@ -121,7 +121,6 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 				"multiple rows of the MSP struct, the scheme is not secure")
 		}
 		attrib[i] = true
-
 	}
 
 	// msg is encrypted using CBC, with a random key that is encapsulated
@@ -318,8 +317,8 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 		k2[t].Add(k2[t], gSigmaPrime)
 		k2[t].ScalarMult(k2[t], aInv[t])
 		k2[t].Add(k2[t], sk.PartG1[t])
-
 	}
+
 	k2[2].ScalarBaseMult(sigmaPrime)
 	k2[2].Neg(k2[2])
 	k2[2].Add(k2[2], sk.PartG1[2])

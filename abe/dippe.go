@@ -274,6 +274,10 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (string, error) {
 	// check if the decryption is possible
 	prod, err := v.Dot(cipher.X)
+	if err != nil {
+		return "", err
+	}
+
 	if prod.Sign() != 0 {
 		return "", fmt.Errorf("insufficient keys")
 	}

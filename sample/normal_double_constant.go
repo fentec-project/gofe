@@ -72,6 +72,7 @@ func NewNormalDoubleConstant(l *big.Int) *NormalDoubleConstant {
 func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 	// prepare values
 	var sign int64
+	var check bool
 	checkVal := new(big.Int)
 	res := new(big.Int)
 	for {
@@ -103,11 +104,16 @@ func (s *NormalDoubleConstant) Sample() (*big.Int, error) {
 		// zeroCheck == 1 if and only if sign == 1 and res.Sign() == 0
 		zeroCheck := int64(res.Sign()) + sign
 		// sample from Bernoulli to decide if accept
-		if Bernoulli(checkVal, s.lSquareInv) && zeroCheck != 1 {
+		check, err = Bernoulli(checkVal, s.lSquareInv)
+		if err != nil {
+			return nil, err
+		}
+
+		if check && zeroCheck != 1 {
 			// calculate the final value that we accepted
 			res.Mul(res, big.NewInt(sign))
 
-			return res, err
+			return res, nil
 		}
 	}
 }

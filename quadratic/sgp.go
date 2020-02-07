@@ -42,7 +42,6 @@ type SGP struct {
 	// Modulus for ciphertext and keys
 	Mod *big.Int
 
-	// TODO: If needed, Bound can be changed to have different bounds for x, y, F.
 	// The value by which elements of vectors x, y, and the
 	// matrix F are bounded.
 	Bound *big.Int

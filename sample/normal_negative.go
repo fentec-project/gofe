@@ -60,8 +60,6 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 	uF.SetPrec(c.n)
 	nSquare := new(big.Int)
 
-	// TODO maybe add an exit condition later, resulting in an error
-	// to prevent infinite loop with unreasonable params
 	for {
 		// random sample from the interval
 		n, err := rand.Int(rand.Reader, c.twiceCutPlusOne)
@@ -78,7 +76,7 @@ func (c *NormalNegative) Sample() (*big.Int, error) {
 		}
 		uF.SetInt(u)
 		uF.Quo(uF, c.powNF)
-		if c.isExpGreater(uF, nSquare) == false {
+		if !c.isExpGreater(uF, nSquare) {
 			return n, nil
 		}
 	}
