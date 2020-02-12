@@ -27,9 +27,9 @@ import (
 )
 
 func TestSGP(t *testing.T) {
-	bound := big.NewInt(1000)
+	bound := big.NewInt(100)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
-	n := 2
+	n := 100
 	f, err := data.NewRandomMatrix(n, n, sampler)
 	if err != nil {
 		t.Fatalf("error when generating random matrix: %v", err)

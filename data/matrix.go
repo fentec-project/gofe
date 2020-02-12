@@ -742,7 +742,7 @@ func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error)
 func (m Matrix) Tensor(other Matrix) Matrix {
 	prod := make(Matrix, m.Rows() * other.Rows())
 	for i := 0; i < prod.Rows(); i++ {
-		prod[i] = make(Vector, other.Cols()*other.Cols())
+		prod[i] = make(Vector, m.Cols()*other.Cols())
 		for j := 0; j < len(prod[i]); j++ {
 			prod[i][j] = new(big.Int).Mul(m[i / other.Rows()][j / other.Cols()], other[i % other.Rows()][j % other.Cols()])
 		}
@@ -755,10 +755,64 @@ func (m Matrix) Tensor(other Matrix) Matrix {
 // ordered as m_11, m_12,..., m_21, m_22,..., m_kl.
 func (m Matrix) ToVec() Vector {
 	res := make(Vector, m.Rows() * m.Cols())
-	for i := 0; i < len(res); i++ {
-		for j := 0; j < len(res); j++ {
-			res[len(m) * i + j] = new(big.Int).Set(m[i][j])
+	for i := 0; i < m.Rows(); i++ {
+		for j := 0; j < m.Cols(); j++ {
+			res[m.Cols() * i + j] = new(big.Int).Set(m[i][j])
 		}
+	}
+
+	return res
+}
+
+// JoinCols joins matrices m and other in a new Matrix
+// with columns from both matrices.
+func (m Matrix) JoinCols(other Matrix) (Matrix, error) {
+	if m.Rows() != other.Rows() {
+		return nil, fmt.Errorf("dimensions don't fit")
+	}
+
+	res := make(Matrix, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		res[i] = make(Vector, m.Cols() + other.Cols())
+		for j := 0; j < m.Cols() + other.Cols(); j++ {
+			if j < m.Cols() {
+				res[i][j] = new(big.Int).Set(m[i][j])
+			} else {
+				res[i][j] = new(big.Int).Set(other[i][j - m.Cols()])
+			}
+		}
+	}
+
+	return res, nil
+}
+
+// JoinRows joins matrices m and other in a new Matrix
+// with rows from both matrices.
+func (m Matrix) JoinRows(other Matrix) (Matrix, error) {
+	if m.Cols() != other.Cols() {
+		return nil, fmt.Errorf("dimensions don't fit")
+	}
+
+	res := make(Matrix, m.Rows() + other.Rows())
+	for i := 0; i < res.Rows(); i++ {
+		res[i] = make(Vector, m.Cols())
+		for j := 0; j < m.Cols(); j++ {
+			if i < m.Rows() {
+				res[i][j] = new(big.Int).Set(m[i][j])
+			} else {
+				res[i][j] = new(big.Int).Set(other[i - m.Rows()][j])
+			}
+		}
+	}
+
+	return res, nil
+}
+
+// Id returns the identity matrix with given dimensions.
+func Id(rows, cols int) Matrix {
+	res := NewConstantMatrix(rows, cols, big.NewInt(0))
+	for i := 0; i < rows && i < cols; i++ {
+		res[i][i].SetInt64(1)
 	}
 
 	return res

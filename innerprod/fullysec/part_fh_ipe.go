@@ -237,13 +237,21 @@ func (d *PartFHIPE) Encrypt(x data.Vector, pubKey *PartFHIPEPubKey) (data.Vector
 // Decrypt accepts the encrypted vector, functional encryption key, and
 // a plaintext vector y. It returns the inner product of x and y.
 // If decryption failed, error is returned.
-func (d *PartFHIPE) Decrypt(cipher data.VectorG1, key data.VectorG2) (*big.Int, error) {
+func (d *PartFHIPE) PartDecrypt(cipher data.VectorG1, feKey data.VectorG2) *bn256.GT {
 	dec := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
-	fmt.Println(len(key), len(cipher), d.Params.L + 4)
 	for i := 0; i < d.Params.L + 4; i++ {
-		pairedI := bn256.Pair(cipher[i], key[i])
+		pairedI := bn256.Pair(cipher[i], feKey[i])
 		dec = new(bn256.GT).Add(pairedI, dec)
 	}
+
+	return dec
+}
+
+// Decrypt accepts the encrypted vector, functional encryption key, and
+// a plaintext vector y. It returns the inner product of x and y.
+// If decryption failed, error is returned.
+func (d *PartFHIPE) Decrypt(cipher data.VectorG1, feKey data.VectorG2) (*big.Int, error) {
+	dec := d.PartDecrypt(cipher, feKey)
 
 	//bSquared := new(big.Int).Mul(d.Params.Bound, d.Params.Bound)
 	//bound := new(big.Int).Mul(big.NewInt(int64(d.Params.L)), bSquared)
