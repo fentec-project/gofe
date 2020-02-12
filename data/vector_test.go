@@ -76,3 +76,14 @@ func TestVector_MulAsPolyInRing(t *testing.T) {
 
 	assert.Equal(t, prod, Vector{big.NewInt(-2), big.NewInt(2), big.NewInt(5)})
 }
+
+func TestVecor_Tensor(t *testing.T) {
+	v1 := Vector{big.NewInt(1), big.NewInt(2)}
+
+	v2 := Vector{big.NewInt(1), big.NewInt(2)}
+
+	prodExpected := Vector{big.NewInt(1), big.NewInt(2), big.NewInt(2), big.NewInt(4)}
+	prod := v1.Tensor(v2)
+
+	assert.Equal(t, prodExpected, prod, "product of matrices does not work correctly")
+}

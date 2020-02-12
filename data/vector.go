@@ -316,3 +316,14 @@ func (v Vector) String() string {
 	}
 	return vStr
 }
+
+// Tensor creates a tensor product of vectors v and other.
+// The result is returned in a new Vector.
+func (v Vector) Tensor(other Vector) Vector {
+	prod := make(Vector, len(v) * len(other))
+	for i := 0; i < len(prod); i++ {
+		prod[i] = new(big.Int).Mul(v[i / len(other)], other[i % len(other)])
+	}
+
+	return prod
+}

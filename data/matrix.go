@@ -736,3 +736,30 @@ func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error)
 
 	return ret, nil
 }
+
+// Tensor creates a tensor product of matrices m and other.
+// The result is returned in a new Matrix.
+func (m Matrix) Tensor(other Matrix) Matrix {
+	prod := make(Matrix, m.Rows() * other.Rows())
+	for i := 0; i < prod.Rows(); i++ {
+		prod[i] = make(Vector, other.Cols()*other.Cols())
+		for j := 0; j < len(prod[i]); j++ {
+			prod[i][j] = new(big.Int).Mul(m[i / other.Rows()][j / other.Cols()], other[i % other.Rows()][j % other.Cols()])
+		}
+	}
+
+	return prod
+}
+
+// ToVec creates a vector whose entries are entries of m
+// ordered as m_11, m_12,..., m_21, m_22,..., m_kl.
+func (m Matrix) ToVec() Vector {
+	res := make(Vector, m.Rows() * m.Cols())
+	for i := 0; i < len(res); i++ {
+		for j := 0; j < len(res); j++ {
+			res[len(m) * i + j] = new(big.Int).Set(m[i][j])
+		}
+	}
+
+	return res
+}
