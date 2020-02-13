@@ -169,20 +169,20 @@ func (q *Quad) GenerateKeys() (*QuadPubKey, *QuadSecKey, error) {
 
 	// assemble matrix M
 	// upper part
-	IdVB, err := data.Id(q.Params.M, q.Params.M).JoinCols(VBMat)
+	IdnVB, err := data.Identity(q.Params.M, q.Params.M).JoinCols(VBMat)
 	if err != nil {
 		return nil, nil, err
 	}
 	aMat := data.Matrix{a}.Transpose()
-	aTensorIdVB := aMat.Tensor(IdVB)
-	aTensorIdVB = aTensorIdVB.Mod(bn256.Order)
-	M0, err := aTensorIdVB.JoinCols(data.NewConstantMatrix(2*q.Params.M, q.Params.N*2, big.NewInt(0)))
+	aTensorIdnVB := aMat.Tensor(IdnVB)
+	aTensorIdnVB = aTensorIdnVB.Mod(bn256.Order)
+	M0, err := aTensorIdnVB.JoinCols(data.NewConstantMatrix(2*q.Params.M, q.Params.N*2, big.NewInt(0)))
 	if err != nil {
 		return nil, nil, err
 	}
 	// lower part
-	IdB := data.Id(q.Params.N, q.Params.N).Tensor(B)
-	M1, err := data.NewConstantMatrix(q.Params.N*3, IdVB.Cols(), big.NewInt(0)).JoinCols(IdB)
+	IdnB := data.Identity(q.Params.N, q.Params.N).Tensor(B)
+	M1, err := data.NewConstantMatrix(q.Params.N*3, IdnVB.Cols(), big.NewInt(0)).JoinCols(IdnB)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -215,7 +215,7 @@ type QuadCipher struct {
 // If the ciphertext could not be generated, it returns an error.
 func (q *Quad) Encrypt(x, y data.Vector, pubKey *QuadPubKey) (*QuadCipher, error) {
 	if len(x) != q.Params.N || len(y) != q.Params.M {
-		return nil, fmt.Errorf("dimensions of vectors are incorect")
+		return nil, fmt.Errorf("dimensions of vectors are incorrect")
 	}
 	if err := x.CheckBound(q.Params.Bound); err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (q *Quad) Encrypt(x, y data.Vector, pubKey *QuadPubKey) (*QuadCipher, error
 // It returns an error if the key could not be derived.
 func (q *Quad) DeriveKey(secKey *QuadSecKey, F data.Matrix) (data.VectorG2, error) {
 	if F.Rows() != q.Params.N || F.Cols() != q.Params.M {
-		return nil, fmt.Errorf("dimensions of the given matrix are incorect")
+		return nil, fmt.Errorf("dimensions of the given matrix are incorrect")
 	}
 
 	UtF, err := secKey.U.Transpose().Mul(F)
@@ -289,7 +289,7 @@ func (q *Quad) Decrypt(c *QuadCipher, feKey data.VectorG2, F data.Matrix) (*big.
 		return nil, fmt.Errorf("dimensions of the given FE key are incorrect")
 	}
 	if F.Rows() != q.Params.N || F.Cols() != q.Params.M {
-		return nil, fmt.Errorf("dimensions of the given matrix are incorect")
+		return nil, fmt.Errorf("dimensions of the given matrix are incorrect")
 	}
 
 	d, err := q.Params.PartFHIPE.PartDecrypt(c.CIPE, feKey)

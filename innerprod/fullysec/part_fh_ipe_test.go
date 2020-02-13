@@ -107,6 +107,9 @@ func TestPartFHIPE(te *testing.T) {
 
 	// check the correctness of the results
 	Mt, err := m.MulVec(t)
+	if err != nil {
+		te.Fatalf("Error calculating the inner product: %v", err)
+	}
 	yMtCheck, err := y.Dot(Mt)
 	if err != nil {
 		te.Fatalf("Error calculating the inner product: %v", err)

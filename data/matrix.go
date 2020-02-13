@@ -778,7 +778,7 @@ func (m Matrix) ToVec() Vector {
 // with columns from both matrices.
 func (m Matrix) JoinCols(other Matrix) (Matrix, error) {
 	if m.Rows() != other.Rows() {
-		return nil, fmt.Errorf("dimensions don't fit")
+		return nil, fmt.Errorf("dimensions do not fit")
 	}
 
 	res := make(Matrix, m.Rows())
@@ -800,7 +800,7 @@ func (m Matrix) JoinCols(other Matrix) (Matrix, error) {
 // with rows from both matrices.
 func (m Matrix) JoinRows(other Matrix) (Matrix, error) {
 	if m.Cols() != other.Cols() {
-		return nil, fmt.Errorf("dimensions don't fit")
+		return nil, fmt.Errorf("dimensions do not fit")
 	}
 
 	res := make(Matrix, m.Rows()+other.Rows())
@@ -818,8 +818,8 @@ func (m Matrix) JoinRows(other Matrix) (Matrix, error) {
 	return res, nil
 }
 
-// Id returns the identity matrix with given dimensions.
-func Id(rows, cols int) Matrix {
+// Identity returns the identity matrix with given dimensions.
+func Identity(rows, cols int) Matrix {
 	res := NewConstantMatrix(rows, cols, big.NewInt(0))
 	for i := 0; i < rows && i < cols; i++ {
 		res[i][i].SetInt64(1)

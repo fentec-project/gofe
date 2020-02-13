@@ -169,7 +169,7 @@ func (v Vector) Apply(f func(*big.Int) *big.Int) Vector {
 	return res
 }
 
-// Sub returns -v for given vector v.
+// Neg returns -v for given vector v.
 // The result is returned in a new Vector.
 func (v Vector) Neg() Vector {
 	neg := make([]*big.Int, len(v))
