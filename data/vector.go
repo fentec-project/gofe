@@ -169,6 +169,17 @@ func (v Vector) Apply(f func(*big.Int) *big.Int) Vector {
 	return res
 }
 
+// Sub returns -v for given vector v.
+// The result is returned in a new Vector.
+func (v Vector) Neg() Vector {
+	neg := make([]*big.Int, len(v))
+	for i, c := range v {
+		neg[i] = new(big.Int).Neg(c)
+	}
+
+	return neg
+}
+
 // Add adds vectors v and other.
 // The result is returned in a new Vector.
 func (v Vector) Add(other Vector) Vector {
@@ -250,7 +261,11 @@ func (v Vector) MulAsPolyInRing(other Vector) (Vector, error) {
 func (v Vector) MulG1() VectorG1 {
 	prod := make(VectorG1, len(v))
 	for i := range prod {
-		prod[i] = new(bn256.G1).ScalarBaseMult(v[i])
+		vi := new(big.Int).Abs(v[i])
+		prod[i] = new(bn256.G1).ScalarBaseMult(vi)
+		if v[i].Sign() == -1 {
+			prod[i].Neg(prod[i])
+		}
 	}
 
 	return prod
@@ -282,7 +297,11 @@ func (v Vector) MulVecG1(g1 VectorG1) VectorG1 {
 func (v Vector) MulG2() VectorG2 {
 	prod := make(VectorG2, len(v))
 	for i := range prod {
-		prod[i] = new(bn256.G2).ScalarBaseMult(v[i])
+		vi := new(big.Int).Abs(v[i])
+		prod[i] = new(bn256.G2).ScalarBaseMult(vi)
+		if v[i].Sign() == -1 {
+			prod[i].Neg(prod[i])
+		}
 	}
 
 	return prod
@@ -320,9 +339,9 @@ func (v Vector) String() string {
 // Tensor creates a tensor product of vectors v and other.
 // The result is returned in a new Vector.
 func (v Vector) Tensor(other Vector) Vector {
-	prod := make(Vector, len(v) * len(other))
+	prod := make(Vector, len(v)*len(other))
 	for i := 0; i < len(prod); i++ {
-		prod[i] = new(big.Int).Mul(v[i / len(other)], other[i % len(other)])
+		prod[i] = new(big.Int).Mul(v[i/len(other)], other[i%len(other)])
 	}
 
 	return prod

@@ -99,6 +99,16 @@ func NewConstantMatrix(rows, cols int, c *big.Int) Matrix {
 	return mat
 }
 
+// Copy creates a new Matrix with the same values.
+func (m Matrix) Copy() Matrix {
+	mat := make(Matrix, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		mat[i] = m[i].Copy()
+	}
+
+	return mat
+}
+
 // Rows returns the number of rows of matrix m.
 func (m Matrix) Rows() int {
 	return len(m)
@@ -740,11 +750,11 @@ func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error)
 // Tensor creates a tensor product of matrices m and other.
 // The result is returned in a new Matrix.
 func (m Matrix) Tensor(other Matrix) Matrix {
-	prod := make(Matrix, m.Rows() * other.Rows())
+	prod := make(Matrix, m.Rows()*other.Rows())
 	for i := 0; i < prod.Rows(); i++ {
 		prod[i] = make(Vector, m.Cols()*other.Cols())
 		for j := 0; j < len(prod[i]); j++ {
-			prod[i][j] = new(big.Int).Mul(m[i / other.Rows()][j / other.Cols()], other[i % other.Rows()][j % other.Cols()])
+			prod[i][j] = new(big.Int).Mul(m[i/other.Rows()][j/other.Cols()], other[i%other.Rows()][j%other.Cols()])
 		}
 	}
 
@@ -754,10 +764,10 @@ func (m Matrix) Tensor(other Matrix) Matrix {
 // ToVec creates a vector whose entries are entries of m
 // ordered as m_11, m_12,..., m_21, m_22,..., m_kl.
 func (m Matrix) ToVec() Vector {
-	res := make(Vector, m.Rows() * m.Cols())
+	res := make(Vector, m.Rows()*m.Cols())
 	for i := 0; i < m.Rows(); i++ {
 		for j := 0; j < m.Cols(); j++ {
-			res[m.Cols() * i + j] = new(big.Int).Set(m[i][j])
+			res[m.Cols()*i+j] = new(big.Int).Set(m[i][j])
 		}
 	}
 
@@ -773,12 +783,12 @@ func (m Matrix) JoinCols(other Matrix) (Matrix, error) {
 
 	res := make(Matrix, m.Rows())
 	for i := 0; i < m.Rows(); i++ {
-		res[i] = make(Vector, m.Cols() + other.Cols())
-		for j := 0; j < m.Cols() + other.Cols(); j++ {
+		res[i] = make(Vector, m.Cols()+other.Cols())
+		for j := 0; j < m.Cols()+other.Cols(); j++ {
 			if j < m.Cols() {
 				res[i][j] = new(big.Int).Set(m[i][j])
 			} else {
-				res[i][j] = new(big.Int).Set(other[i][j - m.Cols()])
+				res[i][j] = new(big.Int).Set(other[i][j-m.Cols()])
 			}
 		}
 	}
@@ -793,14 +803,14 @@ func (m Matrix) JoinRows(other Matrix) (Matrix, error) {
 		return nil, fmt.Errorf("dimensions don't fit")
 	}
 
-	res := make(Matrix, m.Rows() + other.Rows())
+	res := make(Matrix, m.Rows()+other.Rows())
 	for i := 0; i < res.Rows(); i++ {
 		res[i] = make(Vector, m.Cols())
 		for j := 0; j < m.Cols(); j++ {
 			if i < m.Rows() {
 				res[i][j] = new(big.Int).Set(m[i][j])
 			} else {
-				res[i][j] = new(big.Int).Set(other[i - m.Rows()][j])
+				res[i][j] = new(big.Int).Set(other[i-m.Rows()][j])
 			}
 		}
 	}

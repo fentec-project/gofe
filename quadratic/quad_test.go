@@ -20,61 +20,68 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/fentec-project/gofe/quadratic"
-	"fmt"
 	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/quadratic"
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestQuad(t *testing.T) {
+	// choose parameters for the encryption and build the scheme
+	n := 10
+	m := 8
 	bound := big.NewInt(100)
-	sampler := sample.NewUniform(bound)
-	n := 100
-	f, err := data.NewRandomMatrix(n, n, sampler)
+	q, err := quadratic.NewQuad(n, m, bound)
 	if err != nil {
-		t.Fatalf("error when generating random matrix: %v", err)
+		t.Fatalf("error when creating schmeme: %v", err)
 	}
 
-	q := quadratic.NewQuad(n, n, bound)
+	// generate public and secret key
 	pubKey, secKey, err := q.GenerateKeys()
 	if err != nil {
 		t.Fatalf("error when generating keys: %v", err)
 	}
 
-
+	// sample vectors x and y that the encryptor will encrypt with public key;
+	boundNeg := new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1))
+	sampler := sample.NewUniformRange(boundNeg, bound)
 	x, err := data.NewRandomVector(n, sampler)
 	if err != nil {
 		t.Fatalf("error when generating random vector: %v", err)
 	}
-	y, err := data.NewRandomVector(n, sampler)
+	y, err := data.NewRandomVector(m, sampler)
 	if err != nil {
 		t.Fatalf("error when generating random vector: %v", err)
 	}
 
-
-	c, err := q.Encrypt(x, y, pubKey)
+	// simulate an encryptor that encrypt two random vectors
+	encryptor := quadratic.NewQuadFromParams(q.Params)
+	c, err := encryptor.Encrypt(x, y, pubKey)
 	if err != nil {
 		t.Fatalf("error when encrypting: %v", err)
 	}
 
+	// derive a functional encryption key for a random matrix f
+	f, err := data.NewRandomMatrix(n, m, sampler)
+	if err != nil {
+		t.Fatalf("error when generating random matrix: %v", err)
+	}
 	feKey, err := q.DeriveKey(secKey, f)
 	if err != nil {
 		t.Fatalf("error when deriving key: %v", err)
 	}
 
-	fmt.Println(c, feKey)
-
-	check, err := f.MulXMatY(x, y)
-	if err != nil {
-		t.Fatalf("error when computing x*F*y: %v", err)
-	}
-
-	fmt.Println(check)
+	// simulate a decryptor that using FE key decrypt the x^T * f * y
+	// without knowing x and y
 	dec, err := q.Decrypt(c, feKey, f)
 	if err != nil {
 		t.Fatalf("error when decrypting: %v", err)
 	}
 
+	// check the correctness of the result
+	check, err := f.MulXMatY(x, y)
+	if err != nil {
+		t.Fatalf("error when computing x*F*y: %v", err)
+	}
 	assert.Equal(t, check, dec, "Decryption wrong")
 }

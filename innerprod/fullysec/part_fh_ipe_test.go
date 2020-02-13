@@ -23,97 +23,98 @@ import (
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/innerprod/fullysec"
 	"github.com/fentec-project/gofe/sample"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPartFHIPE(t *testing.T) {
-	// choose the parameters for the encryption and build the scheme
+func TestPartFHIPE(te *testing.T) {
+	// choose parameters for the encryption and build the scheme
 	l := 50
-	k := 5
-	bound := big.NewInt(2)
-	sampler := sample.NewUniform(bound)
-	//sampler = sample.NewUniformRange(big.NewInt(1), big.NewInt(2))
-
-
-	m, err := data.NewRandomMatrix(l, k, sampler)
+	bound := big.NewInt(100)
+	boundNeg := new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1))
+	sampler := sample.NewUniformRange(boundNeg, bound)
+	partfhipe, err := fullysec.NewPartFHIPE(l, bound)
 	if err != nil {
-		t.Fatalf("Error during random matrix generation: %v", err)
+		te.Fatalf("Error during scheme creation: %v", err)
 	}
-	//m[0][0] = big.NewInt(1)
-	//det, err := m.Determinant()
-	//if err != nil || det.Sign() == 0 {
-	//	t.Fatalf("Error during random matrix generation: %v", err)
-	//}
 
-
-
-
-	partfhipe:= fullysec.NewPartFHIPE(l, k, bound)
-
-	// generate master key
+	// choose a subspace in which encryption will be allowed
+	k := 5 // dimension of the subspace
+	// the subspace is given by the columns of the matrix m
+	samplerM := sample.NewUniform(new(big.Int).Div(bound, big.NewInt(int64(k))))
+	m, err := data.NewRandomMatrix(l, k, samplerM)
+	if err != nil {
+		te.Fatalf("Error during random matrix generation: %v", err)
+	}
+	// generate public and secret key based on matrix m
 	pubKey, secKey, err := partfhipe.GenerateKeys(m)
 	if err != nil {
-		t.Fatalf("Error during master key generation: %v", err)
+		te.Fatalf("Error during master key generation: %v", err)
 	}
 
-	fmt.Println("pub", pubKey)
-	fmt.Println("sec", secKey)
-
-	// sample a vector that will be encrypted
-	x, err := data.NewRandomVector(k, sampler)
-	if err != nil {
-		t.Fatalf("Error during random vector generation: %v", err)
-	}
-
-	// simulate the instantiation of an encryptor (which should know the master key)
+	// simulate the instantiation of an encryptor
 	encryptor := fullysec.NewPartFHIPEFromParams(partfhipe.Params)
-	// encrypt the vector
-	ciphertext, err := encryptor.Encrypt(x, pubKey)
+	// sample a vector x that the encryptor will encrypt with public key;
+	// the vector is described with k dimensional vector t such that
+	// x = Mt
+	sampler2 := sample.NewUniformRange(big.NewInt(-1), big.NewInt(2))
+	t, err := data.NewRandomVector(k, sampler2)
 	if err != nil {
-		t.Fatalf("Error during encryption: %v", err)
+		te.Fatalf("Error during random vector generation: %v", err)
 	}
 
-	// sample a inner product vector
+	// encrypt the vector
+	ciphertextMt, err := encryptor.Encrypt(t, pubKey)
+	if err != nil {
+		te.Fatalf("Error during encryption: %v", err)
+	}
+
+	// owner of the secret key key encrypt an arbitrary vector
+	x, err := data.NewRandomVector(l, sampler)
+	if err != nil {
+		te.Fatalf("Error during random vector generation: %v", err)
+	}
+	ciphertextX, err := partfhipe.SecEncrypt(x, pubKey, secKey)
+	if err != nil {
+		te.Fatalf("Error during encryption with secret key: %v", err)
+	}
+
+	// sample an inner product vector
 	y, err := data.NewRandomVector(l, sampler)
 	if err != nil {
-		t.Fatalf("Error during random vecotr generation: %v", err)
+		te.Fatalf("Error during random vecotr generation: %v", err)
 	}
 
 	// derive a functional key for vector y
 	feKey, err := partfhipe.DeriveKey(y, secKey)
 	if err != nil {
-		t.Fatalf("Error during key derivation: %v", err)
+		te.Fatalf("Error during key derivation: %v", err)
 	}
-
-	//fmt.Println(feKey, pubKey)
-	Mx, err := m.MulVec(x)
-	yMyCheck, err := y.Dot(Mx)
-
-	fmt.Println(y, m, x, yMyCheck)
-
 
 	// simulate a decryptor
 	decryptor := fullysec.NewPartFHIPEFromParams(partfhipe.Params)
-	// decryptor decrypts the inner-product without knowing
+	// decryptor decrypts the inner-product yMt without knowing
+	// vectors Mt and y
+	yMt, err := decryptor.Decrypt(ciphertextMt, feKey)
+	if err != nil {
+		te.Fatalf("Error during decryption: %v", err)
+	}
+	// and decrypts the inner-product xy without knowing
 	// vectors x and y
-	xMy, err := decryptor.Decrypt(ciphertext, feKey)
+	yx, err := decryptor.Decrypt(ciphertextX, feKey)
 	if err != nil {
-		t.Fatalf("Error during decryption: %v", err)
-	}
-	fmt.Println(xMy, yMyCheck)
-
-	// check the correctness of the result
-
-	if err != nil {
-		t.Fatalf("Error during inner product calculation")
+		te.Fatalf("Error during decryption: %v", err)
 	}
 
-
-
-
+	// check the correctness of the results
+	Mt, err := m.MulVec(t)
+	yMtCheck, err := y.Dot(Mt)
 	if err != nil {
-		t.Fatalf("Error during inner product calculation")
+		te.Fatalf("Error calculating the inner product: %v", err)
 	}
-	assert.Equal(t, xMy.Cmp(yMyCheck), 0, "obtained incorrect inner product")
+	yxCheck, err := y.Dot(x)
+	if err != nil {
+		te.Fatalf("Error calculating the inner product: %v", err)
+	}
+	assert.Equal(te, yMt.Cmp(yMtCheck), 0, "obtained incorrect inner product")
+	assert.Equal(te, yx.Cmp(yxCheck), 0, "obtained incorrect inner product")
 }
