@@ -289,5 +289,5 @@ func TestMatrix_Tensor(t *testing.T) {
 	}
 	prod := m1.Tensor(m2)
 
-	assert.Equal(t, prodExpected, prod, "product of matrices does not work correctly")
+	assert.Equal(t, prodExpected, prod, "tensor product of matrices does not work correctly")
 }

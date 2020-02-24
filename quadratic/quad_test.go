@@ -33,7 +33,7 @@ func TestQuad(t *testing.T) {
 	bound := big.NewInt(100)
 	q, err := quadratic.NewQuad(n, m, bound)
 	if err != nil {
-		t.Fatalf("error when creating schmeme: %v", err)
+		t.Fatalf("error when creating scheme: %v", err)
 	}
 
 	// generate public and secret key
@@ -54,7 +54,7 @@ func TestQuad(t *testing.T) {
 		t.Fatalf("error when generating random vector: %v", err)
 	}
 
-	// simulate an encryptor that encrypt two random vectors
+	// simulate an encryptor that encrypts the two random vectors
 	encryptor := quadratic.NewQuadFromParams(q.Params)
 	c, err := encryptor.Encrypt(x, y, pubKey)
 	if err != nil {

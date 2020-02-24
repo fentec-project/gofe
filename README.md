@@ -79,7 +79,7 @@ bilinear pairings, and offers adaptive security under chosen-plaintext
 attacks (IND-CPA security). You will need `SGP` scheme from package `quadratic`.
 * Second is an efficient pubic key FE by _Romain Gay_ ([paper](https://eprint.iacr.org/2020/093.pdf))
 that is based on the underlying partially function hiding inner product scheme and offers semi-adaptive
-simulation based security.
+simulation based security. You will need `quad` scheme from package `quadratic`.
 
 #### Schemes with attribute based encryption (ABE)
 Schemes are organized under package `abe`.

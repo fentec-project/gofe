@@ -85,5 +85,5 @@ func TestVecor_Tensor(t *testing.T) {
 	prodExpected := Vector{big.NewInt(1), big.NewInt(2), big.NewInt(2), big.NewInt(4)}
 	prod := v1.Tensor(v2)
 
-	assert.Equal(t, prodExpected, prod, "product of matrices does not work correctly")
+	assert.Equal(t, prodExpected, prod, "tensor product of vectors does not work correctly")
 }

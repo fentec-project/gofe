@@ -37,9 +37,12 @@ type PartFHIPEParams struct {
 
 // PartFHIPE represents a partially function hiding inner product
 // FE scheme. A partially function hiding scheme is a public
-// key scheme that allows to encrypt only vectors from a chosen
+// key FE scheme that allows to encrypt vectors and produce FE
+// keys to be able to decrypt only the inner product of the encryption
+// and chosen vector without revealing the encrypted or FE key vector.
+// Public key encryption allows to encrypt only vectors from a chosen
 // subspace. This way a functional encryption key does not reveal
-// its corresponding inner product function. Decryption of a
+// its corresponding inner product vector. Decryption of a
 // ciphertext using FE key can be done without knowing the function.
 // Additionally, owner of the secret key can encrypt any vector.
 //
@@ -52,10 +55,10 @@ type PartFHIPE struct {
 
 // NewPartFHIPE configures a new instance of the scheme.
 // It accepts the length of input vectors l, and a bound by which
-// the coordinates of input vectors are bounded.
+// the absolute values of the coordinates of input vectors are bounded.
 //
 // It returns an error in case the scheme could not be properly
-// configured, or if precondition l * bound² is >= order of the cyclic
+// configured, or if precondition 2* l * bound² is >= order of the cyclic
 // group.
 func NewPartFHIPE(l int, bound *big.Int) (*PartFHIPE, error) {
 	var b *big.Int
@@ -104,6 +107,8 @@ type PartFHIPEPubKey struct {
 }
 
 // GenerateKeys generates a master secret key and public key for the scheme.
+// A matrix M needs to be specified so that the generated public key will
+// allow to encrypt arbitrary vector in the span on the columns of M.
 // It returns an error in case the keys could not be generated.
 func (d *PartFHIPE) GenerateKeys(M data.Matrix) (*PartFHIPEPubKey, *PartFHIPESecKey, error) {
 	if d.Params.L != M.Rows() {
@@ -204,9 +209,10 @@ func (d *PartFHIPE) DeriveKey(y data.Vector, secKey *PartFHIPESecKey) (data.Vect
 	return key.MulG2(), nil
 }
 
-// Encrypt on input vector t encrypts vector x = Mt with the provided public key.
-// It returns a ciphertext vector. Entries of Mt should not be greater then bound.
-// If encryption failed, an error is returned.
+// Encrypt on input vector t encrypts vector x = Mt with the provided public key
+// (matrix M is specified in the public key). It returns a ciphertext vector.
+// Entries of Mt should not be greater then bound.
+// If encryption an failed, an error is returned.
 func (d *PartFHIPE) Encrypt(t data.Vector, pubKey *PartFHIPEPubKey) (data.VectorG1, error) {
 	x, err := pubKey.M.MulVec(t)
 	if err != nil {
@@ -239,9 +245,9 @@ func (d *PartFHIPE) Encrypt(t data.Vector, pubKey *PartFHIPEPubKey) (data.Vector
 	return cipher, nil
 }
 
-// SecEncrypt encrypts an arbitrary vector x using public key but additionally
-// the master secret key is needed. It returns a ciphertext vector.
-// If encryption failed, error is returned.
+// SecEncrypt encrypts an arbitrary vector x using master secret key and
+// public key. It returns a ciphertext vector. If encryption failed,
+// an error is returned.
 func (d *PartFHIPE) SecEncrypt(x data.Vector, pubKey *PartFHIPEPubKey, secKey *PartFHIPESecKey) (data.VectorG1, error) {
 	if len(x) != d.Params.L {
 		return nil, fmt.Errorf("the dimension of the given vector does not match the dimension of the scheme")

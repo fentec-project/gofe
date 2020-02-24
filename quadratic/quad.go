@@ -35,6 +35,7 @@ import (
 // Bound (*big.Int): The value by which coordinates of vectors x, y and F are bounded.
 type QuadParams struct {
 	PartFHIPE *fullysec.PartFHIPE
+	// N should be greater or equal to M
 	N         int // length of vectors x
 	M         int // length of vectors y
 	// The value by which elements of vectors x, y, and the
@@ -46,7 +47,7 @@ type QuadParams struct {
 // More precisely, it allows to encrypt vectors x and y using public key,
 // derive a functional encryption key corresponding to a matrix F, and
 // decrypt value x^T * F * y from encryption of x, y and functional key, without
-// reveling and other information about x or y. The scheme is based on
+// reveling any other information about x or y. The scheme is based on
 // a paper by Romain Gay: "A New Paradigm for Public-Key Functional
 // Encryption for Degree-2 Polynomials".
 // The scheme uses an underling partially function hiding inner product

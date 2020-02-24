@@ -40,6 +40,7 @@ func TestPartFHIPE(te *testing.T) {
 	// choose a subspace in which encryption will be allowed
 	k := 5 // dimension of the subspace
 	// the subspace is given by the columns of the matrix m
+	// we sample m with not too big inputs
 	samplerM := sample.NewUniform(new(big.Int).Div(bound, big.NewInt(int64(k))))
 	m, err := data.NewRandomMatrix(l, k, samplerM)
 	if err != nil {
@@ -92,13 +93,13 @@ func TestPartFHIPE(te *testing.T) {
 
 	// simulate a decryptor
 	decryptor := fullysec.NewPartFHIPEFromParams(partfhipe.Params)
-	// decryptor decrypts the inner-product yMt without knowing
+	// decryptor decrypts the inner-product y^TMt without knowing
 	// vectors Mt and y
 	yMt, err := decryptor.Decrypt(ciphertextMt, feKey)
 	if err != nil {
 		te.Fatalf("Error during decryption: %v", err)
 	}
-	// and decrypts the inner-product xy without knowing
+	// and decrypts the inner-product x^Ty without knowing
 	// vectors x and y
 	yx, err := decryptor.Decrypt(ciphertextX, feKey)
 	if err != nil {
