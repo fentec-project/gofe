@@ -35,7 +35,7 @@ type ddhTestParam struct {
 func testSimpleDDHFromParam(t *testing.T, param ddhTestParam) {
 	l := 3
 	bound := new(big.Int).Exp(big.NewInt(2), big.NewInt(10), nil)
-	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
+	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 
 	var simpleDDH *simple.DDH
 	var err error
