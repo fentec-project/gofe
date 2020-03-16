@@ -85,7 +85,6 @@ type LWE struct {
 // It returns an error in case public parameters of the scheme could
 // not be generated.
 func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
-
 	// K = 2 * l * boundX * boundY
 	K := new(big.Int).Mul(boundX, boundY)
 	K.Mul(K, big.NewInt(int64(l*2)))

@@ -92,7 +92,6 @@ func (c *DMCFEClient) SetShare(pubKeys []*bn256.G1) error {
 			if err != nil {
 				return err
 			}
-
 		}
 		c.Share = c.Share.Mod(bn256.Order)
 	}
@@ -102,7 +101,6 @@ func (c *DMCFEClient) SetShare(pubKeys []*bn256.G1) error {
 
 // Encrypt encrypts number x under some label.
 func (c *DMCFEClient) Encrypt(x *big.Int, label string) (*bn256.G1, error) {
-
 	cipher := new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < 2; i++ {
 		hs, err := bn256.HashG1(strconv.Itoa(i) + " " + label)

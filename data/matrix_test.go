@@ -273,3 +273,21 @@ func TestMatrix_GaussianElimintaion(t *testing.T) {
 	_, err = GaussianEliminationSolver(matWrong, v, p)
 	assert.Error(t, err)
 }
+
+func TestMatrix_Tensor(t *testing.T) {
+	m1 := Matrix{
+		Vector{big.NewInt(1), big.NewInt(2)},
+		Vector{big.NewInt(3), big.NewInt(4)},
+	}
+	m2 := Matrix{
+		Vector{big.NewInt(1), big.NewInt(2)},
+	}
+
+	prodExpected := Matrix{
+		Vector{big.NewInt(1), big.NewInt(2), big.NewInt(2), big.NewInt(4)},
+		Vector{big.NewInt(3), big.NewInt(6), big.NewInt(4), big.NewInt(8)},
+	}
+	prod := m1.Tensor(m2)
+
+	assert.Equal(t, prodExpected, prod, "tensor product of matrices does not work correctly")
+}

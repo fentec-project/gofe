@@ -222,7 +222,6 @@ func (d *FHIPE) Decrypt(cipher *FHIPECipher, key *FHIPEDerivedKey) (*big.Int, er
 	for i := 0; i < d.Params.L; i++ {
 		pairedI := bn256.Pair(key.K2[i], cipher.C2[i])
 		d2 = new(bn256.GT).Add(pairedI, d2)
-
 	}
 
 	// calculate the upper bound of the result needed for the

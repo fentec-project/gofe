@@ -163,7 +163,6 @@ func TestPollardRhoFactorizationBounded(t *testing.T) {
 }
 
 func getSmoothNumber(B, numPrimes, maxPower int) *big.Int {
-
 	// find the index of the maximal allowed factor
 	indexBound := len(smallPrimes)
 	for i, p := range smallPrimes {

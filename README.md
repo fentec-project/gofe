@@ -67,21 +67,24 @@ procedure for decentralization of an inner product scheme, in particular the dec
 functional key that allows a decrytor to decrypt an inner product without revealing the ciphertext or the function (`fullysec.FHMultiIPE`).
     * Function hiding inner product scheme by _Kim, Lewi, Mandal, Montgomery, Roy, Wu_ ([paper](https://eprint.iacr.org/2016/440.pdf)). The scheme allows the decryptor to
 decrypt the inner product of x and y without reveling (ciphertext) x or (function) y (`fullysec.fhipe`).
+    * Partially function hiding inner product scheme by _Romain Gay_ ([paper](https://eprint.iacr.org/2020/093.pdf)). This scheme
+ is a public key inner product scheme that decrypt the inner product of x and y without reveling (ciphertext) x or (function) y. This is
+ achieved by limiting the space of vectors that can be encrypted with a public key (`fullysec.partFHIPE`).
 
 #### Quadratic polynomial schemes
-You will need `SGP` scheme from package `quadratic`. 
-
-It contains an
-implementation of an efficient FE scheme for **quadratic multi-variate
-polynomials** by _Dufour Sans, Gay_ and _Pointcheval_ 
+There are two implemented FE schemes for **quadratic multi-variate polynomials**:
+* First is an efficient symmetric FE scheme by _Dufour Sans, Gay_ and _Pointcheval_ 
 ([paper](https://eprint.iacr.org/2018/206.pdf)) which is based on
 bilinear pairings, and offers adaptive security under chosen-plaintext
-attacks (IND-CPA security).
+attacks (IND-CPA security). You will need `SGP` scheme from package `quadratic`.
+* Second is an efficient pubic key FE by _Romain Gay_ ([paper](https://eprint.iacr.org/2020/093.pdf))
+that is based on the underlying partially function hiding inner product scheme and offers semi-adaptive
+simulation based security. You will need `quad` scheme from package `quadratic`.
 
 #### Schemes with attribute based encryption (ABE)
 Schemes are organized under package `abe`.
 
-It contains two ABE schemes:
+It contains three ABE schemes:
 * A ciphertext policy (CP) ABE scheme named FAME by _Agrawal, Chase_ ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
 message based on a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.fame`.
 * A key policy (KP) ABE scheme by _Goyal, Pandey, Sahai, Waters_ ([paper](https://eprint.iacr.org/2006/309.pdf)) allowing a distribution of

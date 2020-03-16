@@ -221,7 +221,6 @@ func (d *Damgard) GenerateMasterKeys() (*DamgardSecKey, data.Vector, error) {
 		y2 := new(big.Int).Exp(d.Params.H, t, d.Params.P)
 
 		masterPubKey[i] = new(big.Int).Mod(new(big.Int).Mul(y1, y2), d.Params.P)
-
 	}
 
 	return &DamgardSecKey{S: mskS, T: mskT}, masterPubKey, nil
