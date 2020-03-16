@@ -69,7 +69,7 @@ func TestPartFHIPE(te *testing.T) {
 		te.Fatalf("Error during encryption: %v", err)
 	}
 
-	// owner of the secret key key encrypt an arbitrary vector
+	// the owner of the secret key encrypts an arbitrary vector
 	x, err := data.NewRandomVector(l, sampler)
 	if err != nil {
 		te.Fatalf("Error during random vector generation: %v", err)

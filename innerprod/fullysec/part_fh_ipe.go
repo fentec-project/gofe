@@ -212,7 +212,7 @@ func (d *PartFHIPE) DeriveKey(y data.Vector, secKey *PartFHIPESecKey) (data.Vect
 // Encrypt on input vector t encrypts vector x = Mt with the provided public key
 // (matrix M is specified in the public key). It returns a ciphertext vector.
 // Entries of Mt should not be greater then bound.
-// If encryption an failed, an error is returned.
+// If encryption fails, an error is returned.
 func (d *PartFHIPE) Encrypt(t data.Vector, pubKey *PartFHIPEPubKey) (data.VectorG1, error) {
 	x, err := pubKey.M.MulVec(t)
 	if err != nil {
