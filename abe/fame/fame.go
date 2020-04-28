@@ -109,7 +109,11 @@ type Cipher struct {
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned. Note that safety of the encryption is only proved if the mapping
 // msp.RowToAttribS from the rows of msp.Mat to attributes is injective.
+<<<<<<< HEAD:abe/fame/fame.go
 func (a *FAME) Encrypt(msg string, msp *MSP, pk *PubKey) (*Cipher, error) {
+=======
+func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame.go
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -228,7 +232,11 @@ type AttribKeys struct {
 // GenerateAttribKeys given a set of attributes gamma and the master secret key
 // generates keys that can be used for the decryption of any ciphertext encoded
 // with a policy for which attributes gamma are sufficient.
+<<<<<<< HEAD:abe/fame/fame.go
 func (a *FAME) GenerateAttribKeys(gamma []string, sk *SecKey) (*AttribKeys, error) {
+=======
+func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKeys, error) {
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame.go
 	sampler := sample.NewUniform(a.P)
 	r, err := data.NewRandomVector(2, sampler)
 	if err != nil {

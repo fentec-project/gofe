@@ -219,7 +219,7 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 // Mat a matrix, D a set of vectors and RowToAttib a mapping from rows of Mat
 // (or entries of D) to corresponding attributes. Vector D is a set of keys
 // that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
-type Key struct {
+type GPSWKey struct {
 	Mat          data.Matrix
 	D            data.VectorG1
 	RowToAttribI []int
@@ -254,7 +254,7 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *Key {
 		}
 	}
 
-	return &Key{Mat: mat,
+	return &GPSWKey{Mat: mat,
 		D:            d,
 		RowToAttribI: RowToAttribI}
 }

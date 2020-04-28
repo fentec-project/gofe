@@ -44,7 +44,11 @@ func TestFAME(t *testing.T) {
 	// only boolean expressions in which each attribute appears at most once
 	// are allowed - if expressions with multiple appearances of an attribute
 	// are needed, then this attribute can be split into more sub-attributes
+<<<<<<< HEAD:abe/fame/fame_test.go
 	msp, err := fame.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
+=======
+	msp, err := abe.BooleanToMSPString("((0 AND 1) OR (2 AND 3)) AND 5", false)
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame_test.go
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -91,7 +95,11 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
 
+<<<<<<< HEAD:abe/fame/fame_test.go
 	mspSingleCondition, err := fame.BooleanToMSP("0", false)
+=======
+	mspSingleCondition, err := abe.BooleanToMSPString("0", false)
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame_test.go
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -112,9 +120,14 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipherSingleCondition, keysInsuff, pubKey)
 	assert.Error(t, err)
 
+<<<<<<< HEAD:abe/fame/fame_test.go
 	//
 	// test with Single UUID
 	mspSingleUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
+=======
+	// test with UUID
+	mspSingleUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000", false)
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame_test.go
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -137,11 +150,19 @@ func TestFAME(t *testing.T) {
 
 	// decrypt the ciphertext with the keys of an entity
 	// that has sufficient attributes
+<<<<<<< HEAD:abe/fame/fame_test.go
 	msgCheckSingleUUID, err := a.Decrypt(cipherSingleUUID, keysUUID, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
 	assert.Equal(t, msg, msgCheckSingleUUID)
+=======
+	msgCheckUUID, err := a.Decrypt(cipherSingleUUID, keysUUID, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, msgCheckUUID)
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame_test.go
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
@@ -156,6 +177,7 @@ func TestFAME(t *testing.T) {
 
 	// try to decrypt the ciphertext with the keys of an entity
 	// that has insufficient attributes
+<<<<<<< HEAD:abe/fame/fame_test.go
 	_, err = a.Decrypt(cipherSingleUUID, keysInsuffUUID, pubKey)
 	assert.Error(t, err)
 
@@ -182,5 +204,8 @@ func TestFAME(t *testing.T) {
 	// try to decrypt the ciphertext with the keys of an entity
 	// that has insufficient attributes
 	_, err = a.Decrypt(cipherMultiUUID, keysInsuffUUID, pubKey)
+=======
+	_, err = a.Decrypt(cipher, keysInsuffUUID, pubKey)
+>>>>>>> dirty hack on MSP for GPSW, focus was on FAME. FAME supports UUID (or really any string) in this branch:abe/fame_test.go
 	assert.Error(t, err)
 }
