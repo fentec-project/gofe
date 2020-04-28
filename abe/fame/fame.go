@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package abe
+package fame
 
 import (
 	"math/big"
@@ -52,19 +52,19 @@ type FAME struct {
 	P *big.Int // order of the elliptic curve
 }
 
-// NewFAME configures a new instance of the scheme.
-func NewFAME() *FAME {
+// New configures a new instance of the scheme.
+func New() *FAME {
 	return &FAME{P: bn256.Order}
 }
 
-// FAMESecKey represents a master secret key of a FAME scheme.
-type FAMESecKey struct {
+// SecKey represents a master secret key of a FAME scheme.
+type SecKey struct {
 	PartInt [4]*big.Int
 	PartG1  [3]*bn256.G1
 }
 
-// FAMEPubKey represents a public key of a FAME scheme.
-type FAMEPubKey struct {
+// PubKey represents a public key of a FAME scheme.
+type PubKey struct {
 	PartG2 [2]*bn256.G2
 	PartGT [2]*bn256.GT
 }
@@ -72,7 +72,7 @@ type FAMEPubKey struct {
 // GenerateMasterKeys generates a new set of public keys, needed
 // for encrypting data, and master secret keys needed for generating
 // keys for decrypting.
-func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
+func (a *FAME) GenerateMasterKeys() (*PubKey, *SecKey, error) {
 	sampler := sample.NewUniformRange(big.NewInt(1), a.P)
 	val, err := data.NewRandomVector(7, sampler)
 	if err != nil {
@@ -90,12 +90,12 @@ func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
 	partGT := [2]*bn256.GT{new(bn256.GT).ScalarBaseMult(tmp1),
 		new(bn256.GT).ScalarBaseMult(tmp2)}
 
-	return &FAMEPubKey{PartG2: partG2, PartGT: partGT},
-		&FAMESecKey{PartInt: partInt, PartG1: partG1}, nil
+	return &PubKey{PartG2: partG2, PartGT: partGT},
+		&SecKey{PartInt: partInt, PartG1: partG1}, nil
 }
 
-// FAMECipher represents a ciphertext of a FAME scheme.
-type FAMECipher struct {
+// Cipher represents a ciphertext of a FAME scheme.
+type Cipher struct {
 	Ct0     [3]*bn256.G2
 	Ct      [][3]*bn256.G1
 	CtPrime *bn256.GT
@@ -109,7 +109,7 @@ type FAMECipher struct {
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned. Note that safety of the encryption is only proved if the mapping
 // msp.RowToAttribS from the rows of msp.Mat to attributes is injective.
-func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
+func (a *FAME) Encrypt(msg string, msp *MSP, pk *PubKey) (*Cipher, error) {
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -213,12 +213,12 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	ctPrime.Add(ctPrime, new(bn256.GT).ScalarMult(pk.PartGT[1], s[1]))
 	ctPrime.Add(ctPrime, keyGt)
 
-	return &FAMECipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp, SymEnc: symEnc, Iv: iv}, nil
+	return &Cipher{Ct0: ct0, Ct: ct, CtPrime: ctPrime, Msp: msp, SymEnc: symEnc, Iv: iv}, nil
 }
 
-// FAMEAttribKeys represents keys corresponding to attributes possessed by
+// AttribKeys represents keys corresponding to attributes possessed by
 // an entity and used for decrypting in a FAME scheme.
-type FAMEAttribKeys struct {
+type AttribKeys struct {
 	K0        [3]*bn256.G2
 	K         [][3]*bn256.G1
 	KPrime    [3]*bn256.G1
@@ -228,7 +228,7 @@ type FAMEAttribKeys struct {
 // GenerateAttribKeys given a set of attributes gamma and the master secret key
 // generates keys that can be used for the decryption of any ciphertext encoded
 // with a policy for which attributes gamma are sufficient.
-func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKeys, error) {
+func (a *FAME) GenerateAttribKeys(gamma []string, sk *SecKey) (*AttribKeys, error) {
 	sampler := sample.NewUniform(a.P)
 	r, err := data.NewRandomVector(2, sampler)
 	if err != nil {
@@ -323,14 +323,14 @@ func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKe
 	k2[2].Neg(k2[2])
 	k2[2].Add(k2[2], sk.PartG1[2])
 
-	return &FAMEAttribKeys{K0: k0, K: k, KPrime: k2, AttribToI: attribToI}, nil
+	return &AttribKeys{K0: k0, K: k, KPrime: k2, AttribToI: attribToI}, nil
 }
 
-// Decrypt takes as an input a cipher and an FAMEAttribKeys and tries to decrypt
+// Decrypt takes as an input a cipher and an AttribKeys and tries to decrypt
 // the cipher. This is possible only if the set of possessed attributes (and
-// corresponding keys FAMEAttribKeys) suffices the encryption policy of the
+// corresponding keys AttribKeys) suffices the encryption policy of the
 // cipher. If this is not possible, an error is returned.
-func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (string, error) {
+func (a *FAME) Decrypt(cipher *Cipher, key *AttribKeys, pk *PubKey) (string, error) {
 	// find out which attributes are owned
 	attribMap := make(map[string]bool)
 	for k := range key.AttribToI {

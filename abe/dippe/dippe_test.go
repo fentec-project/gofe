@@ -14,31 +14,31 @@
  * limitations under the License.
  */
 
-package abe_test
+package dippe_test
 
 import (
 	"testing"
 
 	"math/big"
 
-	"github.com/fentec-project/gofe/abe"
+	"github.com/fentec-project/gofe/abe/dippe"
 	"github.com/fentec-project/gofe/data"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDIPPE(t *testing.T) {
 	// create a new DIPPE struct, choosing the security parameter
-	d, err := abe.NewDIPPE(3)
+	d, err := dippe.New(3)
 	if err != nil {
 		t.Fatalf("Failed to generate a new scheme: %v", err)
 	}
 	vecLen := 5
 
 	// create authorities and their public keys
-	auth := make([]*abe.DIPPEAuth, vecLen)
-	pubKeys := make([]*abe.DIPPEPubKey, vecLen)
+	auth := make([]*dippe.Auth, vecLen)
+	pubKeys := make([]*dippe.PubKey, vecLen)
 	for i := range auth {
-		auth[i], err = d.NewDIPPEAuth(i)
+		auth[i], err = d.NewAuth(i)
 		if err != nil {
 			t.Fatalf("Failed to generate a new authority: %v", err)
 		}
@@ -88,7 +88,7 @@ func TestDIPPE_ABE_threshold(t *testing.T) {
 	// threshold value of specified attributes can decrypt
 
 	// create a new DIPPE struct, choosing the security parameter
-	d, err := abe.NewDIPPE(3)
+	d, err := dippe.New(3)
 	if err != nil {
 		t.Fatalf("Failed to generate a new scheme: %v", err)
 	}
@@ -96,10 +96,10 @@ func TestDIPPE_ABE_threshold(t *testing.T) {
 	numAttrib := 10
 
 	// create authorities and their public keys
-	auth := make([]*abe.DIPPEAuth, numAttrib+1)
-	pubKeys := make([]*abe.DIPPEPubKey, numAttrib+1)
+	auth := make([]*dippe.Auth, numAttrib+1)
+	pubKeys := make([]*dippe.PubKey, numAttrib+1)
 	for i := range auth {
-		auth[i], err = d.NewDIPPEAuth(i)
+		auth[i], err = d.NewAuth(i)
 		if err != nil {
 			t.Fatalf("Failed to generate a new authority: %v", err)
 		}
@@ -161,7 +161,7 @@ func TestDIPPE_ABE_conjugation(t *testing.T) {
 	// able to decrypt
 
 	// create a new DIPPE struct, choosing the security parameter
-	d, err := abe.NewDIPPE(3)
+	d, err := dippe.New(3)
 	if err != nil {
 		t.Fatalf("Failed to generate a new scheme: %v", err)
 	}
@@ -169,10 +169,10 @@ func TestDIPPE_ABE_conjugation(t *testing.T) {
 	numAttrib := 10
 
 	// create authorities and their public keys
-	auth := make([]*abe.DIPPEAuth, numAttrib+1)
-	pubKeys := make([]*abe.DIPPEPubKey, numAttrib+1)
+	auth := make([]*dippe.Auth, numAttrib+1)
+	pubKeys := make([]*dippe.PubKey, numAttrib+1)
 	for i := range auth {
-		auth[i], err = d.NewDIPPEAuth(i)
+		auth[i], err = d.NewAuth(i)
 		if err != nil {
 			t.Fatalf("Failed to generate a new authority: %v", err)
 		}
