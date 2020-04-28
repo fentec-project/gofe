@@ -179,11 +179,11 @@ func (a *GPSW) GeneratePolicyKeys(msp *MSP, sk data.Vector) (data.VectorG1, erro
 
 	key := make(data.VectorG1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
-		if 0 > msp.RowToAttrib[i] || a.Params.L <= msp.RowToAttrib[i] {
+		if 0 > msp.RowToAttribI[i] || a.Params.L <= msp.RowToAttribI[i] {
 			return nil, fmt.Errorf("attributes of msp not in the universe of a")
 		}
 
-		tMapIInv := new(big.Int).ModInverse(sk[msp.RowToAttrib[i]], a.Params.P)
+		tMapIInv := new(big.Int).ModInverse(sk[msp.RowToAttribI[i]], a.Params.P)
 		matTimesU, err := msp.Mat[i].Dot(u)
 		if err != nil {
 			return nil, err
@@ -220,9 +220,9 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 // (or entries of D) to corresponding attributes. Vector D is a set of keys
 // that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
 type GPSWKey struct {
-	Mat         data.Matrix
-	D           data.VectorG1
-	RowToAttrib []int
+	Mat          data.Matrix
+	D            data.VectorG1
+	RowToAttribI []int
 }
 
 // DelegateKeys given the set of all keys produced from the MSP struct msp joins
@@ -236,27 +236,27 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 
 	countAttrib := 0
 	for i := 0; i < len(msp.Mat); i++ {
-		if attribMap[msp.RowToAttrib[i]] {
+		if attribMap[msp.RowToAttribI[i]] {
 			countAttrib++
 		}
 	}
 
 	mat := make([]data.Vector, countAttrib)
 	d := make(data.VectorG1, countAttrib)
-	rowToAttrib := make([]int, countAttrib)
+	RowToAttribI := make([]int, countAttrib)
 	countAttrib = 0
 	for i := 0; i < len(msp.Mat); i++ {
-		if attribMap[msp.RowToAttrib[i]] {
+		if attribMap[msp.RowToAttribI[i]] {
 			mat[countAttrib] = msp.Mat[i]
 			d[countAttrib] = keys[i]
-			rowToAttrib[countAttrib] = msp.RowToAttrib[i]
+			RowToAttribI[countAttrib] = msp.RowToAttribI[i]
 			countAttrib++
 		}
 	}
 
 	return &GPSWKey{Mat: mat,
-		D:           d,
-		RowToAttrib: rowToAttrib}
+		D:            d,
+		RowToAttribI: RowToAttribI}
 }
 
 // Decrypt takes as an input a cipher and an GPSWKey key and tries to decrypt
@@ -274,7 +274,7 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get a CBC key needed for the decryption of msg
 	keyGt := new(bn256.GT).Set(cipher.E0)
 	for i := 0; i < len(alpha); i++ {
-		pair := bn256.Pair(key.D[i], cipher.E[cipher.AttribToI[key.RowToAttrib[i]]])
+		pair := bn256.Pair(key.D[i], cipher.E[cipher.AttribToI[key.RowToAttribI[i]]])
 		pair.ScalarMult(pair, alpha[i])
 		pair.Neg(pair)
 		keyGt.Add(keyGt, pair)

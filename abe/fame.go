@@ -108,14 +108,14 @@ type FAMECipher struct {
 // curve, a MSP struct representing the decryption policy, and a public key pk. It
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned. Note that safety of the encryption is only proved if the mapping
-// msp.RowToAttrib from the rows of msp.Mat to attributes is injective.
+// msp.RowToAttribS from the rows of msp.Mat to attributes is injective.
 func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
 
-	attrib := make(map[int]bool)
-	for _, i := range msp.RowToAttrib {
+	attrib := make(map[string]bool)
+	for _, i := range msp.RowToAttribS {
 		if attrib[i] {
 			return nil, fmt.Errorf("some attributes correspond to" +
 				"multiple rows of the MSP struct, the scheme is not secure")
@@ -169,13 +169,13 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	ct := make([][3]*bn256.G1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
 		for l := 0; l < 3; l++ {
-			hs1, err := bn256.HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 0")
+			hs1, err := bn256.HashG1(fmt.Sprintf("%s %d 0", msp.RowToAttribS[i], l))
 			if err != nil {
 				return nil, err
 			}
 			hs1.ScalarMult(hs1, s[0])
 
-			hs2, err := bn256.HashG1(strconv.Itoa(msp.RowToAttrib[i]) + " " + strconv.Itoa(l) + " 1")
+			hs2, err := bn256.HashG1(fmt.Sprintf("%s %d 1", msp.RowToAttribS[i], l))
 			if err != nil {
 				return nil, err
 			}
@@ -222,13 +222,13 @@ type FAMEAttribKeys struct {
 	K0        [3]*bn256.G2
 	K         [][3]*bn256.G1
 	KPrime    [3]*bn256.G1
-	AttribToI map[int]int
+	AttribToI map[string]int
 }
 
 // GenerateAttribKeys given a set of attributes gamma and the master secret key
 // generates keys that can be used for the decryption of any ciphertext encoded
 // with a policy for which attributes gamma are sufficient.
-func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys, error) {
+func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKeys, error) {
 	sampler := sample.NewUniform(a.P)
 	r, err := data.NewRandomVector(2, sampler)
 	if err != nil {
@@ -255,22 +255,22 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 	aInv := [2]*big.Int{a0Inv, a1Inv}
 
 	k := make([][3]*bn256.G1, len(gamma))
-	attribToI := make(map[int]int)
+	attribToI := make(map[string]int)
 	for i, y := range gamma {
 		k[i] = [3]*bn256.G1{new(bn256.G1), new(bn256.G1), new(bn256.G1)}
 		gSigma := new(bn256.G1).ScalarBaseMult(sigma[i])
 		for t := 0; t < 2; t++ {
-			hs0, err := bn256.HashG1(strconv.Itoa(y) + " 0 " + strconv.Itoa(t))
+			hs0, err := bn256.HashG1(fmt.Sprintf("%s 0 %d", y, t))
 			if err != nil {
 				return nil, err
 			}
 			hs0.ScalarMult(hs0, pow0)
-			hs1, err := bn256.HashG1(strconv.Itoa(y) + " 1 " + strconv.Itoa(t))
+			hs1, err := bn256.HashG1(fmt.Sprintf("%s 1 %d", y, t))
 			if err != nil {
 				return nil, err
 			}
 			hs1.ScalarMult(hs1, pow1)
-			hs2, err := bn256.HashG1(strconv.Itoa(y) + " 2 " + strconv.Itoa(t))
+			hs2, err := bn256.HashG1(fmt.Sprintf("%s 2 %d", y, t))
 			if err != nil {
 				return nil, err
 			}
@@ -332,14 +332,14 @@ func (a *FAME) GenerateAttribKeys(gamma []int, sk *FAMESecKey) (*FAMEAttribKeys,
 // cipher. If this is not possible, an error is returned.
 func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (string, error) {
 	// find out which attributes are owned
-	attribMap := make(map[int]bool)
+	attribMap := make(map[string]bool)
 	for k := range key.AttribToI {
 		attribMap[k] = true
 	}
 
 	countAttrib := 0
 	for i := 0; i < len(cipher.Msp.Mat); i++ {
-		if attribMap[cipher.Msp.RowToAttrib[i]] {
+		if attribMap[cipher.Msp.RowToAttribS[i]] {
 			countAttrib++
 		}
 	}
@@ -347,13 +347,13 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	// create a matrix of needed keys
 	preMatForKey := make([]data.Vector, countAttrib)
 	ctForKey := make([][3]*bn256.G1, countAttrib)
-	rowToAttrib := make([]int, countAttrib)
+	RowToAttribS := make([]string, countAttrib)
 	countAttrib = 0
 	for i := 0; i < len(cipher.Msp.Mat); i++ {
-		if attribMap[cipher.Msp.RowToAttrib[i]] {
+		if attribMap[cipher.Msp.RowToAttribS[i]] {
 			preMatForKey[countAttrib] = cipher.Msp.Mat[i]
 			ctForKey[countAttrib] = cipher.Ct[i]
-			rowToAttrib[countAttrib] = cipher.Msp.RowToAttrib[i]
+			RowToAttribS[countAttrib] = cipher.Msp.RowToAttribS[i]
 			countAttrib++
 		}
 	}
@@ -388,7 +388,7 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 	for j := 0; j < 3; j++ {
 		ctProd[j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 		keyProd[j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
-		for i, e := range rowToAttrib {
+		for i, e := range RowToAttribS {
 			ctProd[j].Add(ctProd[j], new(bn256.G1).ScalarMult(ctForKey[i][j], alpha[i]))
 			keyProd[j].Add(keyProd[j], new(bn256.G1).ScalarMult(key.K[key.AttribToI[e]][j], alpha[i]))
 		}

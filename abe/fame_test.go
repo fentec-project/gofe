@@ -44,7 +44,7 @@ func TestFAME(t *testing.T) {
 	// only boolean expressions in which each attribute appears at most once
 	// are allowed - if expressions with multiple appearances of an attribute
 	// are needed, then this attribute can be split into more sub-attributes
-	msp, err := abe.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
+	msp, err := abe.BooleanToMSPString("((0 AND 1) OR (2 AND 3)) AND 5", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestFAME(t *testing.T) {
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
-	gamma := []int{0, 2, 3, 5}
+	gamma := []string{"0", "2", "3", "5"}
 
 	// generate keys for decryption for an entity with
 	// attributes gamma
@@ -77,7 +77,7 @@ func TestFAME(t *testing.T) {
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
-	gammaInsuff := []int{1, 3, 5}
+	gammaInsuff := []string{"1", "3", "5"}
 
 	// generate keys for decryption for an entity with
 	// attributes gammaInsuff
@@ -91,7 +91,7 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
 
-	mspSingleCondition, err := abe.BooleanToMSP("0", false)
+	mspSingleCondition, err := abe.BooleanToMSPString("0", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -110,5 +110,51 @@ func TestFAME(t *testing.T) {
 	assert.Equal(t, msg, msgCheckSingleCondition)
 
 	_, err = a.Decrypt(cipherSingleCondition, keysInsuff, pubKey)
+	assert.Error(t, err)
+
+	// test with UUID
+	mspSingleUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000", false)
+	if err != nil {
+		t.Fatalf("Failed to generate the policy: %v", err)
+	}
+
+	cipherSingleUUID, err := a.Encrypt(msg, mspSingleUUID, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	// define a set of attributes (a subset of the universe of attributes)
+	// that an entity possesses
+	gammaUUID := []string{"123e4567-e89b-12d3-a456-426655440000", "123e4567-e89b-12d3-a456-4266554400001"}
+
+	// generate keys for decryption for an entity with
+	// attributes gamma
+	keysUUID, err := a.GenerateAttribKeys(gammaUUID, secKey)
+	if err != nil {
+		t.Fatalf("Failed to generate keys: %v", err)
+	}
+
+	// decrypt the ciphertext with the keys of an entity
+	// that has sufficient attributes
+	msgCheckUUID, err := a.Decrypt(cipherSingleUUID, keysUUID, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, msgCheckUUID)
+
+	// define a set of attributes (a subset of the universe of attributes)
+	// that an entity possesses
+	gammaInsuffUUID := []string{"123e4567-e89b-12d3-a456-426655440099"}
+
+	// generate keys for decryption for an entity with
+	// attributes gammaInsuff
+	keysInsuffUUID, err := a.GenerateAttribKeys(gammaInsuffUUID, secKey)
+	if err != nil {
+		t.Fatalf("Failed to generate keys: %v", err)
+	}
+
+	// try to decrypt the ciphertext with the keys of an entity
+	// that has insufficient attributes
+	_, err = a.Decrypt(cipher, keysInsuffUUID, pubKey)
 	assert.Error(t, err)
 }

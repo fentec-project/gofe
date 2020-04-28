@@ -31,12 +31,14 @@ import (
 // rows of the matrix mapped to an element of A span the vector [1, 0,..., 0] (or
 // vector [1, 1,..., 1] depending on the use case).
 type MSP struct {
-	P           *big.Int
-	Mat         data.Matrix
-	RowToAttrib []int
+	P            *big.Int
+	Mat          data.Matrix
+	RowToAttribS []string
+	// TODO: Should be temporary
+	RowToAttribI []int
 }
 
-// BooleanToMSP takes as an input a boolean expression (without a NOT gate) and
+// BooleanToMSPString takes as an input a boolean expression (without a NOT gate) and
 // outputs a msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
 // boolean expression assigning 1 to some attributes is satisfied iff the
@@ -44,13 +46,29 @@ type MSP struct {
 // depending if parameter convertToOnes is set to true or false. Additionally a
 // vector is produced whose i-th entry indicates to which attribute the i-th row
 // corresponds.
-func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
+func BooleanToMSPString(boolExp string, convertToOnes bool) (*MSP, error) {
+	return booleanToMSP(boolExp, convertToOnes, "string")
+}
+
+// BooleanToMSPInt takes as an input a boolean expression (without a NOT gate) and
+// outputs a msp structure representing the expression, i.e. a matrix whose rows
+// correspond to attributes used in the expression and with the property that a
+// boolean expression assigning 1 to some attributes is satisfied iff the
+// corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0]
+// depending if parameter convertToOnes is set to true or false. Additionally a
+// vector is produced whose i-th entry indicates to which attribute the i-th row
+// corresponds.
+func BooleanToMSPInt(boolExp string, convertToOnes bool) (*MSP, error) {
+	return booleanToMSP(boolExp, convertToOnes, "int")
+}
+
+func booleanToMSP(boolExp string, convertToOnes bool, format string) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
 	// rows of the msp matrix span the vector [1, 0,..., 0]
 	vec := make(data.Vector, 1)
 	vec[0] = big.NewInt(1)
-	msp, _, err := booleanToMSPIterative(boolExp, vec, 1)
+	msp, _, err := booleanToMSPIterative(boolExp, vec, 1, format)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +105,7 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 // assigning 1 to some attributes is satisfied iff the corresponding rows span a vector
 // [1, 0,..., 0]. The algorithm is known as Lewko-Waters algorithm, see Appendix G in
 // https://eprint.iacr.org/2010/351.pdf.
-func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, error) {
+func booleanToMSPIterative(boolExp string, vec data.Vector, c int, format string) (*MSP, int, error) {
 	boolExp = strings.TrimSpace(boolExp)
 	numBrc := 0
 	var boolExp1 string
@@ -114,11 +132,11 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+3:]
 			vec1, vec2 := makeAndVecs(vec, c)
-			msp1, c1, err = booleanToMSPIterative(boolExp1, vec1, c+1)
+			msp1, c1, err = booleanToMSPIterative(boolExp1, vec1, c+1, format)
 			if err != nil {
 				return nil, 0, err
 			}
-			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec2, c1)
+			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec2, c1, format)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -128,11 +146,11 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 		if numBrc == 0 && i < len(boolExp)-2 && boolExp[i:i+2] == "OR" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+2:]
-			msp1, c1, err = booleanToMSPIterative(boolExp1, vec, c)
+			msp1, c1, err = booleanToMSPIterative(boolExp1, vec, c, format)
 			if err != nil {
 				return nil, 0, err
 			}
-			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec, c1)
+			msp2, cOut, err = booleanToMSPIterative(boolExp2, vec, c1, format)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -149,13 +167,9 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 	if !found {
 		if boolExp[0] == '(' && boolExp[len(boolExp)-1] == ')' {
 			boolExp = boolExp[1:(len(boolExp) - 1)]
-			return booleanToMSPIterative(boolExp, vec, c)
+			return booleanToMSPIterative(boolExp, vec, c, format)
 		}
 
-		attrib, err := strconv.Atoi(boolExp)
-		if err != nil {
-			return nil, 0, err
-		}
 		mat := make(data.Matrix, 1)
 		mat[0] = make(data.Vector, c)
 		for i := 0; i < c; i++ {
@@ -166,9 +180,23 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			}
 		}
 
-		rowToAttrib := make([]int, 1)
-		rowToAttrib[0] = attrib
-		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, c, nil
+		// FAME
+		if format == "string" {
+			rowToAttribS := make([]string, 1)
+			rowToAttribS[0] = boolExp
+			return &MSP{Mat: mat, RowToAttribS: rowToAttribS}, c, nil
+		}
+		// GPSW
+		if format == "int" {
+			attrib, err := strconv.Atoi(boolExp)
+			if err != nil {
+				return nil, 0, err
+			}
+			rowToAttribI := make([]int, 1)
+			rowToAttribI[0] = attrib
+			return &MSP{Mat: mat, RowToAttribI: rowToAttribI}, c, nil
+		}
+
 	}
 	// otherwise we join the two msp structures into one
 	mat := make(data.Matrix, len(msp1.Mat)+len(msp2.Mat))
@@ -184,9 +212,10 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 	for i := 0; i < len(msp2.Mat); i++ {
 		mat[i+len(msp1.Mat)] = msp2.Mat[i]
 	}
-	rowToAttrib := append(msp1.RowToAttrib, msp2.RowToAttrib...)
+	rowToAttribS := append(msp1.RowToAttribS, msp2.RowToAttribS...)
+	rowToAttribI := append(msp1.RowToAttribI, msp2.RowToAttribI...)
 
-	return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, cOut, nil
+	return &MSP{Mat: mat, RowToAttribS: rowToAttribS, RowToAttribI: rowToAttribI}, cOut, nil
 }
 
 // makeAndVecs is a helping structure that given a vector and and counter
