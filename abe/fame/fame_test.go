@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package abe_test
+package fame_test
 
 import (
 	"testing"
 
-	"github.com/fentec-project/gofe/abe"
+	"github.com/fentec-project/gofe/abe/fame"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFAME(t *testing.T) {
 	// create a new FAME struct with the universe of attributes
 	// denoted by integer
-	a := abe.NewFAME()
+	a := fame.New()
 
 	// generate a public key and a secret key for the scheme
 	pubKey, secKey, err := a.GenerateMasterKeys()
@@ -44,7 +44,7 @@ func TestFAME(t *testing.T) {
 	// only boolean expressions in which each attribute appears at most once
 	// are allowed - if expressions with multiple appearances of an attribute
 	// are needed, then this attribute can be split into more sub-attributes
-	msp, err := abe.BooleanToMSPString("((0 AND 1) OR (2 AND 3)) AND 5", false)
+	msp, err := fame.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
 
-	mspSingleCondition, err := abe.BooleanToMSPString("0", false)
+	mspSingleCondition, err := fame.BooleanToMSP("0", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestFAME(t *testing.T) {
 
 	//
 	// test with Single UUID
-	mspSingleUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000", false)
+	mspSingleUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestFAME(t *testing.T) {
 
 	//
 	// test with Multi UUID
-	mspMultiUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
+	mspMultiUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
