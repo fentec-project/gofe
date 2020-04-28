@@ -51,7 +51,7 @@ func TestGPSW(t *testing.T) {
 
 	// create a msp struct out of a boolean expression  representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext
-	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", true)
+	msp, err := abe.BooleanToMSPInt("(1 OR 4) AND (2 OR (0 AND 1))", true)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestGPSW(t *testing.T) {
 	}
 
 	// test if error is returned when a bad Msp struct is given
-	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttrib: make([]int, 0)}
+	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttribI: make([]int, 0)}
 	_, err = a.GeneratePolicyKeys(emptyMsp, secKey)
 	assert.Error(t, err)
 
