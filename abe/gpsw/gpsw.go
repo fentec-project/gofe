@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package abe
+package gpsw
 
 import (
 	"crypto/aes"
@@ -46,30 +46,30 @@ import (
 // to encrypt the messages.
 //
 
-// GPSWParams represents configuration parameters for the GPSW ABE-scheme instance.
-type GPSWParams struct {
+// Params represents configuration parameters for the GPSW ABE-scheme instance.
+type Params struct {
 	L int      // number of attributes
 	P *big.Int // order of the elliptic curve
 }
 
 // GPSW represents an GPSW ABE-scheme.
 type GPSW struct {
-	Params *GPSWParams
+	Params *Params
 }
 
-// NewGPSW configures a new instance of the scheme.
+// New configures a new instance of the scheme.
 // It accepts l the number of attributes possibly used in
 // the scheme. Attributes' names will be considered as
 // elements of a set {0, 1,..., l-1}.
-func NewGPSW(l int) *GPSW {
-	return &GPSW{Params: &GPSWParams{
+func New(l int) *GPSW {
+	return &GPSW{Params: &Params{
 		L: l,           // number of attributes in the whole universe
 		P: bn256.Order, // the order of the pairing groups
 	}}
 }
 
-// GPSWPubKey represents a public key of the GPSW ABE-scheme.
-type GPSWPubKey struct {
+// PubKey represents a public key of the GPSW ABE-scheme.
+type PubKey struct {
 	T data.VectorG2
 	Y *bn256.GT
 }
@@ -77,7 +77,7 @@ type GPSWPubKey struct {
 // GenerateMasterKeys generates a new set of public keys, needed
 // for encrypting data, and secret keys needed for generating keys
 // for decryption.
-func (a *GPSW) GenerateMasterKeys() (*GPSWPubKey, data.Vector, error) {
+func (a *GPSW) GenerateMasterKeys() (*PubKey, data.Vector, error) {
 	sampler := sample.NewUniform(a.Params.P)
 	sk, err := data.NewRandomVector(a.Params.L+1, sampler)
 	if err != nil {
@@ -86,11 +86,11 @@ func (a *GPSW) GenerateMasterKeys() (*GPSWPubKey, data.Vector, error) {
 	t := sk[:a.Params.L].MulG2()
 	y := new(bn256.GT).ScalarBaseMult(sk[a.Params.L])
 
-	return &GPSWPubKey{T: t, Y: y}, sk, nil
+	return &PubKey{T: t, Y: y}, sk, nil
 }
 
-// GPSWCipher represents a ciphertext of the GPSW ABE-scheme.
-type GPSWCipher struct {
+// Cipher represents a ciphertext of the GPSW ABE-scheme.
+type Cipher struct {
 	Gamma     []int         // the set of attributes that can be used for policy of decryption
 	AttribToI map[int]int   // a map that connects the attributes in gamma with elements of e
 	E0        *bn256.GT     // the first part of the encryption
@@ -103,7 +103,7 @@ type GPSWCipher struct {
 // attributes that can be latter used in a decryption policy and a public
 // key pk. It returns an encryption of msg. In case of a failed procedure an
 // error is returned.
-func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, error) {
+func (a *GPSW) Encrypt(msg string, gamma []int, pk *PubKey) (*Cipher, error) {
 	// msg is encrypted using CBC, with a random key that is encapsulated
 	// with GPSW
 	_, keyGt, err := bn256.RandomGT(rand.Reader)
@@ -151,7 +151,7 @@ func (a *GPSW) Encrypt(msg string, gamma []int, pk *GPSWPubKey) (*GPSWCipher, er
 		attribToI[el] = i
 	}
 
-	return &GPSWCipher{Gamma: gamma,
+	return &Cipher{Gamma: gamma,
 		AttribToI: attribToI,
 		E0:        e0,
 		E:         e,
@@ -215,20 +215,20 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 	return ret, nil
 }
 
-// GPSWKey represents a key structure for decrypting a ciphertext. It includes
+// Key represents a key structure for decrypting a ciphertext. It includes
 // Mat a matrix, D a set of vectors and RowToAttib a mapping from rows of Mat
 // (or entries of D) to corresponding attributes. Vector D is a set of keys
 // that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
-type GPSWKey struct {
+type Key struct {
 	Mat          data.Matrix
 	D            data.VectorG1
 	RowToAttribI []int
 }
 
 // DelegateKeys given the set of all keys produced from the MSP struct msp joins
-// those that correspond to attributes appearing in attrib and creates an GPSWKey
+// those that correspond to attributes appearing in attrib and creates an Key
 // for the decryption.
-func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey {
+func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *Key {
 	attribMap := make(map[int]bool)
 	for _, e := range attrib {
 		attribMap[e] = true
@@ -254,16 +254,16 @@ func (a *GPSW) DelegateKeys(keys data.VectorG1, msp *MSP, attrib []int) *GPSWKey
 		}
 	}
 
-	return &GPSWKey{Mat: mat,
+	return &Key{Mat: mat,
 		D:            d,
 		RowToAttribI: RowToAttribI}
 }
 
-// Decrypt takes as an input a cipher and an GPSWKey key and tries to decrypt
-// the cipher. If the GPSWKey is properly generated, this is possible if and only
+// Decrypt takes as an input a cipher and an Key key and tries to decrypt
+// the cipher. If the Key is properly generated, this is possible if and only
 // if the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
 // is not possible, an error is returned.
-func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
+func (a *GPSW) Decrypt(cipher *Cipher, key *Key) (string, error) {
 	// get a combination alpha of keys needed to decrypt
 	ones := data.NewConstantVector(len(key.Mat[0]), big.NewInt(1))
 	alpha, err := data.GaussianEliminationSolver(key.Mat.Transpose(), ones, a.Params.P)
