@@ -112,7 +112,8 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipherSingleCondition, keysInsuff, pubKey)
 	assert.Error(t, err)
 
-	// test with UUID
+	//
+	// test with Single UUID
 	mspSingleUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
@@ -136,11 +137,11 @@ func TestFAME(t *testing.T) {
 
 	// decrypt the ciphertext with the keys of an entity
 	// that has sufficient attributes
-	msgCheckUUID, err := a.Decrypt(cipherSingleUUID, keysUUID, pubKey)
+	msgCheckSingleUUID, err := a.Decrypt(cipherSingleUUID, keysUUID, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
-	assert.Equal(t, msg, msgCheckUUID)
+	assert.Equal(t, msg, msgCheckSingleUUID)
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
@@ -155,6 +156,31 @@ func TestFAME(t *testing.T) {
 
 	// try to decrypt the ciphertext with the keys of an entity
 	// that has insufficient attributes
-	_, err = a.Decrypt(cipher, keysInsuffUUID, pubKey)
+	_, err = a.Decrypt(cipherSingleUUID, keysInsuffUUID, pubKey)
+	assert.Error(t, err)
+
+	//
+	// test with Multi UUID
+	mspMultiUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
+	if err != nil {
+		t.Fatalf("Failed to generate the policy: %v", err)
+	}
+
+	cipherMultiUUID, err := a.Encrypt(msg, mspMultiUUID, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	// decrypt the ciphertext with the keys of an entity
+	// that has sufficient attributes
+	msgCheckMultiUUID, err := a.Decrypt(cipherMultiUUID, keysUUID, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, msgCheckMultiUUID)
+
+	// try to decrypt the ciphertext with the keys of an entity
+	// that has insufficient attributes
+	_, err = a.Decrypt(cipherMultiUUID, keysInsuffUUID, pubKey)
 	assert.Error(t, err)
 }
