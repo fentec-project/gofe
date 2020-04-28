@@ -38,18 +38,6 @@ type MSP struct {
 	RowToAttribI []int
 }
 
-// BooleanToMSPString takes as an input a boolean expression (without a NOT gate) and
-// outputs a msp structure representing the expression, i.e. a matrix whose rows
-// correspond to attributes used in the expression and with the property that a
-// boolean expression assigning 1 to some attributes is satisfied iff the
-// corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0]
-// depending if parameter convertToOnes is set to true or false. Additionally a
-// vector is produced whose i-th entry indicates to which attribute the i-th row
-// corresponds.
-func BooleanToMSPString(boolExp string, convertToOnes bool) (*MSP, error) {
-	return booleanToMSP(boolExp, convertToOnes, "string")
-}
-
 // BooleanToMSPInt takes as an input a boolean expression (without a NOT gate) and
 // outputs a msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
@@ -59,10 +47,10 @@ func BooleanToMSPString(boolExp string, convertToOnes bool) (*MSP, error) {
 // vector is produced whose i-th entry indicates to which attribute the i-th row
 // corresponds.
 func BooleanToMSPInt(boolExp string, convertToOnes bool) (*MSP, error) {
-	return booleanToMSP(boolExp, convertToOnes, "int")
+	return BooleanToMSP(boolExp, convertToOnes, "int")
 }
 
-func booleanToMSP(boolExp string, convertToOnes bool, format string) (*MSP, error) {
+func BooleanToMSP(boolExp string, convertToOnes bool, format string) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
 	// rows of the msp matrix span the vector [1, 0,..., 0]

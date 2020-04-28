@@ -19,9 +19,7 @@ package gpsw_test
 import (
 	"testing"
 
-	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/abe/gpsw"
-	"github.com/fentec-project/gofe/data"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,7 +50,7 @@ func TestGPSW(t *testing.T) {
 
 	// create a msp struct out of a boolean expression  representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext
-	msp, err := abe.BooleanToMSPInt("(1 OR 4) AND (2 OR (0 AND 1))", true)
+	msp, err := gpsw.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", true)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -68,7 +66,8 @@ func TestGPSW(t *testing.T) {
 	}
 
 	// test if error is returned when a bad Msp struct is given
-	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttribI: make([]int, 0)}
+	emptyMsp := gpsw.NewMSP()
+
 	_, err = a.GeneratePolicyKeys(emptyMsp, secKey)
 	assert.Error(t, err)
 
