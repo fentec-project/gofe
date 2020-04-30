@@ -90,4 +90,25 @@ func TestFAME(t *testing.T) {
 	// that has insufficient attributes
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
+
+	mspSingleCondition, err := abe.BooleanToMSP("0", false)
+	if err != nil {
+		t.Fatalf("Failed to generate the policy: %v", err)
+	}
+
+	// encrypt the message msg with the decryption policy specified by the
+	// msp structure
+	cipherSingleCondition, err := a.Encrypt(msg, mspSingleCondition, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	msgCheckSingleCondition, err := a.Decrypt(cipherSingleCondition, keys, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %v", err)
+	}
+	assert.Equal(t, msg, msgCheckSingleCondition)
+
+	_, err = a.Decrypt(cipherSingleCondition, keysInsuff, pubKey)
+	assert.Error(t, err)
 }
