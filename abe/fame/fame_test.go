@@ -114,7 +114,7 @@ func TestFAME(t *testing.T) {
 
 	//
 	// test with Single UUID
-	mspSingleUUID, err := abe.BooleanToMSPString("123e4567-e89b-12d3-a456-426655440000", false)
+	mspSingleUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
 
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
