@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package fame_test
+package abe_test
 
 import (
 	"testing"
 
-	"github.com/fentec-project/gofe/abe/fame"
+	"github.com/fentec-project/gofe/abe"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFAME(t *testing.T) {
 	// create a new FAME struct with the universe of attributes
 	// denoted by integer
-	a := fame.New()
+	a := abe.NewFAME()
 
 	// generate a public key and a secret key for the scheme
 	pubKey, secKey, err := a.GenerateMasterKeys()
@@ -39,12 +39,16 @@ func TestFAME(t *testing.T) {
 
 	// create a msp struct out of a boolean expression representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext;
+	// the boolean expression is a string of attributes joined by AND and OR
+	// hence the names of the attributes should not include "AND" or "OR"
+	// as a substring and '(' or ')' as a character
+
 	// note that safety of the encryption is only proved if the mapping
 	// msp.RowToAttrib from the rows of msp.Mat to attributes is injective, i.e.
 	// only boolean expressions in which each attribute appears at most once
 	// are allowed - if expressions with multiple appearances of an attribute
 	// are needed, then this attribute can be split into more sub-attributes
-	msp, err := fame.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
+	msp, err := abe.BooleanToMSP("((0 AND 1) OR (2 AND 3)) AND 5", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -91,7 +95,7 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipher, keysInsuff, pubKey)
 	assert.Error(t, err)
 
-	mspSingleCondition, err := fame.BooleanToMSP("0", false)
+	mspSingleCondition, err := abe.BooleanToMSP("0", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -112,9 +116,8 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipherSingleCondition, keysInsuff, pubKey)
 	assert.Error(t, err)
 
-	//
 	// test with Single UUID
-	mspSingleUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
+	mspSingleUUID, err := abe.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
 
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
@@ -162,7 +165,7 @@ func TestFAME(t *testing.T) {
 
 	//
 	// test with Multi UUID
-	mspMultiUUID, err := fame.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
+	mspMultiUUID, err := abe.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}

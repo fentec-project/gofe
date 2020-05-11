@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dippe
+package abe
 
 import (
 	"crypto/aes"
@@ -43,29 +43,29 @@ type DIPPE struct {
 	P        *big.Int // order of the elliptic curve
 }
 
-// PubKey represents a public key of an authority in DIPPE scheme.
-type PubKey struct {
+// DIPPEPubKey represents a public key of an authority in DIPPE scheme.
+type DIPPEPubKey struct {
 	G1ToWtA   data.MatrixG1
 	GToAlphaA data.VectorGT
 	G2ToSigma *bn256.G2
 }
 
-// SecKey represents a secret key of an authority in DIPPE scheme.
-type SecKey struct {
+// DIPPESecKey represents a secret key of an authority in DIPPE scheme.
+type DIPPESecKey struct {
 	Sigma *big.Int
 	W     data.Matrix
 	Alpha data.Vector
 }
 
-// Auth represents an authority in DIPPE scheme
-type Auth struct {
+// DIPPEAuth represents an authority in DIPPE scheme
+type DIPPEAuth struct {
 	ID int
-	Sk SecKey
-	Pk PubKey
+	Sk DIPPESecKey
+	Pk DIPPEPubKey
 }
 
-// Cipher represents a ciphertext in DIPPE scheme
-type Cipher struct {
+// DIPPECipher represents a ciphertext in DIPPE scheme
+type DIPPECipher struct {
 	C0     data.VectorG1
 	C      data.MatrixG1
 	CPrime *bn256.GT
@@ -74,10 +74,10 @@ type Cipher struct {
 	Iv     []byte      // initialization vector for symmetric encryption
 }
 
-// New configures a new instance of the scheme. The input parameter
+// NewDIPPE configures a new instance of the scheme. The input parameter
 // defines the security assumption of the scheme, so called k-Lin assumption,
 // where k is the input.
-func New(secLevel int) (*DIPPE, error) {
+func NewDIPPE(secLevel int) (*DIPPE, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
 	A, err := data.NewRandomMatrix(secLevel+1, secLevel, sampler)
@@ -103,10 +103,10 @@ func New(secLevel int) (*DIPPE, error) {
 		P:      bn256.Order}, nil
 }
 
-// NewAuth configures a new authority that will be able to
+// NewDIPPEAuth configures a new authority that will be able to
 // produce decryption keys. If the scheme will have n authorities
 // it is assumed that each will have a different id from [0, n).
-func (d *DIPPE) NewAuth(id int) (*Auth, error) {
+func (d *DIPPE) NewDIPPEAuth(id int) (*DIPPEAuth, error) {
 	sampler := sample.NewUniform(bn256.Order)
 
 	W, err := data.NewRandomMatrix(d.secLevel+1, d.secLevel+1, sampler)
@@ -124,7 +124,7 @@ func (d *DIPPE) NewAuth(id int) (*Auth, error) {
 		return nil, err
 	}
 
-	sk := SecKey{W: W, Alpha: alpha, Sigma: sigma}
+	sk := DIPPESecKey{W: W, Alpha: alpha, Sigma: sigma}
 
 	g1ToWtA, err := W.Transpose().MatMulMatG1(d.G1ToA)
 	if err != nil {
@@ -145,9 +145,9 @@ func (d *DIPPE) NewAuth(id int) (*Auth, error) {
 
 	g2ToSigma := new(bn256.G2).ScalarMult(g2, sigma)
 
-	pk := PubKey{G1ToWtA: g1ToWtA, GToAlphaA: gtToAlphaA, G2ToSigma: g2ToSigma}
+	pk := DIPPEPubKey{G1ToWtA: g1ToWtA, GToAlphaA: gtToAlphaA, G2ToSigma: g2ToSigma}
 
-	return &Auth{ID: id, Sk: sk, Pk: pk}, nil
+	return &DIPPEAuth{ID: id, Sk: sk, Pk: pk}, nil
 }
 
 // Encrypt takes as an input a string message msg, a vector x representing a
@@ -155,7 +155,7 @@ func (d *DIPPE) NewAuth(id int) (*Auth, error) {
 // The i-th coordinate of x corresponds to i-th public key of the authority with
 // id i. It returns an encryption of msg. In case of a failed procedure an
 // error is returned.
-func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*PubKey) (*Cipher, error) {
+func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIPPECipher, error) {
 	// msg is encrypted using CBC, with a random key that is encapsulated
 	// with DIPPE
 	_, keyGt, err := bn256.RandomGT(rand.Reader)
@@ -214,7 +214,7 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*PubKey) (*Cipher, 
 	}
 	cPrime.Add(keyGt, cPrime)
 
-	return &Cipher{C0: c0, C: c, CPrime: cPrime, X: x.Copy(), SymEnc: symEnc, Iv: iv}, nil
+	return &DIPPECipher{C0: c0, C: c, CPrime: cPrime, X: x.Copy(), SymEnc: symEnc, Iv: iv}, nil
 }
 
 // DeriveKeyShare allows an authority to give a partial decryption key. Collecting all
@@ -222,7 +222,7 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*PubKey) (*Cipher, 
 // an information about the user that will allow him to decrypt iff the inner product
 // v times x = 0 for the policy x. GID is a global identifier of the user and a slice of
 // public keys of the authorities should be given.
-func (a *Auth) DeriveKeyShare(v data.Vector, pubKeys []*PubKey, gid string) (data.VectorG2, error) {
+func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
 	for i := 0; i < a.Sk.W.Rows(); i++ {
 		g2ToMu[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
@@ -271,7 +271,7 @@ func (a *Auth) DeriveKeyShare(v data.Vector, pubKeys []*PubKey, gid string) (dat
 // a vector v representing the users decryption allowance, and a global identifier.
 // If the provided keys are correct and the inner product v times x = 0 for the policy
 // x, the message is decrypted, otherwise an error is returned.
-func (d *DIPPE) Decrypt(cipher *Cipher, keys []data.VectorG2, v data.Vector, gid string) (string, error) {
+func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (string, error) {
 	// check if the decryption is possible
 	prod, err := v.Dot(cipher.X)
 	if err != nil {
