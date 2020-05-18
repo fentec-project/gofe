@@ -45,9 +45,9 @@ type MSP struct {
 // vector is produced whose i-th entry indicates to which attribute the i-th row
 // corresponds.
 // Example: BooleanToMSP("attrib1 AND (attrib2 OR attrib3)", true)
-// The names of the attributes should not include should not include
-// "AND" or "OR" as a substring and '(' or ')' as a character, otherwise
-// the function will not work properly.
+// The names of the attributes should not include "AND" or "OR" as
+// a substring and '(' or ')' as a character, otherwise the function
+// will not work properly.
 func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
