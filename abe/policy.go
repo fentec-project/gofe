@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/fentec-project/gofe/data"
+	"fmt"
 )
 
 // MSP represents a monotone span program (MSP) describing a policy defining which
@@ -154,6 +155,10 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 		if boolExp[0] == '(' && boolExp[len(boolExp)-1] == ')' {
 			boolExp = boolExp[1:(len(boolExp) - 1)]
 			return booleanToMSPIterative(boolExp, vec, c)
+		}
+
+		if strings.Contains(boolExp, "(") || strings.Contains(boolExp, ")") {
+			return nil, 0, fmt.Errorf("bad boolean expression or attributes contain ( or )")
 		}
 
 		mat := make(data.Matrix, 1)
