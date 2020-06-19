@@ -38,14 +38,13 @@ import (
 // Encrypted Data"
 //
 // We abbreviated it GPSW scheme to honor the authors. This scheme
-// enables distribution of keys based on a boolean expression
-// determining which attributes are needed for an entity to be able
-// to decrypt. Each key is connected to some attribute, such that
-// only a set of keys whose attributes are sufficient can decrypt
-// the massage.
+// enables encrypting data associated with a set of attributes and
+// generating keys associated with boolean expressions determining the
+// policy. A user that owns such a key can decrypt the ciphertext
+// only if the attributes associated to the ciphertext satisfy the
+//policy associated to the key.
 // This scheme is a PUBLIC-KEY scheme - no master secret key is needed
 // to encrypt the messages.
-//
 
 // GPSWParams represents configuration parameters for the GPSW ABE-scheme instance.
 type GPSWParams struct {
@@ -101,7 +100,7 @@ type GPSWCipher struct {
 }
 
 // Encrypt takes as an input a message msg given as a string, gamma a set (slice)
-// of attributes that can be latter used in a decryption policy and a public
+// of attributes that will be associated with the encryption and a public
 // key pk. It returns an encryption of msg. In case of a failed procedure an
 // error is returned.
 func (a *GPSW) Encrypt(msg string, gamma interface{}, pk *GPSWPubKey) (*GPSWCipher, error) {
@@ -178,20 +177,18 @@ func (a *GPSW) Encrypt(msg string, gamma interface{}, pk *GPSWPubKey) (*GPSWCiph
 }
 
 // GPSWKey represents a key structure for decrypting a ciphertext. It includes
-// Mat a matrix, D a set of vectors and RowToAttib a mapping from rows of Mat
-// (or entries of D) to corresponding attributes. Vector D is a set of keys
-// that can decrypt a ciphertext of the rows of mat span the vector [1, 1,..., 1].
+// a msp structure (policy) associated with the key and a vector D representing
+// the main part of the key.
 type GPSWKey struct {
 	Msp         *MSP
 	D           data.VectorG1
 }
 
-// GeneratePolicyKeys given a monotone span program (MSP) msp and the vector of secret
-// keys produces a vector of keys needed for the decryption. In particular,
-// for each row of the MSP matrix msp.mat it creates a corresponding key. Since
-// each row of msp.mat has a corresponding key, this keys can be latter delegated
-// to entities with corresponding attributes.
-func (a *GPSW) GeneratePolicyKeys(msp *MSP, sk data.Vector) (*GPSWKey, error) {
+// GeneratePolicyKey given a monotone span program (MSP) msp and the vector of secret
+// keys produces an ABE key associated with the policy given by MSP. In particular,
+// this key can be used to decrypt any cipertext associated with attributes that
+// satisfy given policy.
+func (a *GPSW) GeneratePolicyKey(msp *MSP, sk data.Vector) (*GPSWKey, error) {
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
 		return nil, fmt.Errorf("empty msp matrix")
 	}
@@ -248,18 +245,21 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 }
 
 // Decrypt takes as an input a cipher and an GPSWKey key and tries to decrypt
-// the cipher. If the GPSWKey is properly generated, this is possible if and only
-// if the rows of the matrix in the key span the vector [1, 1,..., 1]. If this
-// is not possible, an error is returned.
+// the cipher. If the GPSWKey is properly generated, this is possible if and
+// only if the set of attributes associated with the ciphertext satisfies the
+// policy (boolean expression) of the key. This is if and only if the
+// rows of the msp matrix in the key associated with the attributes of the
+// ciphertext span the vector [1, 1,..., 1]. If this is not possible, an
+//error is returned.
 func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get intersection of gamma and attributes used in the key policy
 	gammaMap := make(map[int]bool)
 	for _, e := range cipher.Gamma {
 		gammaMap[e] = true
 	}
-
 	intersection := make([]int, 0)
-	countAttrib := 0
+	mat := make(data.Matrix, 0)
+	d := make(data.VectorG1, 0)
 	for i := 0; i < len(key.Msp.Mat); i++ {
 		attrib, err := strconv.Atoi(key.Msp.RowToAttrib[i])
 		if err != nil {
@@ -267,36 +267,14 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 		}
 		if gammaMap[attrib] {
 			intersection = append(intersection, attrib)
+			mat = append(mat, key.Msp.Mat[i])
+			d = append(d, key.D[i])
 		}
 	}
 
-	mat := make([]data.Vector, len(intersection))
-	d := make(data.VectorG1, len(intersection))
-	rowToAttrib := make([]int, countAttrib)
-	countAttrib = 0
-	for i := 0; i < len(msp.Mat); i++ {
-	if gammaMap[attrib] {
-	mat[countAttrib] = msp.Mat[i]
-	d[countAttrib] = keys[i]
-	rowToAttrib[countAttrib], err = strconv.Atoi(msp.RowToAttrib[i])
-	if err != nil {
-	return nil, err
-	}
-	countAttrib++
-	}
-	}
-
-	return &GPSWKey{Mat: mat,
-	D:           d,
-	RowToAttrib: rowToAttrib}, nil
-	}
-
-
-
-
 	// get a combination alpha of keys needed to decrypt
-	ones := data.NewConstantVector(len(key.Msp.Mat[0]), big.NewInt(1))
-	alpha, err := data.GaussianEliminationSolver(key.Msp.Mat.Transpose(), ones, a.Params.P)
+	ones := data.NewConstantVector(len(mat[0]), big.NewInt(1))
+	alpha, err := data.GaussianEliminationSolver(mat.Transpose(), ones, a.Params.P)
 	if err != nil {
 		return "", fmt.Errorf("the provided key is not sufficient for the decryption")
 	}
@@ -304,7 +282,7 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get a CBC key needed for the decryption of msg
 	keyGt := new(bn256.GT).Set(cipher.E0)
 	for i := 0; i < len(alpha); i++ {
-		pair := bn256.Pair(key.D[i], cipher.E[cipher.AttribToI[key.RowToAttrib[i]]])
+		pair := bn256.Pair(d[i], cipher.E[cipher.AttribToI[intersection[i]]])
 		pair.ScalarMult(pair, alpha[i])
 		pair.Neg(pair)
 		keyGt.Add(keyGt, pair)

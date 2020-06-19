@@ -36,15 +36,23 @@ func TestGPSW(t *testing.T) {
 		t.Fatalf("Failed to generate master keys: %v", err)
 	}
 
-	// create a message to be encrypted
-	msg := "Attack at dawn!"
+	// create two messages to be encrypted
+	msg1 := "Attack at dawn!"
+	msg2 := "More chocolate!"
 
 	// define a set of attributes (a subset of the universe of attributes)
-	// that will later be used in the decryption policy of the message
-	gamma := []int{0, 1, 2, 4, 5} // could be given also as []string{"0", "1", "2", "4", "5"}
+	// that will be associated with the encryptions
+	gamma1 := []int{0, 4, 5} // could be given also as []string{"0", "4", "5"}
+	gamma2 := []int{0, 1, 4} // could be given also as []string{"0", "1", "4"}
 
-	// encrypt the message
-	cipher, err := a.Encrypt(msg, gamma, pubKey)
+	// encrypt the first message with associated attributes gamma1
+	cipher1, err := a.Encrypt(msg1, gamma1, pubKey)
+	if err != nil {
+		t.Fatalf("Failed to encrypt: %v", err)
+	}
+
+	// encrypt the second message with associated attributes gamma2
+	cipher2, err := a.Encrypt(msg2, gamma2, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
@@ -52,8 +60,7 @@ func TestGPSW(t *testing.T) {
 	// create a msp struct out of a boolean expression representing the
 	// policy specifying which attributes are needed to decrypt the ciphertext;
 	// the boolean expression is a string of attributes joined by AND and OR
-	// hence the names of the attributes should not include "AND" or "OR"
-	// as a substring and '(' or ')' as a character
+	// where attributes are integers from the interval [0, l)
 
 	// note that the safety of the encryption is only proved if the mapping
 	// msp.RowToAttrib from the rows of msp.Mat to attributes is injective, i.e.
@@ -65,39 +72,27 @@ func TestGPSW(t *testing.T) {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
 
-	// generate keys for decryption that correspond to provided msp struct,
-	// i.e. a vector of keys, for each row in the msp matrix one key, having
-	// the property that a subset of keys can decrypt a message iff the
-	// corresponding rows span the vector of ones (which is equivalent to
-	// corresponding attributes satisfy the boolean expression)
-	keys, err := a.GeneratePolicyKeys(msp, secKey)
+	// generate a key for decryption that correspond to provided msp struct,
+	// i.e. a key that can decrypt a message iff the attributes associated
+	// with the ciphertext satisfy the boolean expression
+	abeKey, err := a.GeneratePolicyKey(msp, secKey)
 	if err != nil {
 		t.Fatalf("Failed to generate keys: %v", err)
 	}
 
 	// test if error is returned when a bad Msp struct is given
 	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttrib: make([]string, 0)}
-	_, err = a.GeneratePolicyKeys(emptyMsp, secKey)
+	_, err = a.GeneratePolicyKey(emptyMsp, secKey)
 	assert.Error(t, err)
 
-	// produce a set of keys that are given to an entity with a set
-	// of attributes in ownedAttrib
-	ownedAttrib := []int{1, 2} // could be also give as []string{"1", "2"}
-	abeKey, err := a.DelegateKeys(keys, msp, ownedAttrib)
-
-	// decrypt the ciphertext with the set of delegated keys
-	msgCheck, err := a.Decrypt(cipher, abeKey)
+	// decrypt the first ciphertext with abeKey
+	msgCheck, err := a.Decrypt(cipher1, abeKey)
 	if err != nil {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
-	assert.Equal(t, msg, msgCheck)
+	assert.Equal(t, msg1, msgCheck)
 
-	// produce a set of keys that are given to an entity with a set
-	// of insufficient attributes in ownedAttribInsuff
-	ownedAttribInsuff := []int{4, 0}
-	abeKeyInsuff, err := a.DelegateKeys(keys, msp, ownedAttribInsuff)
-
-	// try to decrypt the ciphertext with the set of delegated keys
-	_, err = a.Decrypt(cipher, abeKeyInsuff)
+	// try to decrypt the second ciphertext but fail with abeKey
+	_, err = a.Decrypt(cipher2, abeKey)
 	assert.Error(t, err)
 }
