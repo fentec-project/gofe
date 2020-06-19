@@ -18,10 +18,10 @@ package abe
 
 import (
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/fentec-project/gofe/data"
+	"fmt"
 )
 
 // MSP represents a monotone span program (MSP) describing a policy defining which
@@ -33,17 +33,22 @@ import (
 type MSP struct {
 	P           *big.Int
 	Mat         data.Matrix
-	RowToAttrib []int
+	RowToAttrib []string
 }
 
-// BooleanToMSP takes as an input a boolean expression (without a NOT gate) and
-// outputs a msp structure representing the expression, i.e. a matrix whose rows
+// BooleanToMSP takes as an input a boolean expression (without a NOT gate) as
+// a string where attributes are joined by AND and OR gates. It outputs a
+// msp structure representing the expression, i.e. a matrix whose rows
 // correspond to attributes used in the expression and with the property that a
 // boolean expression assigning 1 to some attributes is satisfied iff the
 // corresponding rows span a vector [1, 1,..., 1] or vector [1, 0,..., 0]
 // depending if parameter convertToOnes is set to true or false. Additionally a
 // vector is produced whose i-th entry indicates to which attribute the i-th row
 // corresponds.
+// Example: BooleanToMSP("attrib1 AND (attrib2 OR attrib3)", true)
+// The names of the attributes should not include "AND" or "OR" as
+// a substring and '(' or ')' as a character, otherwise the function
+// will not work properly.
 func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 	// by the Lewko-Waters algorithm we obtain a MSP struct with the property
 	// that is the the boolean expression is satisfied if and only if the corresponding
@@ -152,10 +157,10 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			return booleanToMSPIterative(boolExp, vec, c)
 		}
 
-		attrib, err := strconv.Atoi(boolExp)
-		if err != nil {
-			return nil, 0, err
+		if strings.Contains(boolExp, "(") || strings.Contains(boolExp, ")") {
+			return nil, 0, fmt.Errorf("bad boolean expression or attributes contain ( or )")
 		}
+
 		mat := make(data.Matrix, 1)
 		mat[0] = make(data.Vector, c)
 		for i := 0; i < c; i++ {
@@ -166,9 +171,10 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			}
 		}
 
-		rowToAttrib := make([]int, 1)
-		rowToAttrib[0] = attrib
-		return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, c, nil
+		rowToAttribS := make([]string, 1)
+		rowToAttribS[0] = boolExp
+		return &MSP{Mat: mat, RowToAttrib: rowToAttribS}, c, nil
+
 	}
 	// otherwise we join the two msp structures into one
 	mat := make(data.Matrix, len(msp1.Mat)+len(msp2.Mat))
@@ -184,9 +190,9 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 	for i := 0; i < len(msp2.Mat); i++ {
 		mat[i+len(msp1.Mat)] = msp2.Mat[i]
 	}
-	rowToAttrib := append(msp1.RowToAttrib, msp2.RowToAttrib...)
+	rowToAttribS := append(msp1.RowToAttrib, msp2.RowToAttrib...)
 
-	return &MSP{Mat: mat, RowToAttrib: rowToAttrib}, cOut, nil
+	return &MSP{Mat: mat, RowToAttrib: rowToAttribS}, cOut, nil
 }
 
 // makeAndVecs is a helping structure that given a vector and and counter

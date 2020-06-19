@@ -26,7 +26,7 @@ import (
 
 func TestGPSW(t *testing.T) {
 	// create a new GPSW struct with the universe of l possible
-	// attributes (attributes are denoted by the integers in [0, l)
+	// attributes (attributes are denoted by the integers in [0, l))
 	l := 10
 	a := abe.NewGPSW(l)
 
@@ -41,7 +41,7 @@ func TestGPSW(t *testing.T) {
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that will later be used in the decryption policy of the message
-	gamma := []int{0, 1, 2, 4}
+	gamma := []int{0, 1, 2, 4, 5} // could be given also as []string{"0", "1", "2", "4", "5"}
 
 	// encrypt the message
 	cipher, err := a.Encrypt(msg, gamma, pubKey)
@@ -49,9 +49,18 @@ func TestGPSW(t *testing.T) {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
 
-	// create a msp struct out of a boolean expression  representing the
-	// policy specifying which attributes are needed to decrypt the ciphertext
-	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 1))", true)
+	// create a msp struct out of a boolean expression representing the
+	// policy specifying which attributes are needed to decrypt the ciphertext;
+	// the boolean expression is a string of attributes joined by AND and OR
+	// hence the names of the attributes should not include "AND" or "OR"
+	// as a substring and '(' or ')' as a character
+
+	// note that the safety of the encryption is only proved if the mapping
+	// msp.RowToAttrib from the rows of msp.Mat to attributes is injective, i.e.
+	// only boolean expressions in which each attribute appears at most once
+	// are allowed - if expressions with multiple appearances of an attribute
+	// are needed, then this attribute can be split into more sub-attributes
+	msp, err := abe.BooleanToMSP("(1 OR 4) AND (2 OR (0 AND 5))", true)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -67,14 +76,14 @@ func TestGPSW(t *testing.T) {
 	}
 
 	// test if error is returned when a bad Msp struct is given
-	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttrib: make([]int, 0)}
+	emptyMsp := &abe.MSP{Mat: make(data.Matrix, 0), RowToAttrib: make([]string, 0)}
 	_, err = a.GeneratePolicyKeys(emptyMsp, secKey)
 	assert.Error(t, err)
 
 	// produce a set of keys that are given to an entity with a set
 	// of attributes in ownedAttrib
-	ownedAttrib := []int{1, 2}
-	abeKey := a.DelegateKeys(keys, msp, ownedAttrib)
+	ownedAttrib := []int{1, 2} // could be also give as []string{"1", "2"}
+	abeKey, err := a.DelegateKeys(keys, msp, ownedAttrib)
 
 	// decrypt the ciphertext with the set of delegated keys
 	msgCheck, err := a.Decrypt(cipher, abeKey)
@@ -86,7 +95,7 @@ func TestGPSW(t *testing.T) {
 	// produce a set of keys that are given to an entity with a set
 	// of insufficient attributes in ownedAttribInsuff
 	ownedAttribInsuff := []int{4, 0}
-	abeKeyInsuff := a.DelegateKeys(keys, msp, ownedAttribInsuff)
+	abeKeyInsuff, err := a.DelegateKeys(keys, msp, ownedAttribInsuff)
 
 	// try to decrypt the ciphertext with the set of delegated keys
 	_, err = a.Decrypt(cipher, abeKeyInsuff)
