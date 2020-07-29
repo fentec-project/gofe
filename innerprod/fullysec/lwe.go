@@ -18,6 +18,7 @@ package fullysec
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -144,18 +145,21 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 
 		sigma = new(big.Float).Quo(big.NewFloat(1), SquaredF)
 		sigma.Quo(sigma, bound2)
-		sigma.Quo(sigma, big.NewFloat(math.Log2(nF)))
+		sigma.Quo(sigma, big.NewFloat(math.Sqrt(math.Log2(nF))))
 
 		// assuming number of bits of q will be at least nBitsQ from the previous
 		// iteration (this is always true) we calculate sigma prime
 		nfPow6 := math.Pow(nF, 6)
 		nBitsQPow2 := math.Pow(float64(nBitsQ), 2)
 		sqrtLog2nFPow5 := math.Pow(math.Sqrt(math.Log2(nF)), 5)
+		//fmt.Println(sqrtLog2nFPow5, sigma)
 		sigmaPrime := new(big.Float).Quo(sigma, kF)
 		sigmaPrime.Quo(sigmaPrime, big.NewFloat(nfPow6*nBitsQPow2*sqrtLog2nFPow5))
+		//fmt.Println(sigmaPrime)
 
 		boundForQ := new(big.Float)
 		boundForQ.Quo(big.NewFloat(math.Sqrt(math.Log2(nF))), sigmaPrime)
+		//fmt.Println(boundForQ)
 		nBitsQ = boundForQ.MantExp(nil) + 1
 		// check if the number of bits for q is greater than i as it was
 		// assumed at the beginning of the iteration
@@ -164,14 +168,15 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 		}
 		// in the next iteration the number of bits for q must be at least as
 		// many as it was demanded in this iteration
-		i = nBitsQ
+		//i = nBitsQ
+		//fmt.Println(nBitsQ)
 	}
 	// get q
 	q, err := rand.Prime(rand.Reader, nBitsQ)
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(nBitsQ)
 	m := int(1.01 * nF * float64(nBitsQ))
 
 	// get sigmaQ

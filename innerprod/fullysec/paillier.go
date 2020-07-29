@@ -79,19 +79,20 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 	// check if the parameters of the scheme are compatible,
 	// i.e. security parameter should be big enough that
 	// the generated n is much greater than l and the bounds
-	xSquareL := new(big.Int).Mul(boundX, boundX)
-	xSquareL.Mul(xSquareL, big.NewInt(int64(2*l)))
-	ySquareL := new(big.Int).Mul(boundY, boundY)
-	ySquareL.Mul(ySquareL, big.NewInt(int64(2*l)))
-	if n.Cmp(xSquareL) < 1 {
-		return nil, fmt.Errorf("parameters generation failed," +
-			"boundX and l too big for bitLen")
+	if boundX != nil && boundY != nil {
+		xSquareL := new(big.Int).Mul(boundX, boundX)
+		xSquareL.Mul(xSquareL, big.NewInt(int64(2*l)))
+		ySquareL := new(big.Int).Mul(boundY, boundY)
+		ySquareL.Mul(ySquareL, big.NewInt(int64(2*l)))
+		if n.Cmp(xSquareL) < 1 {
+			return nil, fmt.Errorf("parameters generation failed," +
+				"boundX and l too big for bitLen")
+		}
+		if n.Cmp(ySquareL) < 1 {
+			return nil, fmt.Errorf("parameters generation failed," +
+				"boundY and l too big for bitLen")
+		}
 	}
-	if n.Cmp(ySquareL) < 1 {
-		return nil, fmt.Errorf("parameters generation failed," +
-			"boundY and l too big for bitLen")
-	}
-
 	// generate a generator for the 2n-th residues subgroup of Z_n^2*
 	gPrime, err := rand.Int(rand.Reader, nSquare)
 	if err != nil {
@@ -170,8 +171,10 @@ func (s *Paillier) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 // In case of malformed secret key or input vector that violates the configured
 // bound, it returns an error.
 func (s *Paillier) DeriveKey(masterSecKey data.Vector, y data.Vector) (*big.Int, error) {
-	if err := y.CheckBound(s.Params.BoundY); err != nil {
+	if s.Params.BoundY != nil {
+		if err := y.CheckBound(s.Params.BoundY); err != nil {
 		return nil, err
+		}
 	}
 
 	return masterSecKey.Dot(y)
@@ -180,8 +183,10 @@ func (s *Paillier) DeriveKey(masterSecKey data.Vector, y data.Vector) (*big.Int,
 // Encrypt encrypts input vector x with the provided master public key.
 // It returns a ciphertext vector. If encryption failed, error is returned.
 func (s *Paillier) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
-	if err := x.CheckBound(s.Params.BoundX); err != nil {
-		return nil, err
+	if s.Params.BoundX != nil {
+		if err := x.CheckBound(s.Params.BoundX); err != nil {
+			return nil, err
+		}
 	}
 
 	// generate a randomness for the encryption
@@ -212,9 +217,12 @@ func (s *Paillier) Encrypt(x, masterPubKey data.Vector) (data.Vector, error) {
 // Decrypt accepts the encrypted vector, functional encryption key, and
 // a vector y. It returns the inner product of x and y.
 func (s *Paillier) Decrypt(cipher data.Vector, key *big.Int, y data.Vector) (*big.Int, error) {
-	if err := y.CheckBound(s.Params.BoundY); err != nil {
-		return nil, err
+	if s.Params.BoundX != nil {
+		if err := y.CheckBound(s.Params.BoundY); err != nil {
+			return nil, err
+		}
 	}
+
 	// tmp value cX is calculated as (prod_{i=1 to l} c_i^y_i) * c_0^(-key) in Z_n^2
 	keyNeg := new(big.Int).Neg(key)
 	cX := internal.ModExp(cipher[0], keyNeg, s.Params.NSquare)
