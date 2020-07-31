@@ -54,6 +54,9 @@ type Paillier struct {
 // should be such that factoring two primes with such a bit length takes
 // at least 2^lambda operations), and boundX and boundY by which
 // coordinates of input vectors and inner product vectors are bounded.
+// If you are not sure how to choose lambda and bitLen, setting
+// lambda = 128, bitLen = 1024 will result in a scheme that is believed
+// to have 128 bit security.
 //
 // It returns an error in the case the scheme could not be properly
 // configured, or if the precondition boundX, boundY < (n / l)^(1/2)
@@ -93,6 +96,7 @@ func NewPaillier(l, lambda, bitLen int, boundX, boundY *big.Int) (*Paillier, err
 				"boundY and l too big for bitLen")
 		}
 	}
+
 	// generate a generator for the 2n-th residues subgroup of Z_n^2*
 	gPrime, err := rand.Int(rand.Reader, nSquare)
 	if err != nil {
@@ -173,7 +177,7 @@ func (s *Paillier) GenerateMasterKeys() (data.Vector, data.Vector, error) {
 func (s *Paillier) DeriveKey(masterSecKey data.Vector, y data.Vector) (*big.Int, error) {
 	if s.Params.BoundY != nil {
 		if err := y.CheckBound(s.Params.BoundY); err != nil {
-		return nil, err
+			return nil, err
 		}
 	}
 

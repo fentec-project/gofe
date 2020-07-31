@@ -42,15 +42,15 @@ import (
 // or the decryptor.
 type PaillierMulti struct {
 	NumClients int
-	BoundX      *big.Int
-	BoundY      *big.Int
+	BoundX     *big.Int
+	BoundY     *big.Int
 	*Paillier
 }
 
-// DamgardMultiClient represents a single client for the PaillierMulti scheme.
+// PaillerMultiClient represents a single client for the PaillierMulti scheme.
 type PaillierMultiClient struct {
-	BoundX      *big.Int
-	BoundY      *big.Int
+	BoundX *big.Int
+	BoundY *big.Int
 	*Paillier
 }
 
@@ -60,7 +60,10 @@ type PaillierMultiClient struct {
 // bits of security the bit length of primes p and q to be generated
 // (the scheme is operating in the Z_{(pq)^2} group), and a bound by
 // which coordinates of input vectors are bounded. It generates all
-//the remaining parameters to be shared.
+// the remaining parameters to be shared.
+// If you are not sure how to choose lambda and bitLen, setting
+// lambda = 128, bitLen = 1024 will result in a scheme that is believed
+// to have 128 bit security.
 //
 // It returns an error in case the underlying Paillier scheme
 // instances could not be properly instantiated.
@@ -75,44 +78,43 @@ func NewPaillierMulti(numClients, l, lambda, bitLength int, boundX, boundY *big.
 		return nil, err
 	}
 
-	// the bound of the underlying Damgard scheme is set to
-	// the maximum value since the scheme will be used to encrypt
+	// the bound of the underlying Paillier scheme is set to
+	// nil value since the scheme will be used to encrypt
 	// values summed with one time pad, thus arbitrary big
 	paillier.Params.BoundX = nil
 	paillier.Params.BoundY = nil
 
 	return &PaillierMulti{
 		NumClients: numClients,
-		BoundY: boundY,
-		BoundX: boundX,
-		Paillier:    paillier,
+		BoundY:     boundY,
+		BoundX:     boundX,
+		Paillier:   paillier,
 	}, nil
 }
 
-
-// NewPaillierMultiClientFromParams takes the bound and configuration parameters of an underlying
+// NewPaillierMultiClientFromParams takes the bounds and configuration parameters of an underlying
 // Paillier scheme instance, and instantiates a new PaillierMultiClient.
 //
 // It returns a new PaillierMultiClient instance.
 func NewPaillierMultiClientFromParams(params *PaillierParams, boundX, boundY *big.Int) *PaillierMultiClient {
 	return &PaillierMultiClient{
-		BoundY: boundY,
-		BoundX: boundX,
+		BoundY:   boundY,
+		BoundX:   boundX,
 		Paillier: &Paillier{params},
 	}
 }
 
 // NewPaillierMultiFromParams takes the number of clients, bound and configuration
 // parameters of an existing Paillier scheme instance, and reconstructs
-// the scheme with same configuration parameters.
+// the scheme with the same configuration parameters.
 //
 // It returns a new PaillierMulti instance.
 func NewPaillierMultiFromParams(numClients int, boundX, boundY *big.Int, params *PaillierParams) *PaillierMulti {
 	return &PaillierMulti{
 		NumClients: numClients,
-		BoundX: boundX,
-		BoundY: boundY,
-		Paillier:    &Paillier{params},
+		BoundX:     boundX,
+		BoundY:     boundY,
+		Paillier:   &Paillier{params},
 	}
 }
 
@@ -125,7 +127,6 @@ type PaillierMultiSecKeys struct {
 }
 
 // GenerateMasterKeys generates keys and one time pads for all the clients.
-//
 // It returns an error in case values could not be generated.
 func (dm *PaillierMulti) GenerateMasterKeys() (*PaillierMultiSecKeys, error) {
 	multiMsk := make([]data.Vector, dm.NumClients)

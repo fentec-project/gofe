@@ -36,8 +36,8 @@ import (
 type QuadParams struct {
 	PartFHIPE *fullysec.PartFHIPE
 	// N should be greater or equal to M
-	N         int // length of vectors x
-	M         int // length of vectors y
+	N int // length of vectors x
+	M int // length of vectors y
 	// The value by which elements of vectors x, y, and the
 	// matrix F are bounded.
 	Bound *big.Int

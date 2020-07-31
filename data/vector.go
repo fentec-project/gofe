@@ -150,7 +150,7 @@ func (v Vector) CheckBound(bound *big.Int) error {
 	for _, c := range v {
 		abs.Abs(c)
 		if abs.Cmp(bound) > 0 {
-			return fmt.Errorf("all coordinates of a vector should be smaller than bound")
+			return fmt.Errorf("all coordinates of a vector should not be greater than bound")
 		}
 	}
 

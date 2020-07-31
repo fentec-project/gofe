@@ -17,7 +17,6 @@
 package fullysec_test
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -28,11 +27,10 @@ import (
 )
 
 func TestFullySec_LWE(t *testing.T) {
-	l := 2
-	n := 256
-	//boundX := big.NewInt(1000) // maximal size of the entry of the message
-	boundX := new(big.Int).Exp(big.NewInt(2), big.NewInt(2), nil) // maximal size of the entry of the message
-	boundY := big.NewInt(2) // maximal size of the entry of the other operand for inner product
+	l := 4
+	n := 64
+	boundX := big.NewInt(1000) // maximal size of the entry of the message
+	boundY := big.NewInt(1000) // maximal size of the entry of the other operand for inner product
 
 	x, y, xy := testVectorData(l, boundX, boundY)
 	emptyVec := data.Vector{}
@@ -41,7 +39,6 @@ func TestFullySec_LWE(t *testing.T) {
 	fsLWE, err := fullysec.NewLWE(l, n, boundX, boundY)
 	assert.NoError(t, err)
 
-	fmt.Println("setup done")
 	Z, err := fsLWE.GenerateSecretKey()
 	assert.NoError(t, err)
 
@@ -74,8 +71,8 @@ func TestFullySec_LWE(t *testing.T) {
 	assert.Error(t, err)
 	_, err = fsLWE.Decrypt(cipher, zY, emptyVec)
 	assert.Error(t, err)
-	//_, err = fsLWE.Decrypt(cipher, zY, y.MulScalar(big.NewInt(10000)))
-	//assert.Error(t, err) // boundary violation
+	_, err = fsLWE.Decrypt(cipher, zY, y.MulScalar(big.NewInt(10000)))
+	assert.Error(t, err) // boundary violation
 	xyDecrypted, err := fsLWE.Decrypt(cipher, zY, y)
 	assert.NoError(t, err)
 	assert.Equal(t, xy.Cmp(xyDecrypted), 0, "obtained incorrect inner product")

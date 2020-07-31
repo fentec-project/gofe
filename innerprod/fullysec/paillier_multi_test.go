@@ -33,7 +33,7 @@ func TestFullySec_PaillierMulti(t *testing.T) {
 	bound := big.NewInt(1024)
 	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
 
-	// build the central authority for the scheme
+	// build the central authority for the scheme with parameters that should provide 128-bit security
 	var paillierMulti *fullysec.PaillierMulti
 	var err error
 	paillierMulti, err = fullysec.NewPaillierMulti(numClients, l, 128, 1024, bound, bound)

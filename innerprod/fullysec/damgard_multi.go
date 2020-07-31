@@ -18,11 +18,12 @@ package fullysec
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/internal"
 	"github.com/fentec-project/gofe/internal/dlog"
 	"github.com/fentec-project/gofe/sample"
-	"math/big"
 )
 
 // DamgardMulti represents a multi input variant of the
