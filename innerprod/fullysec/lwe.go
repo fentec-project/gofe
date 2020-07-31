@@ -171,6 +171,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	m := int(1.01 * nF * float64(nBitsQ))
 
 	// get sigmaQ
