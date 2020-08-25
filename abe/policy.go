@@ -20,8 +20,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/fentec-project/gofe/data"
 	"fmt"
+
+	"github.com/fentec-project/gofe/data"
 )
 
 // MSP represents a monotone span program (MSP) describing a policy defining which
