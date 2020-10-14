@@ -246,9 +246,9 @@ derivedKey, _ := multiDDH.DeriveKey(secKey, Y)
 // Different encryptors may reside on different machines.
 // We simulate this with the for loop below, where numClients
 // encryptors are generated.
-encryptors := make([]*simple.DDHMultiEnc, numClients)
+encryptors := make([]*simple.DDHMultiClient, numClients)
 for i := 0; i < numClients; i++ {
-    encryptors[i] = simple.NewDDHMultiEnc(multiDDH.Params)
+    encryptors[i] = simple.NewDDHMultiClient(multiDDH.Params)
 }
 // Each encryptor encrypts its own input vector X[i] with the
 // keys given to it by the trusted entity.
