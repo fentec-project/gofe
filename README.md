@@ -296,7 +296,7 @@ who own the attributes satisfying a boolean expression 'policy' can decrypt.
 msg := "Attack at dawn!"
 policy := "((0 AND 1) OR (2 AND 3)) AND 5"
 
-gamma := []int{0, 2, 3, 5} // owned attributes
+gamma := []string{"0", "2", "3", "5"} // owned attributes
 
 a := abe.NewFAME() // Create the scheme instance
 pubKey, secKey, _ := a.GenerateMasterKeys() // Create a public key and a master secret key
