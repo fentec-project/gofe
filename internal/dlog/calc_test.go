@@ -77,7 +77,7 @@ func TestCalcZp_BabyStepGiantStep_ElGamal(t *testing.T) {
 }
 
 func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
-	bound := big.NewInt(100000000)
+	bound := big.NewInt(1000000)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
 
 	xCheck, err := sampler.Sample()
@@ -85,6 +85,7 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 		t.Fatalf("error when generating random number: %v", err)
 	}
 
+	//xCheck = big.NewInt(16)
 	g := new(bn256.GT).ScalarBaseMult(big.NewInt(1))
 	h := new(bn256.GT)
 	if xCheck.Sign() == 1 {
@@ -96,6 +97,7 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 	}
 
 	calc := NewCalc().InBN256().WithBound(bound).WithNeg()
+	calc.Precompute(5)
 	x, err := calc.BabyStepGiantStep(h, g)
 	if err != nil {
 		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
