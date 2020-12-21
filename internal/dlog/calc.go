@@ -29,7 +29,7 @@ import (
 // exhaustive computation for practical purposes.
 // If Calc is configured to use a boundary value > MaxBound,
 // it will be automatically adjusted to MaxBound.
-var MaxBound = new(big.Int).Exp(big.NewInt(2), big.NewInt(50), nil)
+var MaxBound = new(big.Int).Exp(big.NewInt(2), big.NewInt(48), nil)
 
 // Calc represents a discrete logarithm calculator.
 type Calc struct{}
@@ -289,7 +289,8 @@ func (c *CalcBN256) WithNeg() *CalcBN256 {
 	}
 }
 
-// precomputes candidates for discrete logarithm
+// Precompute precomputes small steps for the discrete logarithm
+// search. The resulting precomputation table is of size 2^maxBits.
 func (c *CalcBN256) Precompute(maxBits int) error {
 	if maxBits < 2 {
 		return fmt.Errorf("maxBits should be at least 1")

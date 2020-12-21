@@ -102,6 +102,5 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
 	}
-
 	assert.Equal(t, xCheck.Cmp(x), 0, "BabyStepGiantStep in BN256 returns wrong dlog")
 }
