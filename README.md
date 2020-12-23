@@ -37,7 +37,7 @@ To make sure the library works as expected, navigate to your `$GOPATH/src/github
 directory and run `go test -v ./...` . 
 
 ## Using GoFE in your project
-After you have successfuly built the library, you can use it in your project.
+After you have successfully built the library, you can use it in your project.
 Instructions below provide a brief introduction to the most important parts
 of the library, and guide you through a sequence of steps that will quickly
 get your FE example up and running.  
@@ -81,7 +81,7 @@ attacks (IND-CPA security). You will need `SGP` scheme from package `quadratic`.
 that is based on the underlying partially function hiding inner product scheme and offers semi-adaptive
 simulation based security. You will need `quad` scheme from package `quadratic`.
 
-#### Schemes with attribute based encryption (ABE)
+#### Schemes with the attribute based encryption (ABE)
 Schemes are organized under package `abe`.
 
 It contains three ABE schemes:
@@ -101,7 +101,7 @@ some configuration, e.g. values of parameters for the selected scheme.
 
 Let's say we selected a `simple.DDH` scheme. We create a new scheme instance with:
 ````go
-scheme, _ := simple.NewDDH(5, 128, big.NewInt(1000))
+scheme, _ := simple.NewDDH(5, 1024, big.NewInt(1000))
 ````
 
 In the line above, the first argument is length of input vectors **x**
@@ -168,7 +168,18 @@ You can quickly construct random vectors and matrices by:
     X, _ := data.NewRandomMatrix(2, 3, s) // creates a random 2x3 matrix
     ````
     
-## Use the scheme (examples)
+## Use the scheme
+To see how the schemes can be used consult one of the following.
+
+#### Tests
+Every implemented scheme has an implemented test to verify the correctness
+of the implementation (for example Paillier inner-product scheme implemented in
+`innerprod/fullysec/paillier.go` has a corresponding test in 
+`innerprod/fullysec/paillier_test.go`). One can check the appropriate test
+file to see an example of how the chosen scheme can be used.
+
+#### Examples
+We give some concrete examples how to use the schemes. 
 Please note that all the examples below omit error management.
 
 ##### Using a single input scheme

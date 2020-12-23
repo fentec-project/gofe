@@ -97,7 +97,10 @@ func TestCalcBN256_BabyStepGiantStep(t *testing.T) {
 	}
 
 	calc := NewCalc().InBN256().WithBound(bound).WithNeg()
-	calc.Precompute(5)
+	err = calc.Precompute(5)
+	if err != nil {
+		t.Fatalf("error when prcomputing: %v", err)
+	}
 	x, err := calc.BabyStepGiantStep(h, g)
 	if err != nil {
 		t.Fatalf("Error in baby step - giant step algorithm: %v", err)
