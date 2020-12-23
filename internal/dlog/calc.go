@@ -466,24 +466,33 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 			}
 			// for the selected giant step, add all the needed small steps
 			for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
-				//fmt.Print("k", k, "\n")
-				sh.Write([]byte(x.String()))
-				T[string(sh.Sum(nil)[:10])] = new(big.Int).Set(k)
-				sh.Reset()
-				x = new(bn256.GT).Add(x, g)
+				select {
+				case <-quit:
+					return
+				default:
+					sh.Write([]byte(x.String()))
+					T[string(sh.Sum(nil)[:10])] = new(big.Int).Set(k)
+					sh.Reset()
+					x = new(bn256.GT).Add(x, g)
+				}
 			}
 			// make giant steps and search for the solution
 			bound.Exp(giantStep, two, nil)
 			for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
-				sh.Write([]byte(y.String()))
-				e, ok := T[string(sh.Sum(nil)[:10])]
-				sh.Reset()
-				if ok {
-					retChan <- new(big.Int).Add(j, e)
-					errChan <- nil
+				select {
+				case <-quit:
 					return
+				default:
+					sh.Write([]byte(y.String()))
+					e, ok := T[string(sh.Sum(nil)[:10])]
+					sh.Reset()
+					if ok {
+						retChan <- new(big.Int).Add(j, e)
+						errChan <- nil
+						return
+					}
+					y.Add(y, z)
 				}
-				y.Add(y, z)
 			}
 			z.Add(z, z)
 		}
