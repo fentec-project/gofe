@@ -17,6 +17,7 @@
 package dlog
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"math/big"
 
@@ -28,7 +29,7 @@ import (
 // exhaustive computation for practical purposes.
 // If Calc is configured to use a boundary value > MaxBound,
 // it will be automatically adjusted to MaxBound.
-var MaxBound = big.NewInt(15000000000)
+var MaxBound = new(big.Int).Exp(big.NewInt(2), big.NewInt(48), nil)
 
 // Calc represents a discrete logarithm calculator.
 type Calc struct{}
@@ -243,6 +244,7 @@ type CalcBN256 struct {
 	bound   *big.Int
 	m       *big.Int
 	Precomp map[string]*big.Int
+	precompMaxBits int
 	neg     bool
 }
 
@@ -268,6 +270,7 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 			bound:   bound,
 			m:       m,
 			Precomp: c.Precomp,
+			precompMaxBits: c.precompMaxBits,
 			neg:     c.neg,
 		}
 	}
@@ -281,25 +284,35 @@ func (c *CalcBN256) WithNeg() *CalcBN256 {
 		bound:   c.bound,
 		m:       c.m,
 		Precomp: c.Precomp,
+		precompMaxBits: c.precompMaxBits,
 		neg:     true,
 	}
 }
 
-// precomputes candidates for discrete logarithm
-func (c *CalcBN256) precompute(g *bn256.GT) {
-	one := big.NewInt(1)
+// Precompute precomputes small steps for the discrete logarithm
+// search. The resulting precomputation table is of size 2^maxBits.
+func (c *CalcBN256) Precompute(maxBits int) error {
+	if maxBits < 2 {
+		return fmt.Errorf("maxBits should be at least 1")
+	}
+	g := new(bn256.GT).ScalarBaseMult(big.NewInt(1))
 
+	one := big.NewInt(1)
+	sh := sha1.New()
 	// big.Int cannot be a key, thus we use a stringified bytes representation of the integer
 	T := make(map[string]*big.Int)
 	x := bn256.GetGTOne()
 
-	// remainders (r)
-	for i := big.NewInt(0); i.Cmp(c.m) < 0; i.Add(i, one) {
-		T[x.String()] = new(big.Int).Set(i)
+	for i := big.NewInt(0); i.BitLen() <= maxBits; i.Add(i, one) {
+		sh.Write([]byte(x.String()))
+		T[string(sh.Sum(nil)[:10])] = new(big.Int).Set(i)
+		sh.Reset()
 		x = new(bn256.GT).Add(x, g)
 	}
 
 	c.Precomp = T
+	c.precompMaxBits = maxBits
+	return nil
 }
 
 // BabyStepGiantStepStd implements the baby-step giant-step method to
@@ -315,15 +328,11 @@ func (c *CalcBN256) BabyStepGiantStepStd(h, g *bn256.GT) (*big.Int, error) {
 	one := big.NewInt(1)
 
 	// first part of the method can be reused so we
-	// precompute it and save it for later
-	if c.Precomp == nil {
-		c.precompute(g)
-	}
+	// Precompute it and save it for later
 
-	// if group is small, the list can be smaller
-	precompLen := big.NewInt(int64(len(c.Precomp)))
-	if c.m.Cmp(precompLen) != 0 {
-		c.m.Set(precompLen)
+	if c.Precomp == nil {
+		maxbits := c.m.BitLen() + 1
+		_ = c.Precompute(maxbits)
 	}
 
 	// z = g^-m
@@ -350,12 +359,13 @@ func (c *CalcBN256) BabyStepGiantStepStd(h, g *bn256.GT) (*big.Int, error) {
 func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 	// create goroutines calculating positive and possibly negative
 	// result if c.neg is set to true
-	retChan := make(chan *big.Int)
-	errChan := make(chan error)
-	go c.runBabyStepGiantStepIterative(h, g, retChan, errChan)
+	retChan := make(chan *big.Int, 2)
+	errChan := make(chan error, 2)
+	quit := make(chan bool, 2)
+	go c.runBabyStepGiantStepIterative(h, g, retChan, errChan, quit)
 	if c.neg {
-		gInv := new(bn256.GT).Neg(g)
-		go c.runBabyStepGiantStepIterative(h, gInv, retChan, errChan)
+		hInv := new(bn256.GT).Neg(h)
+		go c.runBabyStepGiantStepIterative(hInv, g, retChan, errChan, quit)
 	}
 
 	// catch a value when the first routine finishes
@@ -367,6 +377,9 @@ func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 	if c.neg && err != nil {
 		ret = <-retChan
 		err = <-errChan
+	}
+	if c.neg {
+		quit <- true
 	}
 	// if both routines give an error, return an error
 	if err != nil {
@@ -390,51 +403,100 @@ func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 // within the provided bound, it returns an error. In contrast to the usual
 // implementation of the method, this one proceeds iteratively, meaning that
 // smaller the solution is, faster the algorithm finishes.
-func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *big.Int, errChan chan error) {
+func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *big.Int, errChan chan error,  quit chan bool) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
 
-	// bn256.GT cannot be a key, thus we use a stringified representation of the struct
-	T := make(map[string]*big.Int)
+
+	var startBits int
+	if c.Precomp == nil {
+		_ = c.Precompute(2)
+	}
+
+	startBits = c.precompMaxBits
+
 	// prepare values for the loop
-	x := bn256.GetGTOne()
 	y := new(bn256.GT).Set(h)
-	z := new(bn256.GT).Neg(g)
-	z.ScalarMult(z, two)
-
-	bits := int64(c.m.BitLen())
-
-	T[x.String()] = big.NewInt(0)
-	x.Add(x, g)
 	j := big.NewInt(0)
+
+	// define first giant step
 	giantStep := new(big.Int)
-	bound := new(big.Int)
-	for i := int64(0); i < bits; i++ {
-		// iteratively increasing giant step up to maximal value c.m
-		giantStep.Exp(two, big.NewInt(i+1), nil)
-		if giantStep.Cmp(c.m) > 0 {
-			giantStep.Set(c.m)
-			z.Neg(g)
-			z.ScalarMult(z, c.m)
-		}
-		// for the selected giant step, add all the needed small steps
-		for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
-			T[x.String()] = new(big.Int).Set(k)
-			x.Add(x, g)
-		}
-		// make giant steps and search for the solution
-		bound.Exp(two, big.NewInt(2*(i+1)), nil)
-		for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
-			if e, ok := T[y.String()]; ok {
+	giantStep.Exp(big.NewInt(2), big.NewInt(int64(startBits)), nil)
+	z := new(bn256.GT).Neg(g)
+	z.ScalarMult(z, giantStep)
+
+	bound := new(big.Int).Exp(two, big.NewInt(2*int64(startBits)), nil)
+	sh := sha1.New()
+	for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
+		select {
+		case <-quit:
+			return
+		default:
+			sh.Write([]byte(y.String()))
+			e, ok := c.Precomp[string(sh.Sum(nil)[:10])]
+			sh.Reset()
+			if ok {
 				retChan <- new(big.Int).Add(j, e)
 				errChan <- nil
 				return
 			}
 			y.Add(y, z)
 		}
-		z.Add(z, z)
+	}
+	z.Add(z, z)
+	x := new(bn256.GT).ScalarMult(g, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(startBits)), nil))
+
+	T := make(map[string]*big.Int)
+	for k,v := range c.Precomp {
+		T[k] = v
 	}
 
+	bits := int64(c.m.BitLen())
+	for i := int64(startBits); i < bits; i++ {
+		select {
+		case <-quit:
+			return
+		default:
+			// iteratively increasing giant step up to maximal value c.m
+			giantStep.Exp(two, big.NewInt(i+1), nil)
+			if giantStep.Cmp(c.m) > 0 {
+				giantStep.Set(c.m)
+				z.Neg(g)
+				z.ScalarMult(z, c.m)
+			}
+			// for the selected giant step, add all the needed small steps
+			for k := new(big.Int).Exp(two, big.NewInt(i), nil); k.Cmp(giantStep) < 0; k.Add(k, one) {
+				select {
+				case <-quit:
+					return
+				default:
+					sh.Write([]byte(x.String()))
+					T[string(sh.Sum(nil)[:10])] = new(big.Int).Set(k)
+					sh.Reset()
+					x = new(bn256.GT).Add(x, g)
+				}
+			}
+			// make giant steps and search for the solution
+			bound.Exp(giantStep, two, nil)
+			for ; j.Cmp(bound) < 0; j.Add(j, giantStep) {
+				select {
+				case <-quit:
+					return
+				default:
+					sh.Write([]byte(y.String()))
+					e, ok := T[string(sh.Sum(nil)[:10])]
+					sh.Reset()
+					if ok {
+						retChan <- new(big.Int).Add(j, e)
+						errChan <- nil
+						return
+					}
+					y.Add(y, z)
+				}
+			}
+			z.Add(z, z)
+		}
+	}
 	retChan <- nil
 	errChan <- fmt.Errorf("failed to find the discrete logarithm within bound")
 }
