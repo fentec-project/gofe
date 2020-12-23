@@ -17,6 +17,7 @@
 package simple
 
 import (
+	"math"
 	"math/big"
 
 	"fmt"
@@ -35,7 +36,9 @@ type RingLWEParams struct {
 	N int
 
 	// Settings for discrete gaussian sampler
-	Sigma *big.Float // standard deviation
+	Sigma1 *big.Float // standard deviation
+	Sigma2 *big.Float // standard deviation
+	Sigma3 *big.Float // standard deviation
 
 	Bound *big.Int // upper bound for coordinates of input vectors
 
@@ -67,17 +70,70 @@ type RingLWE struct {
 // any of these conditions is violated, or if public parameters
 // for the scheme cannot be generated for some other reason,
 // an error is returned.
-func NewRingLWE(l, n int, bound, p, q *big.Int, sigma *big.Float) (*RingLWE, error) {
-	// Ensure that p >= 2 * l * B² holds
-	bSquared := new(big.Int).Mul(bound, bound)
-	lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
-	twolTimesBsquared := new(big.Int).Mul(big.NewInt(2), lTimesBsquared)
-	if p.Cmp(twolTimesBsquared) < 0 {
-		return nil, fmt.Errorf("precondition violated: p >= 2*l*b² doesn't hold")
-	}
+func NewRingLWE(l, n int, boundX, boundY, q *big.Int) (*RingLWE, error) {
+	//// Ensure that p >= 2 * l * B² holds
+	//bSquared := new(big.Int).Mul(bound, bound)
+	//lTimesBsquared := new(big.Int).Mul(big.NewInt(int64(l)), bSquared)
+	//twolTimesBsquared := new(big.Int).Mul(big.NewInt(2), lTimesBsquared)
+	//if p.Cmp(twolTimesBsquared) < 0 {
+	//	return nil, fmt.Errorf("precondition violated: p >= 2*l*b² doesn't hold")
+	//}
 	if !isPowOf2(n) {
 		return nil, fmt.Errorf("security parameter n is not a power of 2")
 	}
+
+	K := new(big.Int).Mul(boundX, boundY)
+	K.Mul(K, big.NewInt(2))
+
+	kappa := big.NewFloat(80)
+	kappaSqrt := new(big.Float).Sqrt(kappa)
+
+	sigma := big.NewFloat(1)
+	sigma1 := new(big.Float).Mul(big.NewFloat(math.Sqrt(float64(4*l))), sigma)
+	sigma1.Mul(sigma1, new(big.Float).SetInt(boundX))
+
+	sigma2 := new(big.Float).Mul(big.NewFloat(math.Sqrt(float64(2*(l+2)*n*n))), sigma)
+	sigma2.Mul(sigma2, sigma1)
+	sigma2.Mul(sigma2, kappaSqrt)
+
+	sigma3 := new(big.Float).Mul(sigma2, big.NewFloat(math.Sqrt(float64(2))))
+
+	qFloat1 := new(big.Float).Mul(sigma1, sigma2)
+	qFloat1.Mul(qFloat1, kappa)
+	qFloat1.Mul(qFloat1, big.NewFloat(float64(2*n)))
+	qFloat2 := new(big.Float).Mul(kappaSqrt, sigma3)
+	qFloat := new(big.Float).Add(qFloat1, qFloat2)
+	qFloat.Mul(qFloat,  new(big.Float).SetInt(boundY))
+	qFloat.Mul(qFloat,  big.NewFloat(float64(l)))
+
+	q, _ := qFloat.Int(nil)
+
+
+	qF := new(big.Float).SetInt(q)
+	qFF, _ := qF.Float64()
+	safe := true
+	sigmaPrimeQF, _ := sigma.Float64()
+
+	//fmt.Println(q, sigmaPrimeQ, n, m)
+	fmt.Println(q.BitLen(), math.Log2(sigmaPrimeQF))
+	for mForTest := n; mForTest < 2*n; mForTest++ {
+		d := n + mForTest
+		left := sigmaPrimeQF * math.Sqrt(b)
+		right := math.Pow(delta, 2 * b - float64(d) - 1) * math.Pow(qFF, float64(mForTest) / float64(d))
+		if left < right {
+			fmt.Println(mForTest)
+			safe = false
+			break
+		}
+	}
+	//if safe {
+	//	break
+	//}
+
+
+
+
+
 
 	randVec, err := data.NewRandomVector(n, sample.NewUniform(q))
 	if err != nil {
