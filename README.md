@@ -12,7 +12,7 @@ To quickly get familiar with FE, read a short and very high-level
 introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
 
 <!-- toc -->
-- [Building GoFE](#building-gofe)
+- [Installing GoFE](#installing-gofe)
 - [Using GoFE in your project](#using-gofe-in-your-project)
     * [Select the FE scheme](#select-the-fe-scheme)
     * [Configure selected scheme](#configure-selected-scheme)
@@ -28,7 +28,7 @@ You can expect them to change at any point.
 The purpose of GoFE is to support research and proof-of-concept
 implementations. It **should not be used in production**.
 
-## Building GoFE
+## Installing GoFE
 First, download and build the library by running
  `go get -u -t github.com/fentec-project/gofe/...` from the terminal (note that this also
  downloads and builds all the dependencies of the library). 
