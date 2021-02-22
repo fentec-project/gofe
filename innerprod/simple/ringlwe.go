@@ -60,7 +60,6 @@ type RingLWEParams struct {
 // see https://eprint.iacr.org/2021/046.
 type RingLWE struct {
 	Params  *RingLWEParams
-	//Sampler *sample.NormalCumulative
 }
 
 // NewRingLWE configures a new instance of the scheme.
