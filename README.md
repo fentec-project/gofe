@@ -53,7 +53,7 @@ We organized implementations in two categories based on their security assumptio
 * Schemes with **selective security under chosen-plaintext 
 attacks** (s-IND-CPA security):
     * Scheme by _Abdalla, Bourse, De Caro, Pointcheval_ ([paper](https://eprint.iacr.org/2015/017.pdf)). The scheme can be instantiated from DDH (`simple.DDH`), LWE (`simple.LWE`) primitives.
-    * Experimental Ring-LWE scheme whose security will be argued in a future paper (`simple.RingLWE`)
+    * Ring-LWE scheme based on _Bermudo Mera, Karmakar, Marc, and Soleimanian_ ([paper](https://eprint.iacr.org/2021/046)), see `simple.RingLWE`.
     * Multi-input scheme based on paper by _Abdalla, Catalano, Fiore, Gay, Ursu_ ([paper](https://eprint.iacr.org/2017/972.pdf)) and instantiated from the scheme in the first point (`simple.DDHMulti`).
 
 * Schemes with stronger **adaptive security under chosen-plaintext attacks** (IND-CPA
