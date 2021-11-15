@@ -59,36 +59,36 @@ func TestMAABE(t *testing.T) {
     gid := "gid1"
 
     // authority 1 issues keys to user
-    key11, err := maabe.GenerateAttribKey(gid, "auth1:at1", auth1.Sk)
+    key11, err := auth1.GenerateAttribKey(gid, "auth1:at1", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at1", err)
     }
-    key12, err := maabe.GenerateAttribKey(gid, "auth1:at2", auth1.Sk)
+    key12, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at2", err)
     }
     // authority 2 issues keys to user
-    key21, err := maabe.GenerateAttribKey(gid, "auth2:at1", auth2.Sk)
+    key21, err := auth2.GenerateAttribKey(gid, "auth2:at1", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth2:at1", err)
     }
-    key22, err := maabe.GenerateAttribKey(gid, "auth2:at2", auth2.Sk)
+    key22, err := auth2.GenerateAttribKey(gid, "auth2:at2", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth2:at2", err)
     }
     // authority 3 issues keys to user
-    key31, err := maabe.GenerateAttribKey(gid, "auth3:at1", auth3.Sk)
+    key31, err := auth3.GenerateAttribKey(gid, "auth3:at1", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth3:at1", err)
     }
-    key32, err := maabe.GenerateAttribKey(gid, "auth3:at2", auth3.Sk)
+    key32, err := auth3.GenerateAttribKey(gid, "auth3:at2", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth3:at2", err)
     }
 
     // try and generate key for an attribute that does not belong to the
     // authority (or does not exist)
-    _, err = maabe.GenerateAttribKey(gid, "auth3:at3", auth3.Sk)
+    _, err = auth3.GenerateAttribKey(gid, "auth3:at3", maabe)
     assert.Error(t, err)
 
     // user tries to decrypt with different key combos
@@ -126,7 +126,7 @@ func TestMAABE(t *testing.T) {
     // generate keys with a different GID
     gid2 := "gid2"
     // authority 1 issues keys to user
-    foreignKey11, err := maabe.GenerateAttribKey(gid2, "auth1:at1", auth1.Sk)
+    foreignKey11, err := auth1.GenerateAttribKey(gid2, "auth1:at1", maabe)
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at1", err)
     }

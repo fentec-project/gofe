@@ -276,7 +276,7 @@ type MAABEKey struct {
     Key *bn256.G1
 }
 
-func (a *MAABE) GenerateAttribKey(gid string, attrib string, sk *MAABESecKey) (*MAABEKey, error) {
+func (auth *MAABEAuth) GenerateAttribKey(gid string, attrib string, maabe *MAABE) (*MAABEKey, error) {
     // sanity checks
     if len(gid) == 0 {
         return nil, fmt.Errorf("GID cannot be empty")
@@ -289,8 +289,8 @@ func (a *MAABE) GenerateAttribKey(gid string, attrib string, sk *MAABESecKey) (*
         return nil, err
     }
     var k *bn256.G1
-    if sk.Alpha[attrib] != nil {
-        k = new(bn256.G1).Add(new(bn256.G1).ScalarMult(a.g1, sk.Alpha[attrib]), new(bn256.G1).ScalarMult(hash, sk.Y[attrib]))
+    if auth.Sk.Alpha[attrib] != nil && auth.Sk.Y[attrib] != nil {
+        k = new(bn256.G1).Add(new(bn256.G1).ScalarMult(maabe.g1, auth.Sk.Alpha[attrib]), new(bn256.G1).ScalarMult(hash, auth.Sk.Y[attrib]))
     } else {
         return nil, fmt.Errorf("attribute not found in secret key")
     }
