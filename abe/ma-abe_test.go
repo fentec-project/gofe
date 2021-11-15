@@ -136,5 +136,37 @@ func TestMAABE(t *testing.T) {
     // try and decrypt
     _, err = maabe.Decrypt(ct, ks6)
     assert.Error(t, err)
+
+    // add a new attribute to some authority
+    err = auth3.AddAttribute("auth3:at3", maabe)
+    if err != nil {
+        t.Fatalf("Error adding attribute: %v\n", err)
+    }
+    // now try to generate the key
+    _, err = auth3.GenerateAttribKey(gid, "auth3:at3", maabe)
+    if err != nil {
+        t.Fatalf("Error generating key for new attribute: %v\n", err)
+    }
+
+    // regenerate a compromised key for some authority
+    err = auth1.RegenerateKey("auth1:at2", maabe)
+    if err != nil {
+        t.Fatalf("Error regenerating key: %v\n", err)
+    }
+    // regenerate attrib key for that key and republish pubkey
+    key12_new, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
+    pks = []*abe.MAABEPubKey{auth1.Pk, auth2.Pk, auth3.Pk}
+    // reencrypt msg
+    ct_new, err := maabe.Encrypt(msg, msp, pks)
+    if err != nil {
+        t.Fatalf("Failed to encrypt with new keys")
+    }
+    ks7 := []*abe.MAABEKey{key12_new, key22}
+    // decrypt reencrypted msg
+    msg7, err := maabe.Decrypt(ct_new, ks7)
+    if err != nil {
+        t.Fatalf("Failed to decrypt with regenerated keys: %v\n", err)
+    }
+    assert.Equal(t, msg, msg7)
 }
 

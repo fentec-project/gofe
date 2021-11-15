@@ -109,6 +109,70 @@ func (a *MAABE) NewMAABEAuth(id string, attribs []string) (*MAABEAuth, error) {
     }, nil
 }
 
+func (auth *MAABEAuth) AddAttribute(attrib string, maabe *MAABE) error {
+    // sanity checks
+    if len(attrib) == 0 {
+        return fmt.Errorf("attribute cannot be an empty string")
+    }
+    if maabe == nil {
+        return fmt.Errorf("MAABE struct cannot be nil")
+    }
+    // attribute should not already exist, separate function
+    if auth.Sk.Alpha[attrib] != nil || auth.Sk.Y[attrib] != nil {
+        return fmt.Errorf("attribute already exists")
+    }
+    // generate secret key
+    sampler := sample.NewUniform(maabe.P)
+    skVals, err := data.NewRandomVector(2, sampler)
+    if err != nil {
+        return err
+    }
+    alpha := skVals[0]
+    y := skVals[1]
+    // generate public key
+    eggToAlpha := new(bn256.GT).ScalarMult(bn256.Pair(maabe.g1, maabe.g2), alpha)
+    gToY := new(bn256.G2).ScalarMult(maabe.g2, y)
+    // add keys to authority
+    auth.Sk.Alpha[attrib] = alpha
+    auth.Sk.Y[attrib] = y
+    auth.Pk.EggToAlpha[attrib] = eggToAlpha
+    auth.Pk.GToY[attrib] = gToY
+    auth.Sk.Attribs = append(auth.Sk.Attribs, attrib)
+    auth.Pk.Attribs = append(auth.Pk.Attribs, attrib)
+    return nil
+}
+
+func (auth *MAABEAuth) RegenerateKey(attrib string, maabe *MAABE) error {
+    // sanity checks
+    if len(attrib) == 0 {
+        return fmt.Errorf("attribute cannot be an empty string")
+    }
+    if maabe == nil {
+        return fmt.Errorf("MAABE struct cannot be nil")
+    }
+    // attribute must already exist
+    if auth.Sk.Alpha[attrib] == nil || auth.Sk.Y[attrib] == nil {
+        return fmt.Errorf("attribute does not exist yet")
+    }
+    // generate secret key
+    sampler := sample.NewUniform(maabe.P)
+    skVals, err := data.NewRandomVector(2, sampler)
+    if err != nil {
+        return err
+    }
+    alpha := skVals[0]
+    y := skVals[1]
+    // generate public key
+    eggToAlpha := new(bn256.GT).ScalarMult(bn256.Pair(maabe.g1, maabe.g2), alpha)
+    gToY := new(bn256.G2).ScalarMult(maabe.g2, y)
+    // add keys to authority
+    auth.Sk.Alpha[attrib] = alpha
+    auth.Sk.Y[attrib] = y
+    auth.Pk.EggToAlpha[attrib] = eggToAlpha
+    auth.Pk.GToY[attrib] = gToY
+    return nil
+}
+
 type MAABECipher struct {
     C0 *bn256.GT
     C1x map[string]*bn256.GT
