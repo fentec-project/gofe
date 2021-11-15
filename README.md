@@ -84,7 +84,7 @@ simulation based security. You will need `quad` scheme from package `quadratic`.
 #### Schemes with the attribute based encryption (ABE)
 Schemes are organized under package `abe`.
 
-It contains three ABE schemes:
+It contains four ABE schemes:
 * A ciphertext policy (CP) ABE scheme named FAME by _Agrawal, Chase_ ([paper](https://eprint.iacr.org/2017/807.pdf)) allowing encrypting a
 message based on a boolean expression defining a policy which attributes are needed for the decryption. It is implemented in `abe.fame`.
 * A key policy (KP) ABE scheme by _Goyal, Pandey, Sahai, Waters_ ([paper](https://eprint.iacr.org/2006/309.pdf)) allowing a distribution of
@@ -92,6 +92,7 @@ keys following a boolean expression defining a policy which attributes are neede
 * A decentralized inner product predicate scheme by _Michalevsky, Joye_ ([paper](https://eprint.iacr.org/2018/753.pdf)) allowing encryption
 with policy described as a vector, and a decentralized distribution of keys based on users' vectors so that
 only users with  vectors orthogonal to the encryption vector posses a key that can decrypt the ciphertext. It is implemented in `abe.dippe`.
+* A multi-authority (MA) ciphertext policy (CP) ABE scheme by _Lewko, Waters_ ([paper](https://eprint.iacr.org/2010/351.pdf)) based on a boolean expression defining a policy which attributes are needed for decryption. This scheme is decentralized - the attributes can be spread across multiple different authorites. It is implemented in `abe.ma-abe`.
 
 ### Configure selected scheme
 All GoFE schemes are implemented as Go structs with (at least logically)
