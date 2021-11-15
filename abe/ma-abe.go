@@ -21,12 +21,13 @@
 package abe
 
 import (
-    // "crypto/aes"
-    // cbc "crypto/cipher"
+    "crypto/aes"
+    cbc "crypto/cipher"
     "crypto/rand"
-    // "crypto/sha256"
+    "crypto/sha256"
     "fmt"
     "math/big"
+    "io"
     "github.com/fentec-project/bn256"
     "github.com/fentec-project/gofe/data"
     "github.com/fentec-project/gofe/sample"
@@ -114,50 +115,82 @@ type MAABECipher struct {
     C2x map[string]*bn256.G2
     C3x map[string]*bn256.G2
     Msp *MSP
+    SymEnc []byte // symmetric encryption of the string message
+    Iv []byte // initialization vector for symmetric encryption
 }
 
-func (a *MAABE) Encrypt(msp *MSP, pks []*MAABEPubKey) (*bn256.GT, *MAABECipher, error) {
+func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher, error) {
+    // sanity checks
 	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
-		return nil, nil, fmt.Errorf("empty msp matrix")
+		return nil, fmt.Errorf("empty msp matrix")
 	}
     mspRows := msp.Mat.Rows()
     mspCols := msp.Mat.Cols()
 	attribs := make(map[string]bool)
 	for _, i := range msp.RowToAttrib {
 		if attribs[i] {
-			return nil, nil, fmt.Errorf("some attributes correspond to" +
+			return nil, fmt.Errorf("some attributes correspond to" +
 				"multiple rows of the MSP struct, the scheme is not secure")
 		}
 		attribs[i] = true
 	}
-    // for now encrypt random GT
-    // (this will later become key for CBC encryption of string msg)
-    _, msg, err := bn256.RandomGT(rand.Reader)
-    if err != nil {
-        return nil, nil, err
+    if len(msg) == 0 {
+        return nil, fmt.Errorf("message cannot be empty")
     }
+    // msg is encrypted with AES-CBC with a random key that is encrypted with
+    // MA-ABE
+    // generate secret key
+    _, symKey, err := bn256.RandomGT(rand.Reader)
+    if err != nil {
+        return nil, err
+    }
+    // generate new AES-CBC params
+    keyCBC := sha256.Sum256([]byte(symKey.String()))
+    cipherAES, err := aes.NewCipher(keyCBC[:])
+    if err != nil {
+        return nil, err
+    }
+    iv := make([]byte, cipherAES.BlockSize())
+    _, err = io.ReadFull(rand.Reader, iv)
+    if err != nil {
+        return nil, err
+    }
+    encrypterCBC := cbc.NewCBCEncrypter(cipherAES, iv)
+    // interprete msg as a byte array and pad it according to PKCS7 standard
+    msgByte := []byte(msg)
+    padLen := cipherAES.BlockSize() - (len(msgByte) % cipherAES.BlockSize())
+    msgPad := make([]byte, len(msgByte) + padLen)
+    copy(msgPad, msgByte)
+    for i := len(msgByte); i < len(msgPad); i++ {
+        msgPad[i] = byte(padLen)
+    }
+    // encrypt data
+    symEnc := make([]byte, len(msgPad))
+    encrypterCBC.CryptBlocks(symEnc, msgPad)
+
+    // now encrypt symKey with MA-ABE
     // msg := bn256.GetGTOne()//TEST
     // rand generator
     sampler := sample.NewUniform(a.P)
     // pick random vector v with random s as first element
     v, err := data.NewRandomVector(mspCols, sampler)
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     // v := data.NewConstantVector(mspCols, big.NewInt(0))//TEST
     s := v[0]
     // s_tmp, err := data.NewRandomVector(1, sampler)
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     // s := s_tmp[0]
     // v[0] = s
     lambda_i, err := msp.Mat.MulVec(v)
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     if len(lambda_i) != mspRows {
-        return nil, nil, fmt.Errorf("wrong lambda len")
+        return nil, fmt.Errorf("wrong lambda len")
     }
     lambda := make(map[string]*big.Int)
     for i, at := range msp.RowToAttrib {
@@ -166,23 +199,23 @@ func (a *MAABE) Encrypt(msp *MSP, pks []*MAABEPubKey) (*bn256.GT, *MAABECipher, 
     // pick random vector w with 0 as first element
     w, err := data.NewRandomVector(mspCols, sampler)
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     // w := data.NewConstantVector(mspCols, big.NewInt(1))//TEST
     w[0] = big.NewInt(0)
     omega_i, err := msp.Mat.MulVec(w)
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     if len(omega_i) != mspRows {
-        return nil, nil, fmt.Errorf("wrong omega len")
+        return nil, fmt.Errorf("wrong omega len")
     }
     omega := make(map[string]*big.Int)
     for i, at := range msp.RowToAttrib {
         omega[at] = omega_i[i]
     }
     // calculate ciphertext
-    c0 := new(bn256.GT).Add(msg, new(bn256.GT).ScalarMult(bn256.Pair(a.g1, a.g2), s))
+    c0 := new(bn256.GT).Add(symKey, new(bn256.GT).ScalarMult(bn256.Pair(a.g1, a.g2), s))
     c1 := make(map[string]*bn256.GT)
     c2 := make(map[string]*bn256.G2)
     c3 := make(map[string]*bn256.G2)
@@ -194,7 +227,7 @@ func (a *MAABE) Encrypt(msp *MSP, pks []*MAABEPubKey) (*bn256.GT, *MAABECipher, 
         r[at] = r_i[i]
     }
     if err != nil {
-        return nil, nil, err
+        return nil, err
     }
     for _, at := range msp.RowToAttrib {
         // find the correct pubkey
@@ -223,15 +256,17 @@ func (a *MAABE) Encrypt(msp *MSP, pks []*MAABEPubKey) (*bn256.GT, *MAABECipher, 
             }
         }
         if foundPK == false {
-            return nil, nil, fmt.Errorf("attribute not found in any pubkey")
+            return nil, fmt.Errorf("attribute not found in any pubkey")
         }
     }
-    return msg, &MAABECipher{
+    return &MAABECipher{
         C0: c0,
         C1x: c1,
         C2x: c2,
         C3x: c3,
         Msp: msp,
+        SymEnc: symEnc,
+        Iv: iv,
     }, nil
 }
 
@@ -266,21 +301,21 @@ func (a *MAABE) GenerateAttribKey(gid string, attrib string, sk *MAABESecKey) (*
     }, nil
 }
 
-func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (*bn256.GT, error) {
+func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (string, error) {
     // sanity checks
     if len(ks) == 0 {
-        return nil, fmt.Errorf("empty set of attribute keys")
+        return "", fmt.Errorf("empty set of attribute keys")
     }
     gid := ks[0].Gid
     for _, k := range ks {
         if k.Gid != gid {
-            return nil, fmt.Errorf("not all GIDs are the same")
+            return "", fmt.Errorf("not all GIDs are the same")
         }
     }
     // get hashed GID
     hash, err := bn256.HashG1(gid)
     if err != nil {
-        return nil, err
+        return "", err
     }
     // find out which attributes are valid and extract them
     goodMatRows := make([]data.Vector, 0)
@@ -297,21 +332,19 @@ func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (*bn256.GT, error) {
     }
     goodMat, err := data.NewMatrix(goodMatRows)
     if err != nil {
-        return nil, err
+        return "", err
     }
     //choose consts c_x, such that \sum c_x A_x = (1,0,...,0)
     // if they don't exist, keys are not ok
-    // goodRows := goodMat.Rows()
     goodCols := goodMat.Cols()
     one := data.NewConstantVector(goodCols, big.NewInt(0))
     one[0] = big.NewInt(1)
     c, err := data.GaussianEliminationSolver(goodMat.Transpose(), one, a.P)
     if err != nil {
-        return nil, err
+        return "", err
     }
     cx := make(map[string]*big.Int)
     for i, at := range goodAttribs {
-        // cx[at] = new(big.Int).Mod(c[i], a.P)
         cx[at] = c[i]
     }
     // compute intermediate values
@@ -322,7 +355,7 @@ func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (*bn256.GT, error) {
             den := new(bn256.GT).Neg(bn256.Pair(aToK[at].Key, ct.C2x[at]))
             eggLambda[at] = new(bn256.GT).Add(num, den)
         } else {
-            return nil, fmt.Errorf("attribute %s not in ciphertext dicts", at)
+            return "", fmt.Errorf("attribute %s not in ciphertext dicts", at)
         }
     }
     eggs := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
@@ -336,9 +369,25 @@ func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (*bn256.GT, error) {
                 eggs.Add(eggs, new(bn256.GT).ScalarMult(new(bn256.GT).Neg(eggLambda[at]), new(big.Int).Abs(cx[at])))
             }
         } else {
-            return nil, fmt.Errorf("missing intermediate result")
+            return "", fmt.Errorf("missing intermediate result")
         }
     }
-    msg := new(bn256.GT).Add(ct.C0, new(bn256.GT).Neg(eggs))
-    return msg, nil
+    // calculate key for symmetric encryption
+    symKey := new(bn256.GT).Add(ct.C0, new(bn256.GT).Neg(eggs))
+    // now decrypt message with it
+	keyCBC := sha256.Sum256([]byte(symKey.String()))
+	cipherAES, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return "", err
+	}
+	msgPad := make([]byte, len(ct.SymEnc))
+	decrypter := cbc.NewCBCDecrypter(cipherAES, ct.Iv)
+	decrypter.CryptBlocks(msgPad, ct.SymEnc)
+	// unpad the message
+	padLen := int(msgPad[len(msgPad)-1])
+	if (len(msgPad) - padLen) < 0 {
+		return "", fmt.Errorf("failed to decrypt")
+	}
+	msgByte := msgPad[0:(len(msgPad) - padLen)]
+	return string(msgByte), nil
 }
