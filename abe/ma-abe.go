@@ -215,19 +215,19 @@ type MAABECipher struct {
 // an error is returned.
 func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher, error) {
     // sanity checks
-	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
-		return nil, fmt.Errorf("empty msp matrix")
-	}
+    if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
+        return nil, fmt.Errorf("empty msp matrix")
+    }
     mspRows := msp.Mat.Rows()
     mspCols := msp.Mat.Cols()
-	attribs := make(map[string]bool)
-	for _, i := range msp.RowToAttrib {
-		if attribs[i] {
-			return nil, fmt.Errorf("some attributes correspond to" +
-				"multiple rows of the MSP struct, the scheme is not secure")
-		}
-		attribs[i] = true
-	}
+    attribs := make(map[string]bool)
+    for _, i := range msp.RowToAttrib {
+        if attribs[i] {
+            return nil, fmt.Errorf("some attributes correspond to" +
+            "multiple rows of the MSP struct, the scheme is not secure")
+        }
+        attribs[i] = true
+    }
     if len(msg) == 0 {
         return nil, fmt.Errorf("message cannot be empty")
     }
@@ -474,19 +474,19 @@ func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (string, error) {
     // calculate key for symmetric encryption
     symKey := new(bn256.GT).Add(ct.C0, new(bn256.GT).Neg(eggs))
     // now decrypt message with it
-	keyCBC := sha256.Sum256([]byte(symKey.String()))
-	cipherAES, err := aes.NewCipher(keyCBC[:])
-	if err != nil {
-		return "", err
-	}
-	msgPad := make([]byte, len(ct.SymEnc))
-	decrypter := cbc.NewCBCDecrypter(cipherAES, ct.Iv)
-	decrypter.CryptBlocks(msgPad, ct.SymEnc)
-	// unpad the message
-	padLen := int(msgPad[len(msgPad)-1])
-	if (len(msgPad) - padLen) < 0 {
-		return "", fmt.Errorf("failed to decrypt")
-	}
-	msgByte := msgPad[0:(len(msgPad) - padLen)]
-	return string(msgByte), nil
+    keyCBC := sha256.Sum256([]byte(symKey.String()))
+    cipherAES, err := aes.NewCipher(keyCBC[:])
+    if err != nil {
+        return "", err
+    }
+    msgPad := make([]byte, len(ct.SymEnc))
+    decrypter := cbc.NewCBCDecrypter(cipherAES, ct.Iv)
+    decrypter.CryptBlocks(msgPad, ct.SymEnc)
+    // unpad the message
+    padLen := int(msgPad[len(msgPad)-1])
+    if (len(msgPad) - padLen) < 0 {
+        return "", fmt.Errorf("failed to decrypt")
+    }
+    msgByte := msgPad[0:(len(msgPad) - padLen)]
+    return string(msgByte), nil
 }

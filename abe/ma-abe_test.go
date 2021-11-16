@@ -3,7 +3,7 @@ package abe_test
 import (
     "testing"
     "github.com/fentec-project/gofe/abe"
-	"github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/assert"
 )
 
 func TestMAABE(t *testing.T) {
@@ -30,7 +30,7 @@ func TestMAABE(t *testing.T) {
     // create a msp struct out of the boolean formula
     msp, err := abe.BooleanToMSP("((auth1:at1 AND auth2:at1) OR (auth1:at2 AND auth2:at2)) OR (auth3:at1 AND auth3:at2)", false)
     if err != nil {
-		t.Fatalf("Failed to generate the policy: %v\n", err)
+        t.Fatalf("Failed to generate the policy: %v\n", err)
     }
 
     // define the set of all public keys we use
