@@ -29,9 +29,12 @@ The purpose of GoFE is to support research and proof-of-concept
 implementations. It **should not be used in production**.
 
 ## Installing GoFE
-First, download and build the library by running
+First, download and build the library by running either
+`go install github.com/fentec-project/gofe/...` or
  `go get -u -t github.com/fentec-project/gofe/...` from the terminal (note that this also
- downloads and builds all the dependencies of the library). 
+ downloads and builds all the dependencies of the library).
+ Please note that from Go version 1.18 on, `go get` will [no longer build packages](https://golang.org/doc/go-get-install-deprecation),
+ and `go install` should be used instead.
  
 To make sure the library works as expected, navigate to your `$GOPATH/pkg/mod/github.com/fentec-project/gofe` 
 directory and run `go test -v ./...` . 
