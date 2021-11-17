@@ -74,7 +74,7 @@ type MAABESecKey struct {
 
 // MAABEAuth represents an authority in the MAABE scheme.
 type MAABEAuth struct {
-    Id string
+    ID string
     Pk *MAABEPubKey
     Sk *MAABESecKey
 }
@@ -94,19 +94,19 @@ func (a *MAABE) NewMAABEAuth(id string, attribs []string) (*MAABEAuth, error) {
     // rand generator
     sampler := sample.NewUniform(a.P)
     // generate seckey
-    alpha_i, err := data.NewRandomVector(numattrib, sampler)
+    alphaI, err := data.NewRandomVector(numattrib, sampler)
     if err != nil {
         return nil, err
     }
-    y_i, err := data.NewRandomVector(numattrib, sampler)
+    yI, err := data.NewRandomVector(numattrib, sampler)
     if err != nil {
         return nil, err
     }
     alpha := make(map[string]*big.Int)
     y := make(map[string]*big.Int)
     for i, at := range attribs {
-        alpha[at] = alpha_i[i]
-        y[at] = y_i[i]
+        alpha[at] = alphaI[i]
+        y[at] = yI[i]
     }
     // generate pubkey
     eggToAlpha := make(map[string]*bn256.GT)
@@ -118,7 +118,7 @@ func (a *MAABE) NewMAABEAuth(id string, attribs []string) (*MAABEAuth, error) {
     sk := &MAABESecKey{Attribs: attribs, Alpha: alpha, Y: y}
     pk := &MAABEPubKey{Attribs: attribs, EggToAlpha: eggToAlpha, GToY: gToY}
     return &MAABEAuth{
-        Id: id,
+        ID: id,
         Pk: pk,
         Sk: sk,
     }, nil
@@ -274,16 +274,16 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
     if err != nil {
         return nil, err
     }
-    lambda_i, err := msp.Mat.MulVec(v)
+    lambdaI, err := msp.Mat.MulVec(v)
     if err != nil {
         return nil, err
     }
-    if len(lambda_i) != mspRows {
+    if len(lambdaI) != mspRows {
         return nil, fmt.Errorf("wrong lambda len")
     }
     lambda := make(map[string]*big.Int)
     for i, at := range msp.RowToAttrib {
-        lambda[at] = lambda_i[i]
+        lambda[at] = lambdaI[i]
     }
     // pick random vector w with 0 as first element
     w, err := data.NewRandomVector(mspCols, sampler)
@@ -291,16 +291,16 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
         return nil, err
     }
     w[0] = big.NewInt(0)
-    omega_i, err := msp.Mat.MulVec(w)
+    omegaI, err := msp.Mat.MulVec(w)
     if err != nil {
         return nil, err
     }
-    if len(omega_i) != mspRows {
+    if len(omegaI) != mspRows {
         return nil, fmt.Errorf("wrong omega len")
     }
     omega := make(map[string]*big.Int)
     for i, at := range msp.RowToAttrib {
-        omega[at] = omega_i[i]
+        omega[at] = omegaI[i]
     }
     // calculate ciphertext
     c0 := new(bn256.GT).Add(symKey, new(bn256.GT).ScalarMult(bn256.Pair(a.g1, a.g2), s))
@@ -308,10 +308,10 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
     c2 := make(map[string]*bn256.G2)
     c3 := make(map[string]*bn256.G2)
     // get randomness
-    r_i, err := data.NewRandomVector(mspRows, sampler)
+    rI, err := data.NewRandomVector(mspRows, sampler)
     r := make(map[string]*big.Int)
     for i, at := range msp.RowToAttrib {
-        r[at] = r_i[i]
+        r[at] = rI[i]
     }
     if err != nil {
         return nil, err

@@ -46,13 +46,13 @@ func TestMAABE(t *testing.T) {
     }
 
     // also check for empty message
-    msg_empty := ""
-    _, err = maabe.Encrypt(msg_empty, msp, pks)
+    msgEmpty := ""
+    _, err = maabe.Encrypt(msgEmpty, msp, pks)
     assert.Error(t, err)
 
     // use a pub keyring that is too small
-    pks_small := []*abe.MAABEPubKey{auth1.Pk}
-    _, err = maabe.Encrypt(msg, msp, pks_small)
+    pksSmall := []*abe.MAABEPubKey{auth1.Pk}
+    _, err = maabe.Encrypt(msg, msp, pksSmall)
     assert.Error(t, err)
 
     // choose a single user's Global ID
@@ -154,16 +154,16 @@ func TestMAABE(t *testing.T) {
         t.Fatalf("Error regenerating key: %v\n", err)
     }
     // regenerate attrib key for that key and republish pubkey
-    key12_new, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
+    key12New, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
     pks = []*abe.MAABEPubKey{auth1.Pk, auth2.Pk, auth3.Pk}
     // reencrypt msg
-    ct_new, err := maabe.Encrypt(msg, msp, pks)
+    ctNew, err := maabe.Encrypt(msg, msp, pks)
     if err != nil {
         t.Fatalf("Failed to encrypt with new keys")
     }
-    ks7 := []*abe.MAABEKey{key12_new, key22}
+    ks7 := []*abe.MAABEKey{key12New, key22}
     // decrypt reencrypted msg
-    msg7, err := maabe.Decrypt(ct_new, ks7)
+    msg7, err := maabe.Decrypt(ctNew, ks7)
     if err != nil {
         t.Fatalf("Failed to decrypt with regenerated keys: %v\n", err)
     }
