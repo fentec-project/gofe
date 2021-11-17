@@ -33,8 +33,9 @@ First, download and build the library by running
  `go get -u -t github.com/fentec-project/gofe/...` from the terminal (note that this also
  downloads and builds all the dependencies of the library). 
  
-To make sure the library works as expected, navigate to your `$GOPATH/src/github.com/fentec-project/gofe` 
+To make sure the library works as expected, navigate to your `$GOPATH/pkg/mod/github.com/fentec-project/gofe` 
 directory and run `go test -v ./...` . 
+If you are still using Go version below 1.16 or have `GO111MODULE=off` set, navigate to `$GOPATH/src/github.com/fentec-project` instead.
 
 ## Using GoFE in your project
 After you have successfully built the library, you can use it in your project.
