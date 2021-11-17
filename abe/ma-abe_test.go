@@ -34,7 +34,7 @@ func TestMAABE(t *testing.T) {
     }
 
     // define the set of all public keys we use
-    pks := []*abe.MAABEPubKey{auth1.Pk, auth2.Pk, auth3.Pk}
+    pks := []*abe.MAABEPubKey{auth1.PubKeys(), auth2.PubKeys(), auth3.PubKeys()}
 
     // choose a message
     msg := "Attack at dawn!"
@@ -51,7 +51,7 @@ func TestMAABE(t *testing.T) {
     assert.Error(t, err)
 
     // use a pub keyring that is too small
-    pksSmall := []*abe.MAABEPubKey{auth1.Pk}
+    pksSmall := []*abe.MAABEPubKey{auth1.PubKeys()}
     _, err = maabe.Encrypt(msg, msp, pksSmall)
     assert.Error(t, err)
 
@@ -59,36 +59,27 @@ func TestMAABE(t *testing.T) {
     gid := "gid1"
 
     // authority 1 issues keys to user
-    key11, err := auth1.GenerateAttribKey(gid, "auth1:at1", maabe)
+    keys1, err := auth1.GenerateAttribKeys(gid, attribs1)
     if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at1", err)
+        t.Fatalf("Failed to generate attribute keys: %v\n", err)
     }
-    key12, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
-    if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at2", err)
-    }
+    key11, key12 := keys1[0], keys1[1]
     // authority 2 issues keys to user
-    key21, err := auth2.GenerateAttribKey(gid, "auth2:at1", maabe)
+    keys2, err := auth2.GenerateAttribKeys(gid, attribs2)
     if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth2:at1", err)
+        t.Fatalf("Failed to generate attribute keys: %v\n", err)
     }
-    key22, err := auth2.GenerateAttribKey(gid, "auth2:at2", maabe)
-    if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth2:at2", err)
-    }
+    key21, key22 := keys2[0], keys2[1]
     // authority 3 issues keys to user
-    key31, err := auth3.GenerateAttribKey(gid, "auth3:at1", maabe)
+    keys3, err := auth3.GenerateAttribKeys(gid, attribs3)
     if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth3:at1", err)
+        t.Fatalf("Failed to generate attribute keys: %v\n", err)
     }
-    key32, err := auth3.GenerateAttribKey(gid, "auth3:at2", maabe)
-    if err != nil {
-        t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth3:at2", err)
-    }
+    key31, key32 := keys3[0], keys3[1]
 
     // try and generate key for an attribute that does not belong to the
     // authority (or does not exist)
-    _, err = auth3.GenerateAttribKey(gid, "auth3:at3", maabe)
+    _, err = auth3.GenerateAttribKeys(gid, []string{"auth3:at3"})
     assert.Error(t, err)
 
     // user tries to decrypt with different key combos
@@ -126,10 +117,11 @@ func TestMAABE(t *testing.T) {
     // generate keys with a different GID
     gid2 := "gid2"
     // authority 1 issues keys to user
-    foreignKey11, err := auth1.GenerateAttribKey(gid2, "auth1:at1", maabe)
+    foreignKeys, err := auth1.GenerateAttribKeys(gid2, []string{"auth1:at1"})
     if err != nil {
         t.Fatalf("Failed to generate attribute key for %s: %v\n", "auth1:at1", err)
     }
+    foreignKey11 := foreignKeys[0]
     // join two users who have sufficient attributes together, but not on their
     // own
     ks6 := []*abe.MAABEKey{foreignKey11, key21}
@@ -138,23 +130,27 @@ func TestMAABE(t *testing.T) {
     assert.Error(t, err)
 
     // add a new attribute to some authority
-    err = auth3.AddAttribute("auth3:at3", maabe)
+    err = auth3.AddAttribute("auth3:at3")
     if err != nil {
         t.Fatalf("Error adding attribute: %v\n", err)
     }
     // now try to generate the key
-    _, err = auth3.GenerateAttribKey(gid, "auth3:at3", maabe)
+    _, err = auth3.GenerateAttribKeys(gid, []string{"auth3:at3"})
     if err != nil {
         t.Fatalf("Error generating key for new attribute: %v\n", err)
     }
 
     // regenerate a compromised key for some authority
-    err = auth1.RegenerateKey("auth1:at2", maabe)
+    err = auth1.RegenerateKey("auth1:at2")
     if err != nil {
         t.Fatalf("Error regenerating key: %v\n", err)
     }
     // regenerate attrib key for that key and republish pubkey
-    key12New, err := auth1.GenerateAttribKey(gid, "auth1:at2", maabe)
+    keysNew, err := auth1.GenerateAttribKeys(gid, []string{"auth1:at2"})
+    if err != nil {
+        t.Fatalf("Error generating attrib key for regenerated key: %v\n", err)
+    }
+    key12New := keysNew[0]
     pks = []*abe.MAABEPubKey{auth1.Pk, auth2.Pk, auth3.Pk}
     // reencrypt msg
     ctNew, err := maabe.Encrypt(msg, msp, pks)
