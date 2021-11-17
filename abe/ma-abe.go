@@ -393,7 +393,7 @@ type MAABEKey struct {
     Key *bn256.G1
 }
 
-// GenerateAttribKey generates a list of attribute keys for the given user
+// GenerateAttribKeys generates a list of attribute keys for the given user
 // (represented by its Global ID) that possesses the given list of attributes.
 // In case of a failed procedure an error is returned. The relevant authority
 // has to check that the entity actually possesses the attributes via some
