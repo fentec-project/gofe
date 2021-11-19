@@ -10,6 +10,7 @@ schemes for _linear_ (e.g. _inner products_) and _quadratic polynomials_.
 
 To quickly get familiar with FE, read a short and very high-level 
 introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
+A more detailed introduction with lots of interactive diagrams can be found on [this blog](https://alicebobstory.com/fe).
 
 <!-- toc -->
 - [Installing GoFE](#installing-gofe)
