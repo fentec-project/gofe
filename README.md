@@ -22,6 +22,9 @@ A more detailed introduction with lots of interactive diagrams can be found on [
     * [Configure selected scheme](#configure-selected-scheme)
     * [Prepare input data](#prepare-input-data)
     * [Use the scheme (examples)](#use-the-scheme-(examples))
+- [Related work](#related-work)
+    * [Other implementations](#other-implementations)
+    * [Example projects](#example-projects)
 <!-- tocstop -->
 
 ### Before using the library
