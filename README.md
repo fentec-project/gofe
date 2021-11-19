@@ -325,3 +325,18 @@ cipher, _ := a.Encrypt(msg, msp, pubKey) // Encrypt msg with policy msp under pu
 keys, _ := a.GenerateAttribKeys(gamma, secKey) // Generate keys for the entity with attributes gamma
 dec, _ := a.Decrypt(cipher, keys, pubKey) // Decrypt the message
 ```
+
+## Related work
+
+### Other implementations
+
+Apart from the GoFE library, there is also a C library called CiFEr that
+implements many of the same schemes as GoFE, and can be found
+[here](https://github.com/fentec-project/CiFEr).
+
+### Example projects
+
+A few reference uses of the GoFE library are provided:
+* [creating a privacy preserving heatmap](https://github.com/fentec-project/FE-anonymous-heatmap),
+* [evaluating a machine learning function on encrypted data](https://github.com/fentec-project/neural-network-on-encrypted-data),
+* [privacy friendly data analysis on encrypted data](https://github.com/fentec-project/privacy-friendly-analyses).
