@@ -1,4 +1,7 @@
-# GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ba91378a50b4446852200cc6391b4e2)](https://www.codacy.com/gh/fentec-project/gofe/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
+# GoFE - Functional Encryption library
+[![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe)
+[![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ba91378a50b4446852200cc6391b4e2)](https://www.codacy.com/gh/fentec-project/gofe/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
 
 <p align="center">
         <img src="GoFE_logo.png" width="160" />
