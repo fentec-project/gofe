@@ -1,4 +1,7 @@
-# GoFE - Functional Encryption library [![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe) [![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6d709aa7ba424dafbbca7dc13627eb04)](https://www.codacy.com/manual/tilenmarc/gofe_2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
+# GoFE - Functional Encryption library
+[![Build Status](https://circleci.com/gh/fentec-project/gofe.svg?style=svg)](https://circleci.com/gh/fentec-project/gofe)
+[![GoDoc](https://godoc.org/github.com/fentec-project/gofe?status.svg)](https://godoc.org/github.com/fentec-project/gofe)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ba91378a50b4446852200cc6391b4e2)](https://www.codacy.com/gh/fentec-project/gofe/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=fentec-project/gofe&amp;utm_campaign=Badge_Grade)
 
 <p align="center">
         <img src="GoFE_logo.png" width="160" />
@@ -10,6 +13,7 @@ schemes for _linear_ (e.g. _inner products_) and _quadratic polynomials_.
 
 To quickly get familiar with FE, read a short and very high-level 
 introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
+A more detailed introduction with lots of interactive diagrams can be found on [this blog](https://alicebobstory.com/fe).
 
 <!-- toc -->
 - [Installing GoFE](#installing-gofe)
@@ -18,6 +22,9 @@ introduction on our [Introductory Wiki page](../../wiki/Introduction-to-FE).
     * [Configure selected scheme](#configure-selected-scheme)
     * [Prepare input data](#prepare-input-data)
     * [Use the scheme (examples)](#use-the-scheme-(examples))
+- [Related work](#related-work)
+    * [Other implementations](#other-implementations)
+    * [Example projects](#example-projects)
 <!-- tocstop -->
 
 ### Before using the library
@@ -29,12 +36,16 @@ The purpose of GoFE is to support research and proof-of-concept
 implementations. It **should not be used in production**.
 
 ## Installing GoFE
-First, download and build the library by running
+First, download and build the library by running either
+`go install github.com/fentec-project/gofe/...` or
  `go get -u -t github.com/fentec-project/gofe/...` from the terminal (note that this also
- downloads and builds all the dependencies of the library). 
+ downloads and builds all the dependencies of the library).
+ Please note that from Go version 1.18 on, `go get` will [no longer build packages](https://golang.org/doc/go-get-install-deprecation),
+ and `go install` should be used instead.
  
-To make sure the library works as expected, navigate to your `$GOPATH/src/github.com/fentec-project/gofe` 
+To make sure the library works as expected, navigate to your `$GOPATH/pkg/mod/github.com/fentec-project/gofe` 
 directory and run `go test -v ./...` . 
+If you are still using Go version below 1.16 or have `GO111MODULE=off` set, navigate to `$GOPATH/src/github.com/fentec-project/gofe` instead.
 
 ## Using GoFE in your project
 After you have successfully built the library, you can use it in your project.
@@ -317,3 +328,18 @@ cipher, _ := a.Encrypt(msg, msp, pubKey) // Encrypt msg with policy msp under pu
 keys, _ := a.GenerateAttribKeys(gamma, secKey) // Generate keys for the entity with attributes gamma
 dec, _ := a.Decrypt(cipher, keys, pubKey) // Decrypt the message
 ```
+
+## Related work
+
+### Other implementations
+
+Apart from the GoFE library, there is also a C library called CiFEr that
+implements many of the same schemes as GoFE, and can be found
+[here](https://github.com/fentec-project/CiFEr).
+
+### Example projects
+
+A few reference uses of the GoFE library are provided:
+* [creating a privacy preserving heatmap](https://github.com/fentec-project/FE-anonymous-heatmap),
+* [evaluating a machine learning function on encrypted data](https://github.com/fentec-project/neural-network-on-encrypted-data),
+* [privacy friendly data analysis on encrypted data](https://github.com/fentec-project/privacy-friendly-analyses).
