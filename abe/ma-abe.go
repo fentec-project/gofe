@@ -45,9 +45,9 @@ import (
 // MAABE represents a MAABE scheme.
 type MAABE struct {
     P *big.Int
-    g1 *bn256.G1
-    g2 *bn256.G2
-    gt *bn256.GT
+    G1 *bn256.G1
+    G2 *bn256.G2
+    Gt *bn256.GT
 }
 
 // NewMAABE configures a new instance of the scheme.
@@ -56,9 +56,9 @@ func NewMAABE() *MAABE {
     gen2 := new(bn256.G2).ScalarBaseMult(big.NewInt(1))
     return &MAABE{
             P: bn256.Order,
-            g1: gen1,
-            g2: gen2,
-            gt: bn256.Pair(gen1, gen2),
+            G1: gen1,
+            G2: gen2,
+            Gt: bn256.Pair(gen1, gen2),
     }
 }
 
@@ -117,8 +117,8 @@ func (a *MAABE) NewMAABEAuth(id string, attribs []string) (*MAABEAuth, error) {
     eggToAlpha := make(map[string]*bn256.GT)
     gToY := make(map[string]*bn256.G2)
     for _, at := range attribs {
-        eggToAlpha[at] = new(bn256.GT).ScalarMult(a.gt, alpha[at])
-        gToY[at] = new(bn256.G2).ScalarMult(a.g2, y[at])
+        eggToAlpha[at] = new(bn256.GT).ScalarMult(a.Gt, alpha[at])
+        gToY[at] = new(bn256.G2).ScalarMult(a.G2, y[at])
     }
     sk := &MAABESecKey{Attribs: attribs, Alpha: alpha, Y: y}
     pk := &MAABEPubKey{Attribs: attribs, EggToAlpha: eggToAlpha, GToY: gToY}
@@ -174,8 +174,8 @@ func (auth *MAABEAuth) AddAttribute(attrib string) error {
     alpha := skVals[0]
     y := skVals[1]
     // generate public key
-    eggToAlpha := new(bn256.GT).ScalarMult(auth.Maabe.gt, alpha)
-    gToY := new(bn256.G2).ScalarMult(auth.Maabe.g2, y)
+    eggToAlpha := new(bn256.GT).ScalarMult(auth.Maabe.Gt, alpha)
+    gToY := new(bn256.G2).ScalarMult(auth.Maabe.G2, y)
     // add keys to authority
     auth.Sk.Alpha[attrib] = alpha
     auth.Sk.Y[attrib] = y
@@ -213,8 +213,8 @@ func (auth *MAABEAuth) RegenerateKey(attrib string) error {
     alpha := skVals[0]
     y := skVals[1]
     // generate public key
-    eggToAlpha := new(bn256.GT).ScalarMult(auth.Maabe.gt, alpha)
-    gToY := new(bn256.G2).ScalarMult(auth.Maabe.g2, y)
+    eggToAlpha := new(bn256.GT).ScalarMult(auth.Maabe.Gt, alpha)
+    gToY := new(bn256.G2).ScalarMult(auth.Maabe.G2, y)
     // add keys to authority
     auth.Sk.Alpha[attrib] = alpha
     auth.Sk.Y[attrib] = y
@@ -329,7 +329,7 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
         omega[at] = omegaI[i]
     }
     // calculate ciphertext
-    c0 := new(bn256.GT).Add(symKey, new(bn256.GT).ScalarMult(a.gt, s))
+    c0 := new(bn256.GT).Add(symKey, new(bn256.GT).ScalarMult(a.Gt, s))
     c1 := make(map[string]*bn256.GT)
     c2 := make(map[string]*bn256.G2)
     c3 := make(map[string]*bn256.G2)
@@ -353,17 +353,17 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
                 var tmpLambda *bn256.GT
                 var tmpOmega *bn256.G2
                 if signLambda >= 0 {
-                    tmpLambda = new(bn256.GT).ScalarMult(a.gt, lambda[at])
+                    tmpLambda = new(bn256.GT).ScalarMult(a.Gt, lambda[at])
                 } else {
-                    tmpLambda = new(bn256.GT).ScalarMult(new(bn256.GT).Neg(a.gt), new(big.Int).Abs(lambda[at]))
+                    tmpLambda = new(bn256.GT).ScalarMult(new(bn256.GT).Neg(a.Gt), new(big.Int).Abs(lambda[at]))
                 }
                 if signOmega >= 0 {
-                    tmpOmega = new(bn256.G2).ScalarMult(a.g2, omega[at])
+                    tmpOmega = new(bn256.G2).ScalarMult(a.G2, omega[at])
                 } else {
-                    tmpOmega = new(bn256.G2).ScalarMult(new(bn256.G2).Neg(a.g2), new(big.Int).Abs(omega[at]))
+                    tmpOmega = new(bn256.G2).ScalarMult(new(bn256.G2).Neg(a.G2), new(big.Int).Abs(omega[at]))
                 }
                 c1[at] = new(bn256.GT).Add(tmpLambda, new(bn256.GT).ScalarMult(pk.EggToAlpha[at], r[at]))
-                c2[at] = new(bn256.G2).ScalarMult(a.g2, r[at])
+                c2[at] = new(bn256.G2).ScalarMult(a.G2, r[at])
                 c3[at] = new(bn256.G2).Add(new(bn256.G2).ScalarMult(pk.GToY[at], r[at]), tmpOmega)
                 foundPK = true
                 break
@@ -417,7 +417,7 @@ func (auth *MAABEAuth) GenerateAttribKeys(gid string, attribs []string) ([]*MAAB
     for i, at := range attribs {
         var k *bn256.G1
         if auth.Sk.Alpha[at] != nil && auth.Sk.Y[at] != nil {
-            k = new(bn256.G1).Add(new(bn256.G1).ScalarMult(auth.Maabe.g1, auth.Sk.Alpha[at]), new(bn256.G1).ScalarMult(hash, auth.Sk.Y[at]))
+            k = new(bn256.G1).Add(new(bn256.G1).ScalarMult(auth.Maabe.G1, auth.Sk.Alpha[at]), new(bn256.G1).ScalarMult(hash, auth.Sk.Y[at]))
             ks[i] = &MAABEKey{
                 Gid: gid,
                 Attrib: at,
