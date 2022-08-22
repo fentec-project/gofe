@@ -369,7 +369,7 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
                 break
             }
         }
-        if foundPK == false {
+        if !foundPK {
             return nil, fmt.Errorf("attribute not found in any pubkey")
         }
     }
