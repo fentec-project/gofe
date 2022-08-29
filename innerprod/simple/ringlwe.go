@@ -120,7 +120,7 @@ func NewRingLWE(sec, l int, boundX, boundY *big.Int) (*RingLWE, error) {
 					break
 				}
 			}
-			if safe == false {
+			if !safe {
 				break
 			}
 		}

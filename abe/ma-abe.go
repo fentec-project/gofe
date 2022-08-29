@@ -369,7 +369,7 @@ func (a *MAABE) Encrypt(msg string, msp *MSP, pks []*MAABEPubKey) (*MAABECipher,
                 break
             }
         }
-        if foundPK == false {
+        if !foundPK {
             return nil, fmt.Errorf("attribute not found in any pubkey")
         }
     }
@@ -471,6 +471,9 @@ func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (string, error) {
     //choose consts c_x, such that \sum c_x A_x = (1,0,...,0)
     // if they don't exist, keys are not ok
     goodCols := goodMat.Cols()
+    if goodCols == 0 {
+        return "", fmt.Errorf("no good matrix columns, most likely the keys contain no valid attribute")
+    }
     one := data.NewConstantVector(goodCols, big.NewInt(0))
     one[0] = big.NewInt(1)
     c, err := data.GaussianEliminationSolver(goodMat.Transpose(), one, a.P)
