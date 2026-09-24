@@ -96,3 +96,76 @@ func TestGPSW(t *testing.T) {
 	_, err = a.Decrypt(cipher2, abeKey)
 	assert.Error(t, err)
 }
+
+func TestGPSW_DecryptErrorsWhenSwappedMSPGrows(t *testing.T) {
+	a := abe.NewGPSW(8)
+	pk, sk, err := a.GenerateMasterKeys()
+	if err != nil {
+		t.Fatalf("failed to generate master keys: %v", err)
+	}
+
+	// Generate a key for a one-attribute policy (key.D is 1)
+	smallMsp, err := abe.BooleanToMSP("0", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	key, err := a.GeneratePolicyKey(smallMsp, sk)
+	if err != nil {
+		t.Fatalf("failed to generate policy key: %v", err)
+	}
+
+	// Provide multiple attributes when we encrypt
+	cipher, err := a.Encrypt("Functional encryption library in Go", []int{0, 1, 2, 3}, pk)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+
+	bigMsp, err := abe.BooleanToMSP("0 AND 1 AND 2 AND 3", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	key.Msp = bigMsp
+
+	assert.NotPanics(t, func() {
+		_, err = a.Decrypt(cipher, key)
+	}, "Decrypt panicked when fed a mismatching MSP against its key")
+	assert.Error(
+		t,
+		err,
+		"Decrypt did not return an error nor panic when fed a mismatching MSP against its key",
+	)
+}
+
+func TestGPSW_DecryptWhenNoAttributesMatch(t *testing.T) {
+	a := abe.NewGPSW(8)
+	pk, sk, err := a.GenerateMasterKeys()
+	if err != nil {
+		t.Fatalf("failed to generate master keys: %v", err)
+	}
+
+	msp, err := abe.BooleanToMSP("0", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	key, err := a.GeneratePolicyKey(msp, sk)
+	if err != nil {
+		t.Fatalf("failed to generate policy key: %v", err)
+	}
+
+	// Ciphertext carries attribute not in key's policy at all, so we get an
+	// empty intersection which previously caused a OOB panic
+	cipher, err := a.Encrypt("Functional encryption library in Go", []int{1}, pk)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+
+	assert.NotPanics(t, func() {
+		_, err = a.Decrypt(cipher, key)
+	}, "Decrypt panicked when no ciphertext attribute overlapped with the key",
+	)
+	assert.Error(
+		t,
+		err,
+		"Decrypt neither returned an error nor panicked when no ciphertext attribute overlapped with the key",
+	)
+}
