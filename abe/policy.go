@@ -136,6 +136,9 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 // https://eprint.iacr.org/2010/351.pdf.
 func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, error) {
 	boolExp = strings.TrimSpace(boolExp)
+	if boolExp == "" {
+		return nil, 0, fmt.Errorf("bad boolean expression: reduced to empty string")
+	}
 	numBrc := 0
 	var boolExp1 string
 	var boolExp2 string
@@ -157,7 +160,7 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			numBrc--
 			continue
 		}
-		if numBrc == 0 && i < len(boolExp)-3 && boolExp[i:i+3] == "AND" {
+		if numBrc == 0 && i <= len(boolExp)-3 && boolExp[i:i+3] == "AND" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+3:]
 			vec1, vec2 := makeAndVecs(vec, c)
@@ -172,7 +175,7 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			found = true
 			break
 		}
-		if numBrc == 0 && i < len(boolExp)-2 && boolExp[i:i+2] == "OR" {
+		if numBrc == 0 && i <= len(boolExp)-2 && boolExp[i:i+2] == "OR" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+2:]
 			msp1, c1, err = booleanToMSPIterative(boolExp1, vec, c)
