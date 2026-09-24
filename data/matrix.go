@@ -453,6 +453,11 @@ func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
 		return nil, fmt.Errorf("cannot multiply matrices")
 	}
 
+	// other.Cols() read row 0 and assume all rows are the same without checking
+	if err := other.checkAllEqualLength(); err != nil {
+		return nil, fmt.Errorf("cannot multiply matrices: %w", err)
+	}
+
 	prod := make(MatrixG1, m.Rows())
 	for i := 0; i < m.Rows(); i++ {
 		prod[i] = make([]*bn256.G1, other.Cols())
@@ -481,6 +486,11 @@ func (m Matrix) MatMulMatG1(other MatrixG1) (MatrixG1, error) {
 func (m Matrix) MatMulMatG2(other MatrixG2) (MatrixG2, error) {
 	if m.Cols() != other.Rows() {
 		return nil, fmt.Errorf("cannot multiply matrices")
+	}
+
+	// other.Cols() read row 0 and assume all rows are the same without checking
+	if err := other.checkAllEqualLength(); err != nil {
+		return nil, fmt.Errorf("cannot multiply matrices: %w", err)
 	}
 
 	prod := make(MatrixG2, m.Rows())

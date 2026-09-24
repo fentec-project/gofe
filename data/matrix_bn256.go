@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/fentec-project/bn256"
@@ -18,13 +19,31 @@ func (m MatrixG1) Rows() int {
 	return len(m)
 }
 
-// Cols returns the number of columns of matrixG1 m.
+// Cols returns the number of columns of matrixG1 m's first row
+//
+// Users should not assume all columns of all rows match
 func (m MatrixG1) Cols() int {
 	if len(m) != 0 {
 		return len(m[0])
 	}
 
 	return 0
+}
+
+// Reports an error if m's rows are not all the same length
+func (m MatrixG1) checkAllEqualLength() error {
+	cols := m.Cols()
+	for i, row := range m {
+		if len(row) != cols {
+			return fmt.Errorf(
+				"Not all equal length: row 0 has %d columns but row %d has %d",
+				cols,
+				i,
+				len(row),
+			)
+		}
+	}
+	return nil
 }
 
 // Add sums matrices m and other componentwise.
@@ -83,13 +102,31 @@ func (m MatrixG2) Rows() int {
 	return len(m)
 }
 
-// Cols returns the number of columns of matrixG2 m.
+// Cols returns the number of columns of matrixG1 m's first row
+//
+// Users should not assume all columns of all rows match
 func (m MatrixG2) Cols() int {
 	if len(m) != 0 {
 		return len(m[0])
 	}
 
 	return 0
+}
+
+// Reports an error if m's rows are not all the same length
+func (m MatrixG2) checkAllEqualLength() error {
+	cols := m.Cols()
+	for i, row := range m {
+		if len(row) != cols {
+			return fmt.Errorf(
+				"Not all equal length: row 0 has %d columns but row %d has %d",
+				cols,
+				i,
+				len(row),
+			)
+		}
+	}
+	return nil
 }
 
 // MulScalar multiplies matrix m by a scalar s
