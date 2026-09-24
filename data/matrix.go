@@ -677,20 +677,22 @@ func (m Matrix) DeterminantGauss(p *big.Int) (*big.Int, error) {
 // Z_p, where p should be a prime number. If such x does not exist, then the
 // function returns an error.
 func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error) {
-	if mat.Rows() == 0 || mat.Cols() == 0 {
+	// mat.Rows/Cols are just len, but they're called constantly here
+	rows, cols := mat.Rows(), mat.Cols()
+	if rows == 0 || cols == 0 {
 		return nil, fmt.Errorf("the matrix should not be empty")
 	}
-	if mat.Rows() != len(v) {
+	if rows != len(v) {
 		return nil, fmt.Errorf(fmt.Sprintf("dimensions should match: "+
-			"rows of the matrix %d, length of the vector %d", mat.Rows(), len(v)))
+			"rows of the matrix %d, length of the vector %d", rows, len(v)))
 	}
 
 	// we copy matrix mat into m and v into u
-	cpMat := make([]Vector, mat.Rows())
-	u := make(Vector, mat.Rows())
-	for i := 0; i < mat.Rows(); i++ {
-		cpMat[i] = make(Vector, mat.Cols())
-		for j := 0; j < mat.Cols(); j++ {
+	cpMat := make([]Vector, rows)
+	u := make(Vector, rows)
+	for i := 0; i < rows; i++ {
+		cpMat[i] = make(Vector, cols)
+		for j := 0; j < cols; j++ {
 			cpMat[i][j] = new(big.Int).Set(mat[i][j])
 		}
 		u[i] = new(big.Int).Set(v[i])
@@ -698,11 +700,16 @@ func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error)
 	m, _ := NewMatrix(cpMat) // error is impossible to happen
 
 	// m and u are transformed to be in the upper triangular form
-	ret := make(Vector, mat.Cols())
+	ret := make(Vector, cols)
+	// f and fTimes are "scratch space"; the instantiation of a new big.Int
+	// causes a lot of allocation churn in the O(n^3) algorithm; ~18% reduction
+	// by reusing big.Ints
+	f := new(big.Int)
+	fTimes := new(big.Int)
 	h, k := 0, 0
-	for h < mat.Rows() && k < mat.Cols() {
+	for h < rows && k < cols {
 		zero := true
-		for i := h; i < mat.Rows(); i++ {
+		for i := h; i < rows; i++ {
 			if m[i][k].Sign() != 0 {
 				m[h], m[i] = m[i], m[h]
 
@@ -717,26 +724,28 @@ func GaussianEliminationSolver(mat Matrix, v Vector, p *big.Int) (Vector, error)
 			continue
 		}
 		mHKInv := new(big.Int).ModInverse(m[h][k], p)
-		for i := h + 1; i < mat.Rows(); i++ {
-			f := new(big.Int).Mul(mHKInv, m[i][k])
+		for i := h + 1; i < rows; i++ {
+			f.Mul(mHKInv, m[i][k])
 			m[i][k] = big.NewInt(0)
-			for j := k + 1; j < mat.Cols(); j++ {
-				m[i][j].Sub(m[i][j], new(big.Int).Mul(f, m[h][j]))
+			for j := k + 1; j < cols; j++ {
+				fTimes.Mul(f, m[h][j])
+				m[i][j].Sub(m[i][j], fTimes)
 				m[i][j].Mod(m[i][j], p)
 			}
-			u[i].Sub(u[i], new(big.Int).Mul(f, u[h]))
+			fTimes.Mul(f, u[h])
+			u[i].Sub(u[i], fTimes)
 			u[i].Mod(u[i], p)
 		}
 		k++
 		h++
 	}
 
-	for i := h; i < mat.Rows(); i++ {
+	for i := h; i < rows; i++ {
 		if u[i].Sign() != 0 {
 			return nil, fmt.Errorf("no solution")
 		}
 	}
-	for j := k; j < mat.Cols(); j++ {
+	for j := k; j < cols; j++ {
 		ret[j] = big.NewInt(0)
 	}
 

@@ -274,6 +274,24 @@ func TestMatrix_GaussianElimintaion(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestMatrix_GaussianEliminationNoSolution(t *testing.T) {
+	// two rows that are scalar multiples of each other on left but not right
+	// mat * x = v => no solution
+	p := big.NewInt(17)
+	mat := Matrix{
+		Vector{big.NewInt(1), big.NewInt(2)},
+		Vector{big.NewInt(2), big.NewInt(4)},
+	}
+	v := Vector{big.NewInt(1), big.NewInt(3)}
+
+	_, err := GaussianEliminationSolver(mat, v, p)
+	assert.Error(
+		t,
+		err,
+		"expected solver to return error instead of (impossible and thus incorrect) solution",
+	)
+}
+
 func TestMatrix_Tensor(t *testing.T) {
 	m1 := Matrix{
 		Vector{big.NewInt(1), big.NewInt(2)},
