@@ -166,3 +166,38 @@ func TestMAABE(t *testing.T) {
     assert.Equal(t, msg, msg7)
 }
 
+func TestMAABE_DecryptOnInternallyRaggedMSP(t *testing.T) {
+	a := abe.NewMAABE()
+	auth, err := a.NewMAABEAuth("auth1", []string{"A", "B"})
+	if err != nil {
+		t.Fatalf("failed to create authority: %v", err)
+	}
+	pks := []*abe.MAABEPubKey{auth.PubKeys()}
+
+	msp, err := abe.BooleanToMSP("A AND B", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	cipher, err := a.Encrypt("Functional encryption library in Go", msp, pks)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+
+	// Copy the MSP but cut Mat to 1 row, so the slices no longer match for the
+	// RowToAttrib mapping
+	cipher.Msp.Mat = cipher.Msp.Mat[:1]
+
+	keys, err := auth.GenerateAttribKeys("user1", []string{"A", "B"})
+	if err != nil {
+		t.Fatalf("failed to generate attribute keys: %v", err)
+	}
+
+	assert.NotPanics(t, func() {
+		_, err = a.Decrypt(cipher, keys)
+	}, "Decrypt panicked for a ct.Msp.Mat shorter than ct.Msp.RowToAttrib")
+	assert.Error(
+		t,
+		err,
+		"Decrypt neither panicked nor returned an error for a misshappen Msp in the ciphertext",
+	)
+}

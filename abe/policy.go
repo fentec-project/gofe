@@ -37,6 +37,47 @@ type MSP struct {
 	RowToAttrib []string
 }
 
+// checkConsistent reports an error for abnormal MSPs (nil, empty, mismatching
+// row lengths when they should be uniform, etc.)
+//
+// Beccause the access policy is typically not authenticated, each scheme's
+// Decrypt should call this first as a sanity check that the received MSP looks
+// "reasonable" and to return an error, instead of panic etc. if it does not
+func (msp *MSP) checkConsistent(rows int) error {
+	if msp == nil {
+		return fmt.Errorf("msp is nil")
+	}
+	if len(msp.Mat) == 0 {
+		return fmt.Errorf("msp.Mat is empty")
+	}
+	if len(msp.Mat) != len(msp.RowToAttrib) {
+		return fmt.Errorf(
+			"msp.Mat has %d rows, but msp.RowToAttrib %d entries",
+			len(msp.Mat),
+			len(msp.RowToAttrib),
+		)
+	}
+	if len(msp.Mat) != rows {
+		return fmt.Errorf(
+			"msp does not have the expected number of rows (%d); has %d instead",
+			rows,
+			len(msp.Mat),
+		)
+	}
+	cols := len(msp.Mat[0])
+	for i, row := range msp.Mat {
+		if len(row) != cols {
+			return fmt.Errorf(
+				"msp.Mat's rows are inconsistently sized; should all be %d columns wide, but row %d was %d wide",
+				cols,
+				i,
+				len(row),
+			)
+		}
+	}
+	return nil
+}
+
 // BooleanToMSP takes as an input a boolean expression (without a NOT gate) as
 // a string where attributes are joined by AND and OR gates. It outputs a
 // msp structure representing the expression, i.e. a matrix whose rows
@@ -95,6 +136,9 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 // https://eprint.iacr.org/2010/351.pdf.
 func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, error) {
 	boolExp = strings.TrimSpace(boolExp)
+	if boolExp == "" {
+		return nil, 0, fmt.Errorf("bad boolean expression: reduced to empty string")
+	}
 	numBrc := 0
 	var boolExp1 string
 	var boolExp2 string
@@ -116,7 +160,7 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			numBrc--
 			continue
 		}
-		if numBrc == 0 && i < len(boolExp)-3 && boolExp[i:i+3] == "AND" {
+		if numBrc == 0 && i <= len(boolExp)-3 && boolExp[i:i+3] == "AND" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+3:]
 			vec1, vec2 := makeAndVecs(vec, c)
@@ -131,7 +175,7 @@ func booleanToMSPIterative(boolExp string, vec data.Vector, c int) (*MSP, int, e
 			found = true
 			break
 		}
-		if numBrc == 0 && i < len(boolExp)-2 && boolExp[i:i+2] == "OR" {
+		if numBrc == 0 && i <= len(boolExp)-2 && boolExp[i:i+2] == "OR" {
 			boolExp1 = boolExp[:i]
 			boolExp2 = boolExp[i+2:]
 			msp1, c1, err = booleanToMSPIterative(boolExp1, vec, c)

@@ -253,6 +253,11 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 // ciphertext span the vector [1, 1,..., 1]. If this is not possible, an
 //error is returned.
 func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
+	// MSP is not authenticated, and so we could access out of bounds if handed
+	// a different policy than the one we encrypted under if trusted blindly
+	if err := key.Msp.checkConsistent(len(key.D)); err != nil {
+		return "", fmt.Errorf("the provided key and ciphertext mismatch: %w", err)
+	}
 	// get intersection of gamma and attributes used in the key policy
 	gammaMap := make(map[int]bool)
 	for _, e := range cipher.Gamma {
@@ -271,6 +276,12 @@ func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 			mat = append(mat, key.Msp.Mat[i])
 			d = append(d, key.D[i])
 		}
+	}
+
+	// if none of the attributes match the policy, mat is empty. Stop here
+	// instead of doing any more operations on it to avoid a panic
+	if len(mat) == 0 {
+		return "", fmt.Errorf("the provided key cannot satisfy the ciphertext's policy")
 	}
 
 	// get a combination alpha of keys needed to decrypt

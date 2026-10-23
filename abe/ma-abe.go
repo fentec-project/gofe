@@ -435,95 +435,109 @@ func (auth *MAABEAuth) GenerateAttribKeys(gid string, attribs []string) ([]*MAAB
 // possible only if the set of possessed attributes/keys suffices the
 // decryption policy of the ciphertext. In case this is not possible or
 // something goes wrong an error is returned.
-func (a * MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (string, error) {
-    // sanity checks
-    if len(ks) == 0 {
-        return "", fmt.Errorf("empty set of attribute keys")
-    }
-    gid := ks[0].Gid
-    for _, k := range ks {
-        if k.Gid != gid {
-            return "", fmt.Errorf("not all GIDs are the same")
-        }
-    }
-    // get hashed GID
-    hash, err := bn256.HashG1(gid)
-    if err != nil {
-        return "", err
-    }
-    // find out which attributes are valid and extract them
-    goodMatRows := make([]data.Vector, 0)
-    goodAttribs := make([]string, 0)
-    aToK := make(map[string]*MAABEKey)
-    for _, k := range ks {
-        aToK[k.Attrib] = k
-    }
-    for i, at := range ct.Msp.RowToAttrib {
-        if aToK[at] != nil {
-            goodMatRows = append(goodMatRows, ct.Msp.Mat[i])
-            goodAttribs = append(goodAttribs, at)
-        }
-    }
-    goodMat, err := data.NewMatrix(goodMatRows)
-    if err != nil {
-        return "", err
-    }
-    //choose consts c_x, such that \sum c_x A_x = (1,0,...,0)
-    // if they don't exist, keys are not ok
-    goodCols := goodMat.Cols()
-    if goodCols == 0 {
-        return "", fmt.Errorf("no good matrix columns, most likely the keys contain no valid attribute")
-    }
-    one := data.NewConstantVector(goodCols, big.NewInt(0))
-    one[0] = big.NewInt(1)
-    c, err := data.GaussianEliminationSolver(goodMat.Transpose(), one, a.P)
-    if err != nil {
-        return "", err
-    }
-    cx := make(map[string]*big.Int)
-    for i, at := range goodAttribs {
-        cx[at] = c[i]
-    }
-    // compute intermediate values
-    eggLambda := make(map[string]*bn256.GT)
-    for _, at := range goodAttribs {
-        if ct.C1x[at] != nil && ct.C2x[at] != nil && ct.C3x[at] != nil {
-            num := new(bn256.GT).Add(ct.C1x[at], bn256.Pair(hash, ct.C3x[at]))
-            den := new(bn256.GT).Neg(bn256.Pair(aToK[at].Key, ct.C2x[at]))
-            eggLambda[at] = new(bn256.GT).Add(num, den)
-        } else {
-            return "", fmt.Errorf("attribute %s not in ciphertext dicts", at)
-        }
-    }
-    eggs := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
-    for _, at := range goodAttribs {
-        if eggLambda[at] != nil {
-            sign := cx[at].Cmp(big.NewInt(0))
-            if sign == 1 {
-                eggs.Add(eggs, new(bn256.GT).ScalarMult(eggLambda[at], cx[at]))
-            } else if sign == -1 {
-                eggs.Add(eggs, new(bn256.GT).ScalarMult(new(bn256.GT).Neg(eggLambda[at]), new(big.Int).Abs(cx[at])))
-            }
-        } else {
-            return "", fmt.Errorf("missing intermediate result")
-        }
-    }
-    // calculate key for symmetric encryption
-    symKey := new(bn256.GT).Add(ct.C0, new(bn256.GT).Neg(eggs))
-    // now decrypt message with it
-    keyCBC := sha256.Sum256([]byte(symKey.String()))
-    cipherAES, err := aes.NewCipher(keyCBC[:])
-    if err != nil {
-        return "", err
-    }
-    msgPad := make([]byte, len(ct.SymEnc))
-    decrypter := cbc.NewCBCDecrypter(cipherAES, ct.Iv)
-    decrypter.CryptBlocks(msgPad, ct.SymEnc)
-    // unpad the message
-    padLen := int(msgPad[len(msgPad)-1])
-    if (len(msgPad) - padLen) < 0 {
-        return "", fmt.Errorf("failed to decrypt")
-    }
-    msgByte := msgPad[0:(len(msgPad) - padLen)]
-    return string(msgByte), nil
+func (a *MAABE) Decrypt(ct *MAABECipher, ks []*MAABEKey) (string, error) {
+	// ct.Msp is not authenticated; because we trust all of the rows to be the
+	// same length, we can get an OOB panic if they are not, so we sanity check
+	// beforehand. Note this doesn't guarantee the MSP we receive is the one
+	// the ciphertext was encrypted under
+	if err := ct.Msp.checkConsistent(len(ct.Msp.Mat)); err != nil {
+		return "", fmt.Errorf("the provided ciphertext is malformed: %w", err)
+	}
+	// sanity checks
+	if len(ks) == 0 {
+		return "", fmt.Errorf("empty set of attribute keys")
+	}
+	gid := ks[0].Gid
+	for _, k := range ks {
+		if k.Gid != gid {
+			return "", fmt.Errorf("not all GIDs are the same")
+		}
+	}
+	// get hashed GID
+	hash, err := bn256.HashG1(gid)
+	if err != nil {
+		return "", err
+	}
+	// find out which attributes are valid and extract them
+	goodMatRows := make([]data.Vector, 0)
+	goodAttribs := make([]string, 0)
+	aToK := make(map[string]*MAABEKey)
+	for _, k := range ks {
+		aToK[k.Attrib] = k
+	}
+	for i, at := range ct.Msp.RowToAttrib {
+		if aToK[at] != nil {
+			goodMatRows = append(goodMatRows, ct.Msp.Mat[i])
+			goodAttribs = append(goodAttribs, at)
+		}
+	}
+	goodMat, err := data.NewMatrix(goodMatRows)
+	if err != nil {
+		return "", err
+	}
+	// choose consts c_x, such that \sum c_x A_x = (1,0,...,0)
+	// if they don't exist, keys are not ok
+	goodCols := goodMat.Cols()
+	if goodCols == 0 {
+		return "", fmt.Errorf(
+			"no good matrix columns, most likely the keys contain no valid attribute",
+		)
+	}
+	one := data.NewConstantVector(goodCols, big.NewInt(0))
+	one[0] = big.NewInt(1)
+	c, err := data.GaussianEliminationSolver(goodMat.Transpose(), one, a.P)
+	if err != nil {
+		return "", err
+	}
+	cx := make(map[string]*big.Int)
+	for i, at := range goodAttribs {
+		cx[at] = c[i]
+	}
+	// compute intermediate values
+	eggLambda := make(map[string]*bn256.GT)
+	for _, at := range goodAttribs {
+		if ct.C1x[at] != nil && ct.C2x[at] != nil && ct.C3x[at] != nil {
+			num := new(bn256.GT).Add(ct.C1x[at], bn256.Pair(hash, ct.C3x[at]))
+			den := new(bn256.GT).Neg(bn256.Pair(aToK[at].Key, ct.C2x[at]))
+			eggLambda[at] = new(bn256.GT).Add(num, den)
+		} else {
+			return "", fmt.Errorf("attribute %s not in ciphertext dicts", at)
+		}
+	}
+	eggs := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
+	for _, at := range goodAttribs {
+		if eggLambda[at] != nil {
+			sign := cx[at].Cmp(big.NewInt(0))
+			if sign == 1 {
+				eggs.Add(eggs, new(bn256.GT).ScalarMult(eggLambda[at], cx[at]))
+			} else if sign == -1 {
+				eggs.Add(
+					eggs,
+					new(
+						bn256.GT,
+					).ScalarMult(new(bn256.GT).Neg(eggLambda[at]), new(big.Int).Abs(cx[at])),
+				)
+			}
+		} else {
+			return "", fmt.Errorf("missing intermediate result")
+		}
+	}
+	// calculate key for symmetric encryption
+	symKey := new(bn256.GT).Add(ct.C0, new(bn256.GT).Neg(eggs))
+	// now decrypt message with it
+	keyCBC := sha256.Sum256([]byte(symKey.String()))
+	cipherAES, err := aes.NewCipher(keyCBC[:])
+	if err != nil {
+		return "", err
+	}
+	msgPad := make([]byte, len(ct.SymEnc))
+	decrypter := cbc.NewCBCDecrypter(cipherAES, ct.Iv)
+	decrypter.CryptBlocks(msgPad, ct.SymEnc)
+	// unpad the message
+	padLen := int(msgPad[len(msgPad)-1])
+	if (len(msgPad) - padLen) < 0 {
+		return "", fmt.Errorf("failed to decrypt")
+	}
+	msgByte := msgPad[0:(len(msgPad) - padLen)]
+	return string(msgByte), nil
 }

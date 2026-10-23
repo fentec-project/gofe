@@ -188,3 +188,38 @@ func TestFAME(t *testing.T) {
 	_, err = a.Decrypt(cipherMultiUUID, keysInsuffUUID, pubKey)
 	assert.Error(t, err)
 }
+
+func TestFAME_DecryptErrorsWhenSwappedMSPGrows(t *testing.T) {
+	a := abe.NewFAME()
+	pk, sk, err := a.GenerateMasterKeys()
+	if err != nil {
+		t.Fatalf("failed to generate master keys: %v", err)
+	}
+
+	// One attribute -> Ct has 1 row
+	smallMsp, err := abe.BooleanToMSP("A", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	cipher, err := a.Encrypt("Functional encryption library in Go", smallMsp, pk)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+
+	// Provide 4 to our builder and swap
+	bigMsp, err := abe.BooleanToMSP("A AND B AND C AND D", false)
+	if err != nil {
+		t.Fatalf("failed to build MSP: %v", err)
+	}
+	cipher.Msp = bigMsp
+
+	keys, err := a.GenerateAttribKeys([]string{"A", "B", "C", "D"}, sk)
+	if err != nil {
+		t.Fatalf("failed to generate attribute keys: %v", err)
+	}
+
+	assert.NotPanics(t, func() {
+		_, err = a.Decrypt(cipher, keys, pk)
+	}, "Decrypt panicked when MSP was swapped out")
+	assert.Error(t, err, "Decrypt did not return an error for MSP swapped, and did not panic")
+}

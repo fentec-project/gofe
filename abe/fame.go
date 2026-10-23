@@ -166,6 +166,26 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 		new(bn256.G2).ScalarMult(pk.PartG2[1], s[1]),
 		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
 
+	// The "0 <j> <l> <0|1>" hashes only depend on column j and index l. We can
+	// optimize the rows*cols hash-to-curve to just rows*cols here and cols
+	// hash-to-curve later by precomputing it
+	cols := len(msp.Mat[0])
+	colHash := make([][3]*bn256.G1, cols)
+	for j := 0; j < cols; j++ {
+		for l := 0; l < 3; l++ {
+			hs1, err := bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 0")
+			if err != nil {
+				return nil, err
+			}
+			hs1.ScalarMult(hs1, s[0])
+
+			hs2, err := bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 1")
+			hs2.ScalarMult(hs2, s[1])
+
+			colHash[j][l] = new(bn256.G1).Add(hs1, hs2)
+		}
+	}
+
 	ct := make([][3]*bn256.G1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
 		for l := 0; l < 3; l++ {
@@ -182,24 +202,21 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 			hs2.ScalarMult(hs2, s[1])
 
 			ct[i][l] = new(bn256.G1).Add(hs1, hs2)
-			for j := 0; j < len(msp.Mat[0]); j++ {
-				hs1, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 0")
-				if err != nil {
-					return nil, err
+			for j := 0; j < cols; j++ {
+				pow := msp.Mat[i][j]
+				// A zero coefficient contributes nothing, so
+				// skip it rather than pay a ScalarMult for no reason
+				//
+				// The policy matrix is public, so this branch cannot leak
+				// anything the matrix itself doesn't already.
+				if pow.Sign() == 0 {
+					continue
 				}
-				hs1.ScalarMult(hs1, s[0])
 
-				hs2, err = bn256.HashG1("0 " + strconv.Itoa(j) + " " + strconv.Itoa(l) + " 1")
-				if err != nil {
-					return nil, err
-				}
-				hs2.ScalarMult(hs2, s[1])
-
-				hsToM := new(bn256.G1).Add(hs1, hs2)
-				pow := new(big.Int).Set(msp.Mat[i][j])
+				hsToM := new(bn256.G1).Set(colHash[j][l])
 				if pow.Sign() == -1 {
-					pow.Neg(pow)
-					hsToM.ScalarMult(hsToM, pow)
+					neg := new(big.Int).Neg(pow)
+					hsToM.ScalarMult(hsToM, neg)
 					hsToM.Neg(hsToM)
 				} else {
 					hsToM.ScalarMult(hsToM, pow)
@@ -331,6 +348,12 @@ func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKe
 // corresponding keys FAMEAttribKeys) suffices the encryption policy of the
 // cipher. If this is not possible, an error is returned.
 func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) (string, error) {
+	// As cipher.Msp is not authenticated, it is possible we received one that
+	// mismatches from what it was encrypted under. We cannot resolve this, but
+	// we can add a length-based sanity check to avoid a OOB access/panic
+	if err := cipher.Msp.checkConsistent(len(cipher.Ct)); err != nil {
+		return "", fmt.Errorf("the ciphertext is invalid (mismatching lengths): %w", err)
+	}
 	// find out which attributes are owned
 	attribMap := make(map[string]bool)
 	for k := range key.AttribToI {

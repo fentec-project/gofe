@@ -222,7 +222,22 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIP
 // an information about the user that will allow him to decrypt iff the inner product
 // v times x = 0 for the policy x. GID is a global identifier of the user and a slice of
 // public keys of the authorities should be given.
-func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
+func (a *DIPPEAuth) DeriveKeyShare(
+	v data.Vector,
+	pubKeys []*DIPPEPubKey,
+	gid string,
+) (data.VectorG2, error) {
+	// v[a.ID] is indexed based on the assumption that v is the same size as
+	// the number of rows; we need to assert it is instead of panicking on OOB
+	// access
+	if len(v) <= a.ID {
+		return nil, fmt.Errorf(
+			"v has length %d, but authority %d needed length %d (length mismatch)",
+			len(v),
+			a.ID,
+			a.Sk.W.Rows(),
+		)
+	}
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
 	for i := 0; i < a.Sk.W.Rows(); i++ {
 		g2ToMu[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
@@ -280,6 +295,20 @@ func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector
 
 	if prod.Sign() != 0 {
 		return "", fmt.Errorf("insufficient keys")
+	}
+
+	// G2's columns read row 0's length only, and presume all other rows are
+	// the same length without any authentication ensuring it. If they are not,
+	// this will either ignore data or OOB read later on
+	for i, k := range keys {
+		if len(k) != len(cipher.C0) {
+			return "", fmt.Errorf(
+				"key share %d has length %d (expected %d); misshappen shares",
+				i,
+				len(k),
+				len(cipher.C0),
+			)
+		}
 	}
 
 	// use DIPPE decryption procedure to get a CBC key

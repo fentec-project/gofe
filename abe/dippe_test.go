@@ -26,6 +26,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func setupDIPPE(
+	t *testing.T,
+	secLevel, numAuth int,
+) (*abe.DIPPE, []*abe.DIPPEAuth, []*abe.DIPPEPubKey) {
+	t.Helper()
+	d, err := abe.NewDIPPE(secLevel)
+	if err != nil {
+		t.Fatalf("failed to create DIPPE instance: %v", err)
+	}
+	auths := make([]*abe.DIPPEAuth, numAuth)
+	pubKeys := make([]*abe.DIPPEPubKey, numAuth)
+	for i := 0; i < numAuth; i++ {
+		auths[i], err = d.NewDIPPEAuth(i)
+		if err != nil {
+			t.Fatalf("failed to create authority %d: %v", i, err)
+		}
+		pubKeys[i] = &auths[i].Pk
+	}
+	return d, auths, pubKeys
+}
+
 func TestDIPPE(t *testing.T) {
 	// create a new DIPPE struct, choosing the security parameter
 	d, err := abe.NewDIPPE(3)
@@ -223,4 +244,88 @@ func TestDIPPE_ABE_conjugation(t *testing.T) {
 		t.Fatalf("Failed to decrypt: %v", err)
 	}
 	assert.Equal(t, msg, dec)
+}
+
+func TestDIPPE_DecryptOnMisshappenKeyShares(t *testing.T) {
+	const numAuth = 3
+
+	d, auths, pubKeys := setupDIPPE(t, 4, numAuth)
+
+	x, err := d.ConjunctionPolicyVecInit([]int{0, 1}, numAuth-1)
+	if err != nil {
+		t.Fatalf("failed to build policy vector: %v", err)
+	}
+	cipher, err := d.Encrypt("Functional encryption library in Go", x, pubKeys)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+
+	v, err := d.AttributeVecInit([]int{0, 1}, numAuth-1)
+	if err != nil {
+		t.Fatalf("failed to build attribute vector: %v", err)
+	}
+
+	keys := make([]data.VectorG2, numAuth)
+	for i, auth := range auths {
+		keys[i], err = auth.DeriveKeyShare(v, pubKeys, "user1")
+		if err != nil {
+			t.Fatalf("failed to derive key share for authority %d: %v", i, err)
+		}
+	}
+
+	msg, err := d.Decrypt(cipher, keys, v, "user1")
+	if err != nil || msg != "Functional encryption library in Go" {
+		t.Fatalf("failed to decrypt with satisfying key: msg=%q | err=%v", msg, err)
+	}
+
+	t.Run("authority 0 (row 0) truncated shorter then C0", func(t *testing.T) {
+		truncated := make([]data.VectorG2, numAuth)
+		copy(truncated, keys)
+		truncated[0] = keys[0][:1]
+
+		assert.NotPanics(t, func() {
+			_, err = d.Decrypt(cipher, truncated, v, "user1")
+		}, "Decrypt panicked for a row 0 shorter than C0 in ciphertext")
+		assert.Error(
+			t,
+			err,
+			"Decrypt neither returned an error nor panicked for a mismatching row 0 share length",
+		)
+	})
+
+	t.Run("non-0 authority truncated", func(t *testing.T) {
+		truncated := make([]data.VectorG2, numAuth)
+		copy(truncated, keys)
+		truncated[numAuth-1] = keys[numAuth-1][:1]
+
+		assert.NotPanics(t, func() {
+			_, err = d.Decrypt(cipher, truncated, v, "user1")
+		}, "Decrypt panicked for a row 0 shorter than C0 in ciphertext")
+		assert.Error(
+			t,
+			err,
+			"Decrypt neither returned an error nor panicked for a mismatching row 0 share length",
+		)
+	})
+}
+
+func TestDIPPE_DeriveKeyShareWhenVShorterThanAuthorityID(t *testing.T) {
+	_, auths, pubKeys := setupDIPPE(t, 4, 3)
+
+	// Authority 2 needs v[2]
+	v := data.Vector{big.NewInt(1), big.NewInt(0), big.NewInt(1)}
+	if _, err := auths[2].DeriveKeyShare(v, pubKeys, "user1"); err != nil {
+		t.Fatalf("failed to derive key shares: %v", err)
+	}
+
+	shortV := data.Vector{big.NewInt(1), big.NewInt(0)}
+	var err error
+	assert.NotPanics(t, func() {
+		_, err = auths[2].DeriveKeyShare(shortV, pubKeys, "user1")
+	}, "DeriveKeyShare panicked for a v shorter than there are authorities")
+	assert.Error(
+		t,
+		err,
+		"DeriveKeyShare neither returned an error nor panicked for a v shorter than there are authorities",
+	)
 }
