@@ -25,7 +25,7 @@ import (
 )
 
 func TestNewNormalDouble(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name       string
 		sigma      *big.Float
 		sigmaFirst *big.Float
@@ -55,7 +55,7 @@ func TestNewNormalDouble(t *testing.T) {
 }
 
 func TestNormalDouble(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name       string
 		sigma      *big.Float
 		sigmaFirst *big.Float

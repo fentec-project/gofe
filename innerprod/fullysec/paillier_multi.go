@@ -67,7 +67,10 @@ type PaillierMultiClient struct {
 //
 // It returns an error in case the underlying Paillier scheme
 // instances could not be properly instantiated.
-func NewPaillierMulti(numClients, l, lambda, bitLength int, boundX, boundY *big.Int) (*PaillierMulti, error) {
+func NewPaillierMulti(
+	numClients, l, lambda, bitLength int,
+	boundX, boundY *big.Int,
+) (*PaillierMulti, error) {
 	var newBoundX *big.Int
 	newBoundX = nil
 	if boundX != nil && boundY != nil {
@@ -96,7 +99,10 @@ func NewPaillierMulti(numClients, l, lambda, bitLength int, boundX, boundY *big.
 // Paillier scheme instance, and instantiates a new PaillierMultiClient.
 //
 // It returns a new PaillierMultiClient instance.
-func NewPaillierMultiClientFromParams(params *PaillierParams, boundX, boundY *big.Int) *PaillierMultiClient {
+func NewPaillierMultiClientFromParams(
+	params *PaillierParams,
+	boundX, boundY *big.Int,
+) *PaillierMultiClient {
 	return &PaillierMultiClient{
 		BoundY:   boundY,
 		BoundX:   boundX,
@@ -109,7 +115,11 @@ func NewPaillierMultiClientFromParams(params *PaillierParams, boundX, boundY *bi
 // the scheme with the same configuration parameters.
 //
 // It returns a new PaillierMulti instance.
-func NewPaillierMultiFromParams(numClients int, boundX, boundY *big.Int, params *PaillierParams) *PaillierMulti {
+func NewPaillierMultiFromParams(
+	numClients int,
+	boundX, boundY *big.Int,
+	params *PaillierParams,
+) *PaillierMulti {
 	return &PaillierMulti{
 		NumClients: numClients,
 		BoundX:     boundX,
@@ -182,7 +192,10 @@ type PaillierMultiDerivedKey struct {
 // DeriveKey takes master secret key and a matrix y comprised
 // of input vectors, and returns the functional encryption key.
 // In case the key could not be derived, it returns an error.
-func (dm *PaillierMulti) DeriveKey(secKey *PaillierMultiSecKeys, y data.Matrix) (*PaillierMultiDerivedKey, error) {
+func (dm *PaillierMulti) DeriveKey(
+	secKey *PaillierMultiSecKeys,
+	y data.Matrix,
+) (*PaillierMultiDerivedKey, error) {
 	if dm.BoundY != nil {
 		if err := y.CheckBound(dm.BoundY); err != nil {
 			return nil, err
@@ -210,7 +223,11 @@ func (dm *PaillierMulti) DeriveKey(secKey *PaillierMultiSecKeys, y data.Matrix) 
 // functional encryption key, and a matrix y describing the inner-product.
 // It returns the sum of inner products Σ_i <x_i, y_i>.
 // If decryption failed, error is returned.
-func (dm *PaillierMulti) Decrypt(cipher []data.Vector, key *PaillierMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *PaillierMulti) Decrypt(
+	cipher []data.Vector,
+	key *PaillierMultiDerivedKey,
+	y data.Matrix,
+) (*big.Int, error) {
 	if dm.BoundY != nil {
 		if err := y.CheckBound(dm.BoundY); err != nil {
 			return nil, err

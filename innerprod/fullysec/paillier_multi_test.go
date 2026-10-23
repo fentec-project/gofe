@@ -31,13 +31,15 @@ func TestFullySec_PaillierMulti(t *testing.T) {
 	numClients := 6
 	l := 5
 	bound := big.NewInt(1024)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 
 	// build the central authority for the scheme with parameters that should provide 128-bit security
 	var paillierMulti *fullysec.PaillierMulti
 	var err error
 	paillierMulti, err = fullysec.NewPaillierMulti(numClients, l, 128, 1024, bound, bound)
-
 	if err != nil {
 		t.Fatalf("Failed to initialize multi input inner product: %v", err)
 	}
@@ -61,7 +63,10 @@ func TestFullySec_PaillierMulti(t *testing.T) {
 	}
 
 	// each client encrypts its vector x_i
-	collectedX := make([]data.Vector, numClients) // solely for checking whether Encrypt/Decrypt works properly
+	collectedX := make(
+		[]data.Vector,
+		numClients,
+	) // solely for checking whether Encrypt/Decrypt works properly
 	ciphertexts := make([]data.Vector, numClients)
 	for i := 0; i < numClients; i++ {
 		x, err := data.NewRandomVector(l, sampler) // x_i possessed and chosen by client[i]

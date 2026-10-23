@@ -99,7 +99,10 @@ func NewDamgardMulti(numClients, l, modulusLength int, bound *big.Int) (*Damgard
 //
 // It returns an error in case the underlying Damgard scheme
 // instances could not be properly instantiated.
-func NewDamgardMultiPrecomp(numClients, l, modulusLength int, bound *big.Int) (*DamgardMulti, error) {
+func NewDamgardMultiPrecomp(
+	numClients, l, modulusLength int,
+	bound *big.Int,
+) (*DamgardMulti, error) {
 	bSquared := new(big.Int).Exp(bound, big.NewInt(2), nil)
 	prod := new(big.Int).Mul(big.NewInt(int64(l*numClients*2)), bSquared)
 
@@ -138,7 +141,11 @@ func NewDamgardMultiClientFromParams(bound *big.Int, params *DamgardParams) *Dam
 // the scheme with same configuration parameters.
 //
 // It returns a new DamgardMulti instance.
-func NewDamgardMultiFromParams(numClients int, bound *big.Int, params *DamgardParams) *DamgardMulti {
+func NewDamgardMultiFromParams(
+	numClients int,
+	bound *big.Int,
+	params *DamgardParams,
+) *DamgardMulti {
 	return &DamgardMulti{
 		NumClients: numClients,
 		Bound:      bound,
@@ -209,7 +216,10 @@ type DamgardMultiDerivedKey struct {
 // DeriveKey takes master secret key and a matrix y comprised
 // of input vectors, and returns the functional encryption key.
 // In case the key could not be derived, it returns an error.
-func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKeys, y data.Matrix) (*DamgardMultiDerivedKey, error) {
+func (dm *DamgardMulti) DeriveKey(
+	secKey *DamgardMultiSecKeys,
+	y data.Matrix,
+) (*DamgardMultiDerivedKey, error) {
 	if err := y.CheckBound(dm.Bound); err != nil {
 		return nil, err
 	}
@@ -236,7 +246,11 @@ func (dm *DamgardMulti) DeriveKey(secKey *DamgardMultiSecKeys, y data.Matrix) (*
 // functional encryption key, and a matrix y describing the inner-product.
 // It returns the sum of inner products Σ_i <x_i, y_i>.
 // If decryption failed, error is returned.
-func (dm *DamgardMulti) Decrypt(cipher []data.Vector, key *DamgardMultiDerivedKey, y data.Matrix) (*big.Int, error) {
+func (dm *DamgardMulti) Decrypt(
+	cipher []data.Vector,
+	key *DamgardMultiDerivedKey,
+	y data.Matrix,
+) (*big.Int, error) {
 	if err := y.CheckBound(dm.Bound); err != nil {
 		return nil, err
 	}

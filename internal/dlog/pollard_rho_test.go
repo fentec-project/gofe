@@ -35,7 +35,6 @@ func TestPollardRho(t *testing.T) {
 
 	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
 	xCheck, err := sampler.Sample()
-
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
@@ -43,7 +42,6 @@ func TestPollardRho(t *testing.T) {
 	h := new(big.Int).Exp(params.g, xCheck, params.p)
 
 	x, err := pollardRho(h, params.g, params.p, params.order)
-
 	if err != nil {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
@@ -59,14 +57,12 @@ func TestPollardRhoParallel(t *testing.T) {
 
 	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
 	xCheck, err := sampler.Sample()
-
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
 
 	h := new(big.Int).Exp(params.g, xCheck, params.p)
 	x, err := pollardRhoParallel(h, params.g, params.p, params.order)
-
 	if err != nil {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
@@ -82,7 +78,6 @@ func TestPollardRhoFactorization(t *testing.T) {
 	}
 
 	factorization, err := pollardRhoFactorization(n, nil)
-
 	if err != nil {
 		t.Fatalf("error in pollard rho factorization: %v", err)
 	}
@@ -102,14 +97,12 @@ func TestPollardRhoElGamal(t *testing.T) {
 	order := key.Q
 	sampler := sample.NewUniform(new(big.Int).Exp(big.NewInt(2), big.NewInt(30), nil))
 	xCheck, err := sampler.Sample()
-
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
 
 	h := new(big.Int).Exp(key.G, xCheck, key.P)
 	x, err := pollardRho(h, key.G, key.P, order)
-
 	if err != nil {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
@@ -141,7 +134,6 @@ func TestPollardRhoFactorizationHard(t *testing.T) {
 	n := new(big.Int).Mul(p, q)
 
 	factorization, err := pollardRhoFactorization(n, nil)
-
 	if err != nil {
 		t.Fatalf("error in pollard rho factorization: %v", err)
 	}
@@ -154,7 +146,6 @@ func TestPollardRhoFactorizationBounded(t *testing.T) {
 	B := smallPrimes[len(smallPrimes)-1]
 	n := getSmoothNumber(B, 30, 10)
 	factorization, err := pollardRhoFactorization(n, big.NewInt(int64(B)))
-
 	if err != nil {
 		t.Fatalf("error in bounded pollard rho factorization: %v", err)
 	}
@@ -180,7 +171,10 @@ func getSmoothNumber(B, numPrimes, maxPower int) *big.Int {
 	for i := 0; i < numPrimes; i++ {
 		prime := smallPrimes[rand.Intn(indexBound)]
 		power := rand.Intn(maxPower + 1)
-		prod.Mul(prod, new(big.Int).Exp(big.NewInt(int64(prime)), big.NewInt(int64(power)), big.NewInt(0)))
+		prod.Mul(
+			prod,
+			new(big.Int).Exp(big.NewInt(int64(prime)), big.NewInt(int64(power)), big.NewInt(0)),
+		)
 	}
 
 	return prod

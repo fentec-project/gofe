@@ -17,10 +17,9 @@
 package fullysec
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/big"
-
-	"crypto/sha256"
 	"strconv"
 
 	"github.com/fentec-project/bn256"
@@ -134,8 +133,10 @@ func (c *DMCFEClient) DeriveKeyShare(y data.Vector) (data.VectorG2, error) {
 		}
 	}
 
-	keyShare := data.VectorG2{new(bn256.G2).ScalarBaseMult(big.NewInt(0)),
-		new(bn256.G2).ScalarBaseMult(big.NewInt(0))}
+	keyShare := data.VectorG2{
+		new(bn256.G2).ScalarBaseMult(big.NewInt(0)),
+		new(bn256.G2).ScalarBaseMult(big.NewInt(0)),
+	}
 	for k := 0; k < 2; k++ {
 		for i := 0; i < 2; i++ {
 			add := new(bn256.G2).ScalarMult(hs[i], c.Share[k][i])
@@ -156,7 +157,8 @@ func (c *DMCFEClient) DeriveKeyShare(y data.Vector) (data.VectorG2, error) {
 // a string under which vector x has been encrypted (each client encrypted x_i under this label). The value bound
 // specifies the bound of the output (solution will be in the interval (-bound, bound)) and can be nil.
 func DMCFEDecrypt(ciphers []*bn256.G1, keyShares []data.VectorG2, y data.Vector, label string,
-	bound *big.Int) (*big.Int, error) {
+	bound *big.Int,
+) (*big.Int, error) {
 	key1 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	key2 := new(bn256.G2).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < len(keyShares); i++ {

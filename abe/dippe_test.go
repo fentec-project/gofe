@@ -17,9 +17,8 @@
 package abe_test
 
 import (
-	"testing"
-
 	"math/big"
+	"testing"
 
 	"github.com/fentec-project/gofe/abe"
 	"github.com/fentec-project/gofe/data"
@@ -48,8 +47,10 @@ func TestDIPPE(t *testing.T) {
 	msg := "some message"
 
 	// choose a policy vector
-	policyVec := data.Vector([]*big.Int{big.NewInt(1), big.NewInt(-1),
-		big.NewInt(1), big.NewInt(0), big.NewInt(0)})
+	policyVec := data.Vector([]*big.Int{
+		big.NewInt(1), big.NewInt(-1),
+		big.NewInt(1), big.NewInt(0), big.NewInt(0),
+	})
 
 	// encrypt the message with the chosen policy give by a policy vector,
 	cipher, err := d.Encrypt(msg, policyVec, pubKeys)
@@ -61,8 +62,10 @@ func TestDIPPE(t *testing.T) {
 	userGID := "someGID"
 	// choose user's vector, decryption is possible if and only if
 	// the users's and policy vector are orthogonal
-	userVec := data.Vector([]*big.Int{big.NewInt(0), big.NewInt(1),
-		big.NewInt(1), big.NewInt(-3), big.NewInt(4)})
+	userVec := data.Vector([]*big.Int{
+		big.NewInt(0), big.NewInt(1),
+		big.NewInt(1), big.NewInt(-3), big.NewInt(4),
+	})
 
 	// authorities generate decryption keys for the user
 	userKeys := make([]data.VectorG2, vecLen)
@@ -114,7 +117,11 @@ func TestDIPPE_ABE_threshold(t *testing.T) {
 	exactThreshold := 3
 	// generate the exact threshold vector (this conversion allows the
 	// DIPPE scheme to be used as an ABE threshold scheme)
-	thresholdPolicyVec, err := d.ExactThresholdPolicyVecInit(thresholdAttrib, exactThreshold, numAttrib)
+	thresholdPolicyVec, err := d.ExactThresholdPolicyVecInit(
+		thresholdAttrib,
+		exactThreshold,
+		numAttrib,
+	)
 	if err != nil {
 		t.Fatalf("Failed to generate threshold vector: %v", err)
 	}
@@ -140,7 +147,11 @@ func TestDIPPE_ABE_threshold(t *testing.T) {
 	// authorities generate decryption keys for the user
 	thresholdUserKeys := make([]data.VectorG2, len(auth))
 	for i := range auth {
-		thresholdUserKeys[i], err = auth[i].DeriveKeyShare(thresholdUserVec, pubKeys, thresholdUserGID)
+		thresholdUserKeys[i], err = auth[i].DeriveKeyShare(
+			thresholdUserVec,
+			pubKeys,
+			thresholdUserGID,
+		)
 		if err != nil {
 			t.Fatalf("Failed to generate a user key: %v", err)
 		}

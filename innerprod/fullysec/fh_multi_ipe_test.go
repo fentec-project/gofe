@@ -43,7 +43,10 @@ func TestFH_Multi_IPE(t *testing.T) {
 	}
 
 	// sample vectors that will be encrypted
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 	x := make(data.Matrix, numClient)
 	for i := 0; i < numClient; i++ {
 		x[i], err = data.NewRandomVector(vecLen, sampler)

@@ -17,17 +17,15 @@
 package abe
 
 import (
-	"math/big"
-
-	"fmt"
-	"strconv"
-
 	"crypto/aes"
-	cbc "crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
-
+	"fmt"
 	"io"
+	"math/big"
+	"strconv"
+
+	cbc "crypto/cipher"
 
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
@@ -80,15 +78,21 @@ func (a *FAME) GenerateMasterKeys() (*FAMEPubKey, *FAMESecKey, error) {
 	}
 
 	partInt := [4]*big.Int{val[0], val[1], val[2], val[3]}
-	partG1 := [3]*bn256.G1{new(bn256.G1).ScalarBaseMult(val[4]),
+	partG1 := [3]*bn256.G1{
+		new(bn256.G1).ScalarBaseMult(val[4]),
 		new(bn256.G1).ScalarBaseMult(val[5]),
-		new(bn256.G1).ScalarBaseMult(val[6])}
-	partG2 := [2]*bn256.G2{new(bn256.G2).ScalarBaseMult(val[0]),
-		new(bn256.G2).ScalarBaseMult(val[1])}
+		new(bn256.G1).ScalarBaseMult(val[6]),
+	}
+	partG2 := [2]*bn256.G2{
+		new(bn256.G2).ScalarBaseMult(val[0]),
+		new(bn256.G2).ScalarBaseMult(val[1]),
+	}
 	tmp1 := new(big.Int).Mod(new(big.Int).Add(new(big.Int).Mul(val[0], val[4]), val[6]), a.P)
 	tmp2 := new(big.Int).Mod(new(big.Int).Add(new(big.Int).Mul(val[1], val[5]), val[6]), a.P)
-	partGT := [2]*bn256.GT{new(bn256.GT).ScalarBaseMult(tmp1),
-		new(bn256.GT).ScalarBaseMult(tmp2)}
+	partGT := [2]*bn256.GT{
+		new(bn256.GT).ScalarBaseMult(tmp1),
+		new(bn256.GT).ScalarBaseMult(tmp2),
+	}
 
 	return &FAMEPubKey{PartG2: partG2, PartGT: partGT},
 		&FAMESecKey{PartInt: partInt, PartG1: partG1}, nil
@@ -162,9 +166,11 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	if err != nil {
 		return nil, err
 	}
-	ct0 := [3]*bn256.G2{new(bn256.G2).ScalarMult(pk.PartG2[0], s[0]),
+	ct0 := [3]*bn256.G2{
+		new(bn256.G2).ScalarMult(pk.PartG2[0], s[0]),
 		new(bn256.G2).ScalarMult(pk.PartG2[1], s[1]),
-		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
+		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1])),
+	}
 
 	ct := make([][3]*bn256.G1, len(msp.Mat))
 	for i := 0; i < len(msp.Mat); i++ {
@@ -246,9 +252,11 @@ func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKe
 	pow2 := new(big.Int).Add(r[0], r[1])
 	pow2.Mod(pow2, a.P)
 
-	k0 := [3]*bn256.G2{new(bn256.G2).ScalarBaseMult(pow0),
+	k0 := [3]*bn256.G2{
+		new(bn256.G2).ScalarBaseMult(pow0),
 		new(bn256.G2).ScalarBaseMult(pow1),
-		new(bn256.G2).ScalarBaseMult(pow2)}
+		new(bn256.G2).ScalarBaseMult(pow2),
+	}
 
 	a0Inv := new(big.Int).ModInverse(sk.PartInt[0], a.P)
 	a1Inv := new(big.Int).ModInverse(sk.PartInt[1], a.P)
@@ -390,7 +398,10 @@ func (a *FAME) Decrypt(cipher *FAMECipher, key *FAMEAttribKeys, pk *FAMEPubKey) 
 		keyProd[j] = new(bn256.G1).ScalarBaseMult(big.NewInt(0))
 		for i, e := range rowToAttrib {
 			ctProd[j].Add(ctProd[j], new(bn256.G1).ScalarMult(ctForKey[i][j], alpha[i]))
-			keyProd[j].Add(keyProd[j], new(bn256.G1).ScalarMult(key.K[key.AttribToI[e]][j], alpha[i]))
+			keyProd[j].Add(
+				keyProd[j],
+				new(bn256.G1).ScalarMult(key.K[key.AttribToI[e]][j], alpha[i]),
+			)
 		}
 		keyProd[j].Add(keyProd[j], key.KPrime[j])
 		ctPairing := bn256.Pair(ctProd[j], key.K0[j])

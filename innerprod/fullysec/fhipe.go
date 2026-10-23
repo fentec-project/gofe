@@ -17,10 +17,9 @@
 package fullysec
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
-
-	"crypto/rand"
 
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
@@ -68,7 +67,9 @@ func NewFHIPE(l int, boundX, boundY *big.Int) (*FHIPE, error) {
 		Params: &FHIPEParams{
 			L:      l,
 			BoundX: boundX,
-			BoundY: boundY}}, nil
+			BoundY: boundY,
+		},
+	}, nil
 }
 
 // NewFHIPEFromParams takes configuration parameters of an existing

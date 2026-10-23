@@ -56,7 +56,8 @@ func newNormal(sigma *big.Float, n uint) *normal {
 
 // expCoef are coefficients of a polynomial approximating an exponential
 // function.
-var expCoef = []float64{1.43291003789439094275872613876154915146798884961754e-7,
+var expCoef = []float64{
+	1.43291003789439094275872613876154915146798884961754e-7,
 	1.2303944375555413249736938854916878938183799618855e-6,
 	1.5359914219462011698283041005730353845137869939208e-5,
 	1.5396043210538638053991311593904356413986533880234e-4,
@@ -65,13 +66,16 @@ var expCoef = []float64{1.43291003789439094275872613876154915146798884961754e-7,
 	5.5504109841318247098307381293125217780470848083496e-2,
 	0.24022650687652774559310842050763312727212905883789,
 	0.69314718056193380668617010087473317980766296386719,
-	1}
+	1,
+}
 
-var mantissaPrecision = uint64(52)
-var mantissaMask = (uint64(1) << mantissaPrecision) - 1
-var bitLenForSample = uint64(19)
-var maxExp = uint64(1023)
-var cmpMask = uint64(1) << 61
+var (
+	mantissaPrecision = uint64(52)
+	mantissaMask      = (uint64(1) << mantissaPrecision) - 1
+	bitLenForSample   = uint64(19)
+	maxExp            = uint64(1023)
+	cmpMask           = uint64(1) << 61
+)
 
 // Bernoulli returns true with probability proportional to
 // 2^{-t/l^2}. A polynomial approximation is used to evaluate

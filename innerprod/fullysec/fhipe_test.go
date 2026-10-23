@@ -43,7 +43,10 @@ func TestFHIPE(t *testing.T) {
 	}
 
 	// sample a vector that will be encrypted
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 	x, err := data.NewRandomVector(l, sampler)
 	if err != nil {
 		t.Fatalf("Error during random vector generation: %v", err)

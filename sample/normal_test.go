@@ -17,9 +17,8 @@
 package sample_test
 
 import (
-	"testing"
-
 	"math/big"
+	"testing"
 
 	"github.com/fentec-project/gofe/sample"
 	"github.com/stretchr/testify/assert"

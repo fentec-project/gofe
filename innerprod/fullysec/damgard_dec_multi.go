@@ -116,7 +116,6 @@ type DamgardDecMultiSecKey struct {
 // It returns an error in case master keys could not be generated.
 func (c *DamgardDecMultiClient) GenerateKeys() (*DamgardDecMultiSecKey, error) {
 	masterSecretKey, masterPublicKey, err := c.Damgard.GenerateMasterKeys()
-
 	if err != nil {
 		return nil, fmt.Errorf("error in master key generation")
 	}
@@ -127,15 +126,20 @@ func (c *DamgardDecMultiClient) GenerateKeys() (*DamgardDecMultiSecKey, error) {
 		return nil, fmt.Errorf("error in random vector generation")
 	}
 
-	return &DamgardDecMultiSecKey{sk: masterSecretKey,
+	return &DamgardDecMultiSecKey{
+		sk:     masterSecretKey,
 		pk:     masterPublicKey,
-		OtpKey: otpVector}, nil
+		OtpKey: otpVector,
+	}, nil
 }
 
 // Encrypt generates a ciphertext from the input vector x
 // with the provided secret key.
 // If encryption failed, error is returned.
-func (c *DamgardDecMultiClient) Encrypt(x data.Vector, key *DamgardDecMultiSecKey) (data.Vector, error) {
+func (c *DamgardDecMultiClient) Encrypt(
+	x data.Vector,
+	key *DamgardDecMultiSecKey,
+) (data.Vector, error) {
 	if err := x.CheckBound(c.Params.Bound); err != nil {
 		return nil, err
 	}
@@ -157,7 +161,10 @@ type DamgardDecMultiDerivedKeyPart struct {
 // a matrix y comprised of input vectors, and returns a part of
 // the functional encryption key.
 // In case the key could not be derived, it returns an error.
-func (c *DamgardDecMultiClient) DeriveKeyShare(secKey *DamgardDecMultiSecKey, y data.Matrix) (*DamgardDecMultiDerivedKeyPart, error) {
+func (c *DamgardDecMultiClient) DeriveKeyShare(
+	secKey *DamgardDecMultiSecKey,
+	y data.Matrix,
+) (*DamgardDecMultiDerivedKeyPart, error) {
 	if err := y.CheckBound(c.Damgard.Params.Bound); err != nil {
 		return nil, err
 	}
@@ -193,7 +200,11 @@ type DamgardDecMultiDec struct {
 // new DamgardDecMultiDec struct.
 func NewDamgardDecMultiDec(damgardMulti *DamgardMulti) *DamgardDecMultiDec {
 	return &DamgardDecMultiDec{
-		DamgardMulti: NewDamgardMultiFromParams(damgardMulti.NumClients, damgardMulti.Bound, damgardMulti.Params),
+		DamgardMulti: NewDamgardMultiFromParams(
+			damgardMulti.NumClients,
+			damgardMulti.Bound,
+			damgardMulti.Params,
+		),
 	}
 }
 
@@ -201,7 +212,11 @@ func NewDamgardDecMultiDec(damgardMulti *DamgardMulti) *DamgardDecMultiDec {
 // an array of partial functional encryption keys, and a matrix y representing
 // the inner-product vectors. It returns the sum of inner products.
 // If decryption failed, an error is returned.
-func (dc *DamgardDecMultiDec) Decrypt(cipher []data.Vector, partKeys []*DamgardDecMultiDerivedKeyPart, y data.Matrix) (*big.Int, error) {
+func (dc *DamgardDecMultiDec) Decrypt(
+	cipher []data.Vector,
+	partKeys []*DamgardDecMultiDerivedKeyPart,
+	y data.Matrix,
+) (*big.Int, error) {
 	if err := y.CheckBound(dc.Params.Bound); err != nil {
 		return nil, err
 	}
@@ -216,8 +231,9 @@ func (dc *DamgardDecMultiDec) Decrypt(cipher []data.Vector, partKeys []*DamgardD
 		keys[i] = partKeys[i].KeyPart
 	}
 	z.Mod(z, dc.Params.Q)
-	key := &DamgardMultiDerivedKey{Keys: keys,
-		Z: z,
+	key := &DamgardMultiDerivedKey{
+		Keys: keys,
+		Z:    z,
 	}
 
 	return dc.DamgardMulti.Decrypt(cipher, key, y)

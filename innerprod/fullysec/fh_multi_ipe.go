@@ -71,8 +71,10 @@ type FHMultiIPESecKey struct {
 // FHMultiIPEParams for the description of the parameters. It returns
 // a new FHMultiIPE instance.
 func NewFHMultiIPE(secLevel, numClients, vecLen int, boundX, boundY *big.Int) *FHMultiIPE {
-	params := &FHMultiIPEParams{SecLevel: secLevel, NumClients: numClients,
-		VecLen: vecLen, BoundX: boundX, BoundY: boundY}
+	params := &FHMultiIPEParams{
+		SecLevel: secLevel, NumClients: numClients,
+		VecLen: vecLen, BoundX: boundX, BoundY: boundY,
+	}
 	return &FHMultiIPE{Params: params}
 }
 
@@ -221,7 +223,11 @@ func (f FHMultiIPE) Encrypt(x data.Vector, partSecKey data.Matrix) (data.VectorG
 // x_1,...,x_m and a functional encryption key corresponding to vectors y_1,...,y_m.
 // It returns the sum of inner products <x_1,y_1> + ... + <x_m, y_m>. If decryption
 // failed, an error is returned.
-func (f *FHMultiIPE) Decrypt(cipher data.MatrixG1, key data.MatrixG2, pubKey *bn256.GT) (*big.Int, error) {
+func (f *FHMultiIPE) Decrypt(
+	cipher data.MatrixG1,
+	key data.MatrixG2,
+	pubKey *bn256.GT,
+) (*big.Int, error) {
 	sum := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < f.Params.NumClients; i++ {
 		for j := 0; j < 2*f.Params.VecLen+2*f.Params.SecLevel+1; j++ {

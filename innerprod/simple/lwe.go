@@ -17,13 +17,11 @@
 package simple
 
 import (
-	"math/big"
-
 	"crypto/rand"
-	"math"
-	"math/bits"
-
 	"fmt"
+	"math"
+	"math/big"
+	"math/bits"
 
 	"github.com/fentec-project/gofe/data"
 	gofe "github.com/fentec-project/gofe/internal"

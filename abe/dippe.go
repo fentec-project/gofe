@@ -22,10 +22,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"math/big"
 	"strconv"
-
-	"io"
 
 	"github.com/fentec-project/bn256"
 	"github.com/fentec-project/gofe/data"
@@ -97,10 +96,12 @@ func NewDIPPE(secLevel int) (*DIPPE, error) {
 	UA.Mod(bn256.Order)
 	g1ToUA := UA.MulG1()
 
-	return &DIPPE{secLevel: secLevel,
-		G1ToA:  g1ToA,
-		G1ToUA: g1ToUA,
-		P:      bn256.Order}, nil
+	return &DIPPE{
+		secLevel: secLevel,
+		G1ToA:    g1ToA,
+		G1ToUA:   g1ToUA,
+		P:        bn256.Order,
+	}, nil
 }
 
 // NewDIPPEAuth configures a new authority that will be able to
@@ -222,7 +223,11 @@ func (d *DIPPE) Encrypt(msg string, x data.Vector, pubKeys []*DIPPEPubKey) (*DIP
 // an information about the user that will allow him to decrypt iff the inner product
 // v times x = 0 for the policy x. GID is a global identifier of the user and a slice of
 // public keys of the authorities should be given.
-func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid string) (data.VectorG2, error) {
+func (a *DIPPEAuth) DeriveKeyShare(
+	v data.Vector,
+	pubKeys []*DIPPEPubKey,
+	gid string,
+) (data.VectorG2, error) {
 	g2ToMu := make(data.VectorG2, a.Sk.W.Rows())
 	for i := 0; i < a.Sk.W.Rows(); i++ {
 		g2ToMu[i] = new(bn256.G2).ScalarBaseMult(big.NewInt(0))
@@ -253,7 +258,6 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 	g2ToH := make(data.VectorG2, a.Sk.W.Rows())
 	for j := range g2ToH {
 		g2ToH[j], err = bn256.HashG2(strconv.Itoa(j) + gid + v.String())
-
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +275,12 @@ func (a *DIPPEAuth) DeriveKeyShare(v data.Vector, pubKeys []*DIPPEPubKey, gid st
 // a vector v representing the users decryption allowance, and a global identifier.
 // If the provided keys are correct and the inner product v times x = 0 for the policy
 // x, the message is decrypted, otherwise an error is returned.
-func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector, gid string) (string, error) {
+func (d *DIPPE) Decrypt(
+	cipher *DIPPECipher,
+	keys []data.VectorG2,
+	v data.Vector,
+	gid string,
+) (string, error) {
 	// check if the decryption is possible
 	prod, err := v.Dot(cipher.X)
 	if err != nil {
@@ -344,7 +353,11 @@ func (d *DIPPE) Decrypt(cipher *DIPPECipher, keys []data.VectorG2, v data.Vector
 // attributes it creates a policy vector that can be used for the DIPPE encryption.
 // The user will be able to decrypt only if he posses exactly the threshold
 // value of the attributes.
-func (d DIPPE) ExactThresholdPolicyVecInit(attrib []int, threshold int, numAttrib int) (data.Vector, error) {
+func (d DIPPE) ExactThresholdPolicyVecInit(
+	attrib []int,
+	threshold int,
+	numAttrib int,
+) (data.Vector, error) {
 	policyVec := data.NewConstantVector(numAttrib+1, big.NewInt(0))
 	one := big.NewInt(1)
 	for _, e := range attrib {

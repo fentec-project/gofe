@@ -602,7 +602,6 @@ func (m Matrix) InverseModGauss(p *big.Int) (Matrix, *big.Int, error) {
 			} else {
 				matExt[i][j] = big.NewInt(0)
 			}
-
 		}
 	}
 
@@ -754,7 +753,9 @@ func (m Matrix) Tensor(other Matrix) Matrix {
 	for i := 0; i < prod.Rows(); i++ {
 		prod[i] = make(Vector, m.Cols()*other.Cols())
 		for j := 0; j < len(prod[i]); j++ {
-			prod[i][j] = new(big.Int).Mul(m[i/other.Rows()][j/other.Cols()], other[i%other.Rows()][j%other.Cols()])
+			prod[i][j] = new(
+				big.Int,
+			).Mul(m[i/other.Rows()][j/other.Cols()], other[i%other.Rows()][j%other.Cols()])
 		}
 	}
 

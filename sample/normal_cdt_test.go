@@ -23,7 +23,7 @@ import (
 )
 
 func TestNormalCDT(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		expect paramBounds
 	}{

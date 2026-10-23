@@ -99,7 +99,7 @@ func NewLWE(l, n int, boundX, boundY *big.Int) (*LWE, error) {
 	// parameters for the scheme are given as a set of requirements in the paper
 	// hence we search for such parameters iteratively
 	for i := 1; true; i++ {
-		//assuming that the final q will have at most i bits we calculate a bound
+		// assuming that the final q will have at most i bits we calculate a bound
 		boundMF := float64(n * i)
 		// tmp values
 		log2M := math.Log2(boundMF)

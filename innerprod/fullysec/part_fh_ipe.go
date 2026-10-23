@@ -112,7 +112,9 @@ type PartFHIPEPubKey struct {
 // It returns an error in case the keys could not be generated.
 func (d *PartFHIPE) GenerateKeys(M data.Matrix) (*PartFHIPEPubKey, *PartFHIPESecKey, error) {
 	if d.Params.L != M.Rows() {
-		return nil, nil, fmt.Errorf("dimensions of the given matrix do not match dimensions of the scheme")
+		return nil, nil, fmt.Errorf(
+			"dimensions of the given matrix do not match dimensions of the scheme",
+		)
 	}
 	sampler := sample.NewUniform(bn256.Order)
 
@@ -171,7 +173,9 @@ func (d *PartFHIPE) GenerateKeys(M data.Matrix) (*PartFHIPEPubKey, *PartFHIPESec
 // returns an error.
 func (d *PartFHIPE) DeriveKey(y data.Vector, secKey *PartFHIPESecKey) (data.VectorG2, error) {
 	if len(y) != d.Params.L {
-		return nil, fmt.Errorf("the dimension of the given vector does not match the dimension of the scheme")
+		return nil, fmt.Errorf(
+			"the dimension of the given vector does not match the dimension of the scheme",
+		)
 	}
 	if d.Params.Bound != nil {
 		if err := y.CheckBound(d.Params.Bound); err != nil {
@@ -248,9 +252,15 @@ func (d *PartFHIPE) Encrypt(t data.Vector, pubKey *PartFHIPEPubKey) (data.Vector
 // SecEncrypt encrypts an arbitrary vector x using master secret key and
 // public key. It returns a ciphertext vector. If encryption failed,
 // an error is returned.
-func (d *PartFHIPE) SecEncrypt(x data.Vector, pubKey *PartFHIPEPubKey, secKey *PartFHIPESecKey) (data.VectorG1, error) {
+func (d *PartFHIPE) SecEncrypt(
+	x data.Vector,
+	pubKey *PartFHIPEPubKey,
+	secKey *PartFHIPESecKey,
+) (data.VectorG1, error) {
 	if len(x) != d.Params.L {
-		return nil, fmt.Errorf("the dimension of the given vector does not match the dimension of the scheme")
+		return nil, fmt.Errorf(
+			"the dimension of the given vector does not match the dimension of the scheme",
+		)
 	}
 	if d.Params.Bound != nil {
 		if err := x.CheckBound(d.Params.Bound); err != nil {
@@ -289,7 +299,9 @@ func (d *PartFHIPE) SecEncrypt(x data.Vector, pubKey *PartFHIPEPubKey, secKey *P
 // To obtain a final result, calculating the discrete logarithm is needed.
 func (d *PartFHIPE) PartDecrypt(cipher data.VectorG1, feKey data.VectorG2) (*bn256.GT, error) {
 	if len(cipher) != d.Params.L+4 || len(feKey) != d.Params.L+4 {
-		return nil, fmt.Errorf("the length of FE key or ciphertext does not match the dimension of the scheme")
+		return nil, fmt.Errorf(
+			"the length of FE key or ciphertext does not match the dimension of the scheme",
+		)
 	}
 	dec := new(bn256.GT).ScalarBaseMult(big.NewInt(0))
 	for i := 0; i < d.Params.L+4; i++ {

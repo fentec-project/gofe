@@ -108,7 +108,8 @@ type SGPCipher struct {
 
 // NewSGPCipher constructs an instance of SGPCipher.
 func NewSGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
-	bMulG2 []data.VectorG2) *SGPCipher {
+	bMulG2 []data.VectorG2,
+) *SGPCipher {
 	return &SGPCipher{
 		G1MulGamma: g1MulGamma,
 		AMulG1:     aMulG1,

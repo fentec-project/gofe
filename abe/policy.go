@@ -17,10 +17,9 @@
 package abe
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
-
-	"fmt"
 
 	"github.com/fentec-project/gofe/data"
 )
@@ -77,7 +76,7 @@ func BooleanToMSP(boolExp string, convertToOnes bool) (*MSP, error) {
 				}
 			}
 		}
-		//change the msp matrix by multiplying with it the matrix invMat
+		// change the msp matrix by multiplying with it the matrix invMat
 		msp.Mat, err = msp.Mat.Mul(invMat)
 		if err != nil {
 			return nil, err

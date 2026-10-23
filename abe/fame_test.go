@@ -118,7 +118,6 @@ func TestFAME(t *testing.T) {
 
 	// test with Single UUID
 	mspSingleUUID, err := abe.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000", false)
-
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
@@ -130,7 +129,10 @@ func TestFAME(t *testing.T) {
 
 	// define a set of attributes (a subset of the universe of attributes)
 	// that an entity possesses
-	gammaUUID := []string{"123e4567-e89b-12d3-a456-426655440000", "123e4567-e89b-12d3-a456-4266554400001"}
+	gammaUUID := []string{
+		"123e4567-e89b-12d3-a456-426655440000",
+		"123e4567-e89b-12d3-a456-4266554400001",
+	}
 
 	// generate keys for decryption for an entity with
 	// attributes gamma
@@ -165,7 +167,10 @@ func TestFAME(t *testing.T) {
 
 	//
 	// test with Multi UUID
-	mspMultiUUID, err := abe.BooleanToMSP("123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001", false)
+	mspMultiUUID, err := abe.BooleanToMSP(
+		"123e4567-e89b-12d3-a456-426655440000 OR 123e4567-e89b-12d3-a456-426655440001",
+		false,
+	)
 	if err != nil {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}

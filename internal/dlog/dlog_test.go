@@ -50,7 +50,6 @@ func TestDLog(t *testing.T) {
 
 	sampler := sample.NewUniformRange(big.NewInt(2), params.order)
 	xCheck, err := sampler.Sample()
-
 	if err != nil {
 		t.Fatalf("Error during random int generation: %v", err)
 	}
@@ -64,7 +63,6 @@ func TestDLog(t *testing.T) {
 	}
 
 	x2, err := pollardRhoParallel(h, params.g, params.p, params.order)
-
 	if err != nil {
 		t.Fatalf("Error in Pollard rho algorithm: %v", err)
 	}
