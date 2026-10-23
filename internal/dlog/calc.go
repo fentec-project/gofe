@@ -188,7 +188,11 @@ func (c *CalcZp) runBabyStepGiantStep(h, g *big.Int, retChan chan *big.Int, errC
 // within the provided bound, it returns an error. In contrast to the usual
 // implementation of the method, this one proceeds iteratively, meaning that
 // smaller the solution is, faster the algorithm finishes.
-func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.Int, errChan chan error) {
+func (c *CalcZp) runBabyStepGiantStepIterative(
+	h, g *big.Int,
+	retChan chan *big.Int,
+	errChan chan error,
+) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
 
@@ -241,11 +245,11 @@ func (c *CalcZp) runBabyStepGiantStepIterative(h, g *big.Int, retChan chan *big.
 // CalcBN256 represents a calculator for discrete logarithms
 // that operates in the BN256 group.
 type CalcBN256 struct {
-	bound   *big.Int
-	m       *big.Int
-	Precomp map[string]*big.Int
+	bound          *big.Int
+	m              *big.Int
+	Precomp        map[string]*big.Int
 	precompMaxBits int
-	neg     bool
+	neg            bool
 }
 
 // InBN256 builds parameters needed to calculate a discrete
@@ -267,11 +271,11 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 		m.Add(m, big.NewInt(1))
 
 		return &CalcBN256{
-			bound:   bound,
-			m:       m,
-			Precomp: c.Precomp,
+			bound:          bound,
+			m:              m,
+			Precomp:        c.Precomp,
 			precompMaxBits: c.precompMaxBits,
-			neg:     c.neg,
+			neg:            c.neg,
 		}
 	}
 	return c
@@ -281,11 +285,11 @@ func (c *CalcBN256) WithBound(bound *big.Int) *CalcBN256 {
 // negative integers.
 func (c *CalcBN256) WithNeg() *CalcBN256 {
 	return &CalcBN256{
-		bound:   c.bound,
-		m:       c.m,
-		Precomp: c.Precomp,
+		bound:          c.bound,
+		m:              c.m,
+		Precomp:        c.Precomp,
 		precompMaxBits: c.precompMaxBits,
-		neg:     true,
+		neg:            true,
 	}
 }
 
@@ -403,10 +407,14 @@ func (c *CalcBN256) BabyStepGiantStep(h, g *bn256.GT) (*big.Int, error) {
 // within the provided bound, it returns an error. In contrast to the usual
 // implementation of the method, this one proceeds iteratively, meaning that
 // smaller the solution is, faster the algorithm finishes.
-func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *big.Int, errChan chan error,  quit chan bool) {
+func (c *CalcBN256) runBabyStepGiantStepIterative(
+	h, g *bn256.GT,
+	retChan chan *big.Int,
+	errChan chan error,
+	quit chan bool,
+) {
 	one := big.NewInt(1)
 	two := big.NewInt(2)
-
 
 	var startBits int
 	if c.Precomp == nil {
@@ -444,10 +452,12 @@ func (c *CalcBN256) runBabyStepGiantStepIterative(h, g *bn256.GT, retChan chan *
 		}
 	}
 	z.Add(z, z)
-	x := new(bn256.GT).ScalarMult(g, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(startBits)), nil))
+	x := new(
+		bn256.GT,
+	).ScalarMult(g, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(startBits)), nil))
 
 	T := make(map[string]*big.Int)
-	for k,v := range c.Precomp {
+	for k, v := range c.Precomp {
 		T[k] = v
 	}
 

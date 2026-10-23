@@ -22,10 +22,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"math/big"
-
 	"io"
-
+	"math/big"
 	"strconv"
 
 	"github.com/fentec-project/bn256"
@@ -169,20 +167,22 @@ func (a *GPSW) Encrypt(msg string, gamma interface{}, pk *GPSWPubKey) (*GPSWCiph
 		attribToI[el] = i
 	}
 
-	return &GPSWCipher{Gamma: gammaI,
+	return &GPSWCipher{
+		Gamma:     gammaI,
 		AttribToI: attribToI,
 		E0:        e0,
 		E:         e,
 		SymEnc:    symEnc,
-		Iv:        iv}, nil
+		Iv:        iv,
+	}, nil
 }
 
 // GPSWKey represents a key structure for decrypting a ciphertext. It includes
 // a msp structure (policy) associated with the key and a vector D representing
 // the main part of the key.
 type GPSWKey struct {
-	Msp         *MSP
-	D           data.VectorG1
+	Msp *MSP
+	D   data.VectorG1
 }
 
 // GeneratePolicyKey given a monotone span program (MSP) msp and the vector of secret
@@ -251,7 +251,7 @@ func getSum(y *big.Int, p *big.Int, d int) (data.Vector, error) {
 // policy (boolean expression) of the key. This is if and only if the
 // rows of the msp matrix in the key associated with the attributes of the
 // ciphertext span the vector [1, 1,..., 1]. If this is not possible, an
-//error is returned.
+// error is returned.
 func (a *GPSW) Decrypt(cipher *GPSWCipher, key *GPSWKey) (string, error) {
 	// get intersection of gamma and attributes used in the key policy
 	gammaMap := make(map[int]bool)

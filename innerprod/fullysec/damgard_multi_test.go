@@ -31,14 +31,22 @@ func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) 
 	numClients := 6
 	l := 5
 	bound := big.NewInt(1024)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 
 	// build the central authority for the scheme
 	var damgardMulti *fullysec.DamgardMulti
 	var err error
 	if param.precomputed {
 		// modulusLength defines the security of the scheme, the higher the better
-		damgardMulti, err = fullysec.NewDamgardMultiPrecomp(numClients, l, param.modulusLength, bound)
+		damgardMulti, err = fullysec.NewDamgardMultiPrecomp(
+			numClients,
+			l,
+			param.modulusLength,
+			bound,
+		)
 	} else {
 		damgardMulti, err = fullysec.NewDamgardMulti(numClients, l, param.modulusLength, bound)
 	}
@@ -65,7 +73,10 @@ func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) 
 	}
 
 	// each client encrypts its vector x_i
-	collectedX := make([]data.Vector, numClients) // solely for checking whether Encrypt/Decrypt works properly
+	collectedX := make(
+		[]data.Vector,
+		numClients,
+	) // solely for checking whether Encrypt/Decrypt works properly
 	ciphertexts := make([]data.Vector, numClients)
 	for i := 0; i < numClients; i++ {
 		x, err := data.NewRandomVector(l, sampler) // x_i possessed and chosen by client[i]
@@ -108,8 +119,10 @@ func testFullySecDamgardMultiDDHFromParam(t *testing.T, param damgardTestParam) 
 }
 
 func TestFullySec_DamgardMultiDDH(t *testing.T) {
-	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
-		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+	params := []damgardTestParam{
+		{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true},
+	}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {

@@ -41,7 +41,6 @@ func TestVector(t *testing.T) {
 
 	add := x.Add(y)
 	mul, err := x.Dot(y)
-
 	if err != nil {
 		t.Fatalf("Error during vector multiplication: %v", err)
 	}
@@ -53,7 +52,12 @@ func TestVector(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		assert.Equal(t, new(big.Int).Add(x[i], y[i]), add[i], "coordinates should sum correctly")
 		innerProd = innerProd.Add(innerProd, new(big.Int).Mul(x[i], y[i]))
-		assert.Equal(t, new(big.Int).Mod(x[i], big.NewInt(modulo)), mod[i], "coordinates should mod correctly")
+		assert.Equal(
+			t,
+			new(big.Int).Mod(x[i], big.NewInt(modulo)),
+			mod[i],
+			"coordinates should mod correctly",
+		)
 	}
 
 	assert.Equal(t, innerProd, mul, "inner product should calculate correctly")

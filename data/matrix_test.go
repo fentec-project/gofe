@@ -40,7 +40,6 @@ func TestMatrix(t *testing.T) {
 	}
 
 	add, err := x.Add(y)
-
 	if err != nil {
 		t.Fatalf("Error during matrix addition: %v", err)
 	}
@@ -50,8 +49,18 @@ func TestMatrix(t *testing.T) {
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
-			assert.Equal(t, new(big.Int).Add(x[i][j], y[i][j]), add[i][j], "coordinates should sum correctly")
-			assert.Equal(t, new(big.Int).Mod(x[i][j], modulo), mod[i][j], "coordinates should mod correctly")
+			assert.Equal(
+				t,
+				new(big.Int).Add(x[i][j], y[i][j]),
+				add[i][j],
+				"coordinates should sum correctly",
+			)
+			assert.Equal(
+				t,
+				new(big.Int).Mod(x[i][j], modulo),
+				mod[i][j],
+				"coordinates should mod correctly",
+			)
 		}
 	}
 
@@ -221,7 +230,6 @@ func TestMatrix_InverseMod(t *testing.T) {
 		for j := 0; j < m.Cols(); j++ {
 			assert.Equal(t, mInv1[i][j].Cmp(mInv2[i][j]), 0, "computed inverses are not equal")
 		}
-
 	}
 }
 

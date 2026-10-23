@@ -24,7 +24,7 @@ import (
 )
 
 func TestNormalCumulative(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		sigma    *big.Float
 		n        uint

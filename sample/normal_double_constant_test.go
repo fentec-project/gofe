@@ -26,7 +26,7 @@ import (
 func TestNormalDoubleConstant(t *testing.T) {
 	sigmaCDTSquare := 0.84932180028801904272150283410
 	sigmaCDTSquare *= sigmaCDTSquare
-	var tests = []struct {
+	tests := []struct {
 		k      *big.Int
 		name   string
 		expect paramBounds

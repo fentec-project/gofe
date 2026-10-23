@@ -56,7 +56,10 @@ func Test_DMCFE(t *testing.T) {
 	// the decryption of the inner product is possible
 	label := "some label"
 	bound := big.NewInt(1000)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 	y, err := data.NewRandomVector(numClients, sampler)
 	if err != nil {
 		t.Fatalf("could not create random vector: %v", err)

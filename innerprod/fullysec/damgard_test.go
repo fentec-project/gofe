@@ -35,7 +35,10 @@ type damgardTestParam struct {
 func testFullySecDamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 	l := 16
 	bound := big.NewInt(1024)
-	sampler := sample.NewUniformRange(new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)), bound)
+	sampler := sample.NewUniformRange(
+		new(big.Int).Add(new(big.Int).Neg(bound), big.NewInt(1)),
+		bound,
+	)
 
 	var damgard *fullysec.Damgard
 	var err error
@@ -49,25 +52,21 @@ func testFullySecDamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 	}
 
 	masterSecKey, masterPubKey, err := damgard.GenerateMasterKeys()
-
 	if err != nil {
 		t.Fatalf("Error during master key generation: %v", err)
 	}
 
 	y, err := data.NewRandomVector(l, sampler)
-
 	if err != nil {
 		t.Fatalf("Error during random generation: %v", err)
 	}
 
 	key, err := damgard.DeriveKey(masterSecKey, y)
-
 	if err != nil {
 		t.Fatalf("Error during key derivation: %v", err)
 	}
 
 	x, err := data.NewRandomVector(l, sampler)
-
 	if err != nil {
 		t.Fatalf("Error during random generation: %v", err)
 	}
@@ -75,19 +74,16 @@ func testFullySecDamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 	// simulate the instantiation of encryptor (which should be given masterPubKey)
 	encryptor := fullysec.NewDamgardFromParams(damgard.Params)
 	xyCheck, err := x.Dot(y)
-
 	if err != nil {
 		t.Fatalf("Error during inner product calculation")
 	}
 	ciphertext, err := encryptor.Encrypt(x, masterPubKey)
-
 	if err != nil {
 		t.Fatalf("Error during encryption: %v", err)
 	}
 
 	decryptor := fullysec.NewDamgardFromParams(damgard.Params)
 	xy, err := decryptor.Decrypt(ciphertext, key, y)
-
 	if err != nil {
 		t.Fatalf("Error during decryption: %v", err)
 	}
@@ -96,8 +92,10 @@ func testFullySecDamgardDDHFromParam(t *testing.T, param damgardTestParam) {
 }
 
 func TestFullySec_DamgardDDH(t *testing.T) {
-	params := []damgardTestParam{{name: "random", modulusLength: 512, precomputed: false},
-		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+	params := []damgardTestParam{
+		{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true},
+	}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {

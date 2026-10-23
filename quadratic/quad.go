@@ -177,7 +177,9 @@ func (q *Quad) GenerateKeys() (*QuadPubKey, *QuadSecKey, error) {
 	aMat := data.Matrix{a}.Transpose()
 	aTensorIdnVB := aMat.Tensor(IdnVB)
 	aTensorIdnVB = aTensorIdnVB.Mod(bn256.Order)
-	M0, err := aTensorIdnVB.JoinCols(data.NewConstantMatrix(2*q.Params.M, q.Params.N*2, big.NewInt(0)))
+	M0, err := aTensorIdnVB.JoinCols(
+		data.NewConstantMatrix(2*q.Params.M, q.Params.N*2, big.NewInt(0)),
+	)
 	if err != nil {
 		return nil, nil, err
 	}

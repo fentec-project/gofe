@@ -72,7 +72,10 @@ func testSimpleMultiDDHFromParam(t *testing.T, param ddhTestParam) {
 	}
 
 	// each client encrypts its vector x_i
-	collectedX := make([]data.Vector, numOfSlots) // for checking whether encrypt/decrypt works properly
+	collectedX := make(
+		[]data.Vector,
+		numOfSlots,
+	) // for checking whether encrypt/decrypt works properly
 	ciphertexts := make([]data.Vector, numOfSlots)
 	for i := 0; i < numOfSlots; i++ {
 		x, err := data.NewRandomVector(l, sampler) // x possessed and chosen by clients[i]
@@ -118,8 +121,10 @@ func testSimpleMultiDDHFromParam(t *testing.T, param ddhTestParam) {
 }
 
 func TestSimple_MultiDDH(t *testing.T) {
-	params := []ddhTestParam{{name: "random", modulusLength: 512, precomputed: false},
-		{name: "precomputed", modulusLength: 2048, precomputed: true}}
+	params := []ddhTestParam{
+		{name: "random", modulusLength: 512, precomputed: false},
+		{name: "precomputed", modulusLength: 2048, precomputed: true},
+	}
 
 	for _, param := range params {
 		t.Run(param.name, func(t *testing.T) {

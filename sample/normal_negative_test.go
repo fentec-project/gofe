@@ -25,7 +25,7 @@ import (
 )
 
 func TestNormalNegative(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		sigma  *big.Float
 		n      uint
 		expect paramBounds

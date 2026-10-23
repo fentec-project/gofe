@@ -17,10 +17,11 @@
 package simple_test
 
 import (
-	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/sample"
 	"math/big"
 	"testing"
+
+	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/sample"
 
 	"github.com/fentec-project/gofe/innerprod/simple"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +29,8 @@ import (
 
 func TestSimple_RingLWE(t *testing.T) {
 	// choose meta-parameters
-	l := 30 // l-dimensional vectors
-	sec := 75 // min bits of security
+	l := 30             // l-dimensional vectors
+	sec := 75           // min bits of security
 	bx := big.NewInt(2) // bound for the input coordinates
 	by := big.NewInt(2) // bound for the inner-product coordinates
 
@@ -48,7 +49,7 @@ func TestSimple_RingLWE(t *testing.T) {
 	SK, err := ringLWE.GenerateSecretKey()
 	assert.NoError(t, err)
 
-    // generate a public key
+	// generate a public key
 	PK, err := ringLWE.GeneratePublicKey(SK)
 	assert.NoError(t, err)
 
@@ -80,7 +81,7 @@ func TestSimple_RingLWE(t *testing.T) {
 	xyDecrypted, err := ringLWE.Decrypt(cipher, skY, y)
 	assert.NoError(t, err)
 	// check the result
-	for i:=0; i < dimX; i++ {
+	for i := 0; i < dimX; i++ {
 		assert.Equal(t, xy[i].Cmp(xyDecrypted[i]), 0, "obtained incorrect inner product")
 	}
 }

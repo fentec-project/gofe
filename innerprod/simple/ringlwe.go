@@ -17,9 +17,10 @@
 package simple
 
 import (
-	gofe "github.com/fentec-project/gofe/internal"
 	"math"
 	"math/big"
+
+	gofe "github.com/fentec-project/gofe/internal"
 
 	"github.com/fentec-project/gofe/data"
 	"github.com/fentec-project/gofe/sample"
@@ -59,7 +60,7 @@ type RingLWEParams struct {
 // "Efficient Lattice-Based Inner-Product Functional Encryption",
 // see https://eprint.iacr.org/2021/046.
 type RingLWE struct {
-	Params  *RingLWEParams
+	Params *RingLWEParams
 }
 
 // NewRingLWE configures a new instance of the scheme.
@@ -136,16 +137,16 @@ func NewRingLWE(sec, l int, boundX, boundY *big.Int) (*RingLWE, error) {
 
 	return &RingLWE{
 		Params: &RingLWEParams{
-			L:     l,
-			N:     n,
+			L:      l,
+			N:      n,
 			BoundX: boundX,
 			BoundY: boundY,
-			P:     K,
-			Q:     q,
+			P:      K,
+			Q:      q,
 			Sigma1: sigma1,
 			Sigma2: sigma2,
 			Sigma3: sigma3,
-			A:     randVec,
+			A:      randVec,
 		},
 	}, nil
 }
@@ -233,9 +234,9 @@ func (s *RingLWE) center(X data.Matrix) data.Matrix {
 
 // RingLWECipher is functional encryption key for DDH Scheme.
 type RingLWECipher struct {
-	Ct0   data.Matrix
-	Ct1   data.Vector
-	K    int
+	Ct0 data.Matrix
+	Ct1 data.Vector
+	K   int
 }
 
 // Encrypt encrypts matrix X using public key PK.
@@ -243,7 +244,7 @@ type RingLWECipher struct {
 // public key or input matrix that violates the configured bound,
 // it returns an error.
 //
-//The resulting ciphertext has dimensions (l + 1) * n.
+// The resulting ciphertext has dimensions (l + 1) * n.
 func (s *RingLWE) Encrypt(X data.Matrix, PK data.Matrix) (*RingLWECipher, error) {
 	if err := X.CheckBound(s.Params.BoundX); err != nil {
 		return nil, err
